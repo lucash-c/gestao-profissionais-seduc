@@ -1,0 +1,40 @@
+packages:
+  - apps/*
+  - packages/*
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+
+minimumReleaseAgeExclude:
+  - '@vitest/coverage-v8@5.0.3'
+  - '@vitest/mocker@5.0.3'
+  - '@vitest/spy@5.0.3'
+  - dotenv@18.0.5
+  - pg-cloudflare@1.4.1
+  - pg-connection-string@2.14.1
+  - pg-protocol@1.16.1
+  - pg@8.23.1
+  - sass-embedded-all-unknown@1.105.1
+  - sass-embedded-android-arm64@1.105.1
+  - sass-embedded-android-arm@1.105.1
+  - sass-embedded-android-riscv64@1.105.1
+  - sass-embedded-android-x64@1.105.1
+  - sass-embedded-darwin-arm64@1.105.1
+  - sass-embedded-darwin-x64@1.105.1
+  - sass-embedded-linux-arm64@1.105.1
+  - sass-embedded-linux-arm@1.105.1
+  - sass-embedded-linux-musl-arm64@1.105.1
+  - sass-embedded-linux-musl-arm@1.105.1
+  - sass-embedded-linux-musl-riscv64@1.105.1
+  - sass-embedded-linux-musl-x64@1.105.1
+  - sass-embedded-linux-riscv64@1.105.1
+  - sass-embedded-linux-x64@1.105.1
+  - sass-embedded-unknown-all@1.105.1
+  - sass-embedded-win32-arm64@1.105.1
+  - sass-embedded-win32-x64@1.105.1
+  - sass-embedded@1.105.1
+  - sass@1.105.1
+  - vitest@5.0.3

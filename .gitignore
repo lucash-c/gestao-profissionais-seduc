@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Builds and generated code
+dist/
+coverage/
+packages/database/src/generated/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.idea/
+.vscode/
+.vs/
+.DS_Store
+Thumbs.db
+*.suo
+*.user
+*.swp
+*.swo
+
+# Runtime artifacts
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+
+# Local PostgreSQL data and volumes
+.pgdata/
+pgdata/
+postgres-data/
+postgres_data/
+data/postgres/
+
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Quasar/Vite
+.quasar/
+.vite/

@@ -1,0 +1,12 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Etapa 0: nenhuma tabela de domínio é criada.
+// Os modelos serão adicionados exclusivamente na Etapa 1, após aprovação.

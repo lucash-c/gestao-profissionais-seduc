@@ -1,0 +1,39 @@
+{
+  "name": "seduc-americana",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sistema de Remoção, Permuta e Listão da SEDUC Americana/SP",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "apps:build": "pnpm --filter \"./apps/**\" build",
+    "build": "pnpm db:generate && pnpm packages:build && pnpm apps:build",
+    "db:generate": "pnpm --filter @seduc/database db:generate",
+    "db:validate": "pnpm --filter @seduc/database db:validate",
+    "dev": "pnpm db:generate && pnpm packages:build && pnpm --parallel --filter @seduc/api --filter @seduc/web dev",
+    "dev:api": "pnpm db:generate && pnpm packages:build && pnpm --filter @seduc/api dev",
+    "dev:web": "pnpm --filter @seduc/contracts build && pnpm --filter @seduc/web dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings=0",
+    "packages:build": "pnpm --filter \"./packages/**\" build",
+    "test": "pnpm db:generate && pnpm packages:build && pnpm --filter \"./apps/**\" test",
+    "test:coverage": "pnpm db:generate && pnpm packages:build && pnpm --filter \"./apps/**\" test:coverage",
+    "test:integration": "pnpm db:generate && pnpm packages:build && pnpm --filter @seduc/api test:integration",
+    "typecheck": "pnpm db:generate && pnpm packages:build && pnpm --filter \"./apps/**\" typecheck",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.0",
+    "eslint": "10.11.0",
+    "eslint-plugin-vue": "10.11.1",
+    "globals": "17.12.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0"
+  }
+}

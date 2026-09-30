@@ -1,0 +1,404 @@
+PROMPT MESTRE - SEDUC AMERICANA/SP
+Sistema de Remocao, Permuta e Listao - V4
+
+Voce vai desenvolver este projeto por ETAPAS, com foco em seguranca, integridade de dados, testes e aderencia estrita a documentacao.
+
+ARQUIVOS QUE VOU ANEXAR
+1. SEDUC_Americana_Remocao_Permuta_Listao_Especificacao_V4.pdf
+2. Mockups_SEDUC_Americana_V4.zip
+
+ANTES DE PROGRAMAR
+- Leia integralmente a documentacao V4.
+- Inspecione todos os code.html dentro do ZIP de mockups.
+- Dentro do ZIP, code.html e a referencia funcional autoritativa; screen.png e apenas referencia visual do Stitch.
+- Leia README_V4.md do ZIP.
+- Nao invente regras de negocio que nao estejam documentadas.
+- Se encontrar contradicao real entre arquivos, pare e informe o ponto antes de implementar a parte afetada.
+- A documentacao V4 prevalece sobre textos antigos ou dados ficticios dos mockups.
+
+STACK OBRIGATORIA
+- Docker / Docker Compose
+- PostgreSQL
+- Node.js
+- Express
+- TypeScript
+- Vue 3
+- Quasar
+- Prisma para ORM/migrations, com SQL manual somente quando necessario para constraints/indices avancados
+- Vitest
+- Supertest
+- Vue Test Utils
+- Playwright pode ser usado posteriormente para E2E dos fluxos criticos
+
+PRINCIPIO CENTRAL DO SISTEMA
+Este NAO e um portal de escolha para professores ou demais profissionais.
+O profissional participante NAO possui login para escolher vaga.
+No dia do evento, a escolha ocorre presencialmente.
+Somente o perfil OPERADOR registra no sistema a escolha verbal/presencial informada pelo profissional chamado.
+
+PERFIS
+1. ADMINISTRADOR
+2. OPERADOR
+3. DIRETOR DE UNIDADE
+4. SECRETARIO ESCOLAR
+
+RBAC OBRIGATORIO
+ADMINISTRADOR:
+- cadastro global de unidades e profissionais;
+- usuarios;
+- pontuacao;
+- configuracoes;
+- modulo de correcao administrativa;
+- nao registra escolhas normais de eventos.
+
+OPERADOR:
+- cria/prepara/inicia/conduz/encerra eventos;
+- prepara fila;
+- consulta cadastros necessarios;
+- consulta vagas;
+- registra escolhas e permutas no dia do evento;
+- NAO edita cadastro comum de unidades/profissionais;
+- NAO altera pontuacao;
+- NAO altera profissional.remocao ou profissional.permuta.
+
+DIRETOR / SECRETARIO:
+- cadastro/edicao apenas da propria unidade e profissionais permitidos dessa unidade;
+- podem registrar previamente remocao/permuta conforme documentacao;
+- nao operam eventos;
+- devem possuir unidade vinculada.
+
+AUTENTICACAO
+- Login por credencial propria: login ou e-mail + senha.
+- Nao usar CPF/matricula do participante como regra de autenticacao.
+- Nao existe criacao publica de usuario na tela de login.
+- Somente ADMIN cria usuarios dentro do sistema.
+- Senhas sempre armazenadas como hash seguro.
+
+PONTUACAO
+- Apenas professores que usam pontuacao possuem esse criterio.
+- Novo professor inicia com pontuacao 0.
+- Somente ADMINISTRADOR altera pontuacao.
+- O sistema NAO calcula pontuacao por tempo de servico, titulos, cursos, assiduidade ou qualquer outra formula.
+- O sistema armazena somente o valor oficial NUMERIC informado.
+- Alteracao normal de pontuacao deve gerar auditoria.
+
+ORDENACAO DA FILA
+PROFESSORES:
+1. pontuacao DESC
+2. data_entrada_prefeitura ASC
+3. data_nascimento ASC (mais velho primeiro)
+
+NAO PROFESSORES:
+1. data_entrada_prefeitura ASC
+2. data_nascimento ASC
+
+Se ainda houver empate absoluto, NAO invente quarto criterio. Marque EMPATE_PENDENTE ate regra administrativa formal.
+
+INSCRICAO PREVIA
+Tabela profissional possui:
+- remocao BOOLEAN NOT NULL DEFAULT FALSE
+- permuta BOOLEAN NOT NULL DEFAULT FALSE
+
+Esses campos sao informados dias antes do evento.
+O OPERADOR nunca os altera durante preparacao ou sessao.
+
+ELEGIBILIDADE OBRIGATORIA
+- Evento REMOCAO: somente profissional.remocao = TRUE pode entrar na fila final.
+- Evento PERMUTA: somente profissional.permuta = TRUE pode entrar na fila final.
+- Quem nao e elegivel deve continuar VISIVEL na tela de preparacao para conferencia, mas com selecao bloqueada.
+- LISTAO nao possui boolean proprio nesta versao; seguir as regras documentadas para cargo/escopo ate definicao futura.
+
+PREPARACAO DA FILA
+Ao escolher o cargo:
+- carregar todos os profissionais ativos desse cargo;
+- manter todos visiveis;
+- seletores TODOS / COM SEDE / SEM SEDE / REMOCAO / PERMUTA alteram checkboxes, nao ocultam linhas;
+- busca textual deve preferencialmente realcar resultados, sem comprometer a conferencia da lista completa;
+- seletores nunca podem ultrapassar a elegibilidade do tipo do evento;
+- operador pode DESMARCAR elegiveis;
+- operador nao pode incluir ineligiveis em REMOCAO/PERMUTA;
+- ordem e calculada automaticamente e nao pode ser arrastada/reordenada manualmente.
+
+A fila preparada em evento RASCUNHO e apenas PREVIA.
+Somente ao INICIAR o evento:
+- validar novamente elegibilidade;
+- congelar participantes;
+- gravar snapshots de pontuacao/data de entrada/data de nascimento;
+- calcular posicao oficial;
+- tornar a fila vinculante para a sessao.
+
+SEDE, EXERCICIO E POSTOS
+Nao misture os conceitos:
+- lotacao_sede = titularidade oficial;
+- exercicio_profissional = onde a pessoa efetivamente trabalha;
+- posto_trabalho = posto individual na unidade/cargo/periodo;
+- afastamento = motivo que pode liberar temporariamente a sede para substituicao.
+
+POSTOS E "VAGAS"
+Na interface pode existir o botao "+ Nova Vaga", mas internamente "vaga" e a DISPONIBILIDADE de um posto.
+Nao crie uma tabela independente de vaga apenas por causa do nome da UI, salvo necessidade tecnica claramente justificada.
+
+COM SEDE:
+- posto ativo sem lotacao_sede ativa;
+- ao ser escolhido, cria nova lotacao_sede e encerra a anterior do profissional na mesma transacao.
+
+SEM SEDE / SUBSTITUICAO:
+- posto possui titular de sede;
+- titular esta afastado ou exercendo em outro posto;
+- posto esta sem ocupante atual;
+- quem ocupa temporariamente recebe exercicio SUBSTITUICAO/SEM_SEDE;
+- titularidade da sede nao muda.
+
+Nao permitir DELETE fisico normal de posto/disponibilidade que possua historico.
+Usar INATIVACAO.
+
+CONSTRAINTS CRITICAS
+- no maximo uma lotacao_sede ativa por profissional;
+- no maximo um titular ativo por posto;
+- no maximo um exercicio ativo por profissional;
+- no maximo um ocupante em exercicio ativo por posto;
+- movimentacoes atomicas: commit integral ou rollback integral.
+
+CONSULTA DE VAGAS DURANTE EVENTO
+Somente permitir confirmar vagas compativeis com:
+- cargo/funcao;
+- periodo;
+- regras do evento;
+- estado real do posto.
+
+A tela deve diferenciar claramente:
+- SEDE FIXA / COM SEDE
+- SEM SEDE / SUBSTITUICAO
+
+Antes da confirmacao, simular:
+- situacao antes;
+- destino;
+- tipo;
+- posto/sede liberado;
+- impacto no quadro.
+
+EVENTO PRESENCIAL
+Fluxo:
+1. operador inicia evento;
+2. chama o primeiro participante;
+3. profissional informa verbalmente sua escolha;
+4. operador consulta vagas;
+5. operador seleciona a vaga informada;
+6. sistema valida novamente;
+7. operador confirma;
+8. backend executa transacao;
+9. disponibilidade e recalculada;
+10. telão e Central atualizam;
+11. operador chama o proximo.
+
+PERMUTA
+- registrada somente pelo OPERADOR;
+- dois profissionais na mesma movimentacao/transacao;
+- validar os dois lados antes de commit;
+- qualquer falha deve reverter tudo;
+- profissional.permuta apenas indica manifestacao previa, nao significa que o sistema deva inventar antecipadamente um "par sinalizado".
+
+TELAO PUBLICO
+Somente informativo.
+Mostrar:
+- profissional atual;
+- proximos;
+- unidades/vagas compativeis do cargo/periodo atual;
+- ultimas 5 escolhas, da mais recente para a mais antiga;
+- opcao para consultar escolhas anteriores.
+
+Nunca mostrar no telão:
+- CPF;
+- matricula;
+- nascimento;
+- endereco;
+- dados administrativos internos desnecessarios.
+
+AUDITORIA
+Alteracoes normais devem registrar:
+- usuario;
+- entidade;
+- registro;
+- acao;
+- before/after JSONB;
+- data/hora TIMESTAMPTZ.
+
+Movimentacoes do evento sao historico de negocio separado da auditoria tecnica.
+
+MODULO DE CORRECAO ADMINISTRATIVA
+Exclusivo do ADMINISTRADOR.
+Conforme regra solicitada, alteracoes feitas explicitamente nesse modulo NAO geram auditoria nem movimentacao de evento.
+Isole rotas, services e UI desse modulo e exiba alerta forte antes de salvar.
+
+MOCKUPS
+- Reaproveite identidade visual e organizacao dos code.html.
+- Nao copie dados ficticios como se fossem regras.
+- CRUDs administrativos do ZIP representam contexto ADMINISTRADOR.
+- Central/Preparacao/Consulta de vagas representam contexto OPERADOR.
+- Diretor/Secretario terao a mesma base de cadastro, porem restrita a unidade vinculada.
+
+CAMPOS OPCIONAIS DE UNIDADE PRESENTES NOS MOCKUPS
+- codigo_inep: opcional
+- polo_regiao: opcional
+Nao os transforme em requisito obrigatorio nem regra de elegibilidade sem nova orientacao.
+
+QUALIDADE DE CODIGO
+- controllers finos;
+- regras em services/use-cases;
+- validacao de payloads;
+- middleware de autenticacao/RBAC;
+- transacoes explicitas nos fluxos de movimento;
+- TypeScript estrito;
+- nomes claros;
+- evitar duplicacao;
+- migrations versionadas;
+- seeds apenas para dados de demonstracao/configuracao segura;
+- nao hardcodar unidades/cargos/regras configuraveis.
+
+TESTES UNITARIOS/INTEGRACAO OBRIGATORIOS
+Inclua testes para, no minimo:
+- RBAC dos 4 perfis;
+- diretor/secretario restritos a propria unidade;
+- operador impedido de editar cadastro/flags/pontuacao;
+- pontuacao default 0 e alteracao somente ADMIN;
+- remocao/permuta default FALSE;
+- elegibilidade da fila por tipo do evento;
+- lista completa visivel na preparacao (regra de dominio/API refletida no frontend);
+- ranking professor;
+- ranking nao professor;
+- empate absoluto;
+- sede unica;
+- exercicio unico;
+- disponibilidade COM SEDE;
+- disponibilidade SEM SEDE;
+- substituicao em cadeia;
+- compatibilidade de periodo;
+- snapshot/congelamento no inicio do evento;
+- bloqueio de movimento em evento encerrado/cancelado;
+- transacao atomica de remocao;
+- transacao atomica de permuta;
+- auditoria normal;
+- isolamento do modulo de correcao administrativa.
+
+DESENVOLVIMENTO POR ETAPAS
+NAO implemente tudo de uma vez.
+
+ETAPA 0 - FUNDACAO
+- monorepo/estrutura do projeto;
+- Docker Compose;
+- PostgreSQL;
+- backend Express + TypeScript;
+- frontend Vue 3 + Quasar + TypeScript;
+- lint/format;
+- Vitest/Supertest/Vue Test Utils configurados;
+- healthcheck da API e banco;
+- .env.example;
+- README para subir o ambiente.
+
+ETAPA 1 - BANCO BASE
+- tipos de unidade;
+- unidades/telefones;
+- cargos/funcoes;
+- compatibilidade cargo x tipo_unidade;
+- periodos;
+- segmentos;
+- profissionais/telefones;
+- remocao/permuta;
+- usuarios;
+- constraints e migrations.
+
+ETAPA 2 - AUTENTICACAO E RBAC
+- login por login/e-mail;
+- usuarios;
+- 4 perfis;
+- unidade vinculada;
+- middleware de autorizacao;
+- testes.
+
+ETAPA 3 - CADASTROS
+- Unidades;
+- Profissionais;
+- Usuarios ADMIN;
+- pontuacao ADMIN;
+- manifestacao previa Remocao/Permuta;
+- aplicar mockups e permissoes.
+
+ETAPA 4 - QUADRO / POSTOS / DISPONIBILIDADES
+- quadro_necessidade;
+- postos individuais;
+- tela Postos de Trabalho & Vagas;
+- COM SEDE / SEM SEDE como disponibilidade do posto;
+- inativacao historica.
+
+ETAPA 5 - LOTACAO / EXERCICIO / AFASTAMENTOS
+- lotacao_sede;
+- exercicio_profissional;
+- afastamentos;
+- calculo consistente de disponibilidade;
+- substituicoes em cadeia.
+
+ETAPA 6 - EVENTOS / PREPARACAO DA FILA
+- evento RASCUNHO;
+- selecao de cargo;
+- elegibilidade por tipo;
+- lista completa;
+- seletores de checkbox;
+- previa ordenada;
+- evento_participante;
+- iniciar + snapshot + congelamento.
+
+ETAPA 7 - REMOCAO / LISTAO
+- Central operacional;
+- consulta de vagas;
+- simulacao antes/depois;
+- movimentacao atomica;
+- recalculo;
+- proximo participante;
+- telão publico.
+
+ETAPA 8 - PERMUTA
+- validacao bilateral;
+- transacao atomica;
+- tela propria.
+
+ETAPA 9 - AUDITORIA / CORRECAO ADMINISTRATIVA
+- auditoria normal;
+- historicos;
+- modulo isolado ADMIN sem auditoria, exatamente conforme documentacao.
+
+ETAPA 10 - REFINO UI
+- consistencia Quasar;
+- acessibilidade;
+- responsividade;
+- estados de loading/erro/vazio;
+- bloqueio de dupla submissao.
+
+ETAPA 11 - HARDENING E ENTREGA
+- testes integrados;
+- concorrencia;
+- indices;
+- backup/restauracao;
+- seguranca;
+- logs;
+- documentacao final.
+
+MODO DE TRABALHO OBRIGATORIO
+Ao final de CADA etapa:
+1. rode todos os testes;
+2. rode lint/typecheck;
+3. informe arquivos criados/alterados;
+4. explique objetivamente o que foi implementado;
+5. liste qualquer regra que dependa de confirmacao;
+6. pare e aguarde minha autorizacao para seguir.
+
+NAO avance automaticamente para a proxima etapa.
+
+PRIMEIRA ACAO AGORA
+Nao escreva codigo ainda.
+Primeiro:
+1. leia o PDF V4 e o ZIP de mockups;
+2. apresente um resumo curto do entendimento do dominio;
+3. apresente a estrutura de pastas proposta;
+4. apresente o plano detalhado SOMENTE da ETAPA 0;
+5. aponte qualquer contradicao ou duvida real encontrada;
+6. pare e aguarde minha autorizacao para iniciar a ETAPA 0.

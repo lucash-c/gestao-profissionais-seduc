@@ -1,0 +1,1081 @@
+<!DOCTYPE html><html lang="pt-BR" style="width: 1280px; height: 1629px; overflow: hidden; position: relative;"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface":"#fbf9f8","on-error-container":"#93000a","primary-container":"#1976d2","surface-dim":"#dcd9d9","error-container":"#ffdad6","primary-fixed-dim":"#a5c8ff","on-background":"#1b1c1c","primary":"#005dac","surface-container-highest":"#e4e2e1","on-tertiary-fixed-variant":"#344861","on-primary-fixed-variant":"#004786","on-primary":"#ffffff","tertiary-container":"#637792","outline":"#717783","tertiary-fixed-dim":"#b3c8e6","inverse-on-surface":"#f3f0f0","tertiary-fixed":"#d2e4ff","surface-bright":"#fbf9f8","surface-container":"#f0eded","on-surface":"#1b1c1c","surface-variant":"#e4e2e1","error":"#ba1a1a","on-primary-container":"#fffdff","secondary-fixed":"#d3e4ff","secondary-fixed-dim":"#a2c9ff","surface-tint":"#005faf","on-tertiary-container":"#fffeff","on-error":"#ffffff","background":"#fbf9f8","surface-container-low":"#f6f3f2","primary-fixed":"#d4e3ff","on-tertiary":"#ffffff","on-secondary":"#ffffff","on-secondary-container":"#004b85","inverse-surface":"#303030","secondary-container":"#89bcfe","on-secondary-fixed":"#001c38","on-secondary-fixed-variant":"#004881","surface-container-high":"#eae8e7","secondary":"#27609c","inverse-primary":"#a5c8ff","on-tertiary-fixed":"#051c33","outline-variant":"#c1c6d4","on-surface-variant":"#414752","surface-container-lowest":"#ffffff","on-primary-fixed":"#001c3a","tertiary":"#4a5e78"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"gutter":"1rem","space-xl":"1.5rem","space-sm":"0.5rem","space-lg":"1rem","space-md":"0.75rem","space-xs":"0.25rem","gutter-dense":"0.5rem","margin-mobile":"0.75rem","margin":"1.25rem"},fontFamily:{"headline-md":["Roboto Flex"],"headline-sm":["Roboto Flex"],"label-sm":["Roboto Flex"],"tabular-data":["Roboto Flex"],"label-md":["Roboto Flex"],"body-lg":["Roboto Flex"],"body-md":["Roboto Flex"],"label-lg":["Roboto Flex"],"headline-lg":["Roboto Flex"],"body-sm":["Roboto Flex"]},fontSize:{"headline-md":["1.375rem",{"lineHeight":"1.75rem","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","fontWeight":"600"}],"label-sm":["0.6875rem",{"lineHeight":"0.875rem","letterSpacing":"0.05em","fontWeight":"700"}],"tabular-data":["0.8125rem",{"lineHeight":"1.125rem","fontWeight":"500"}],"label-md":["0.75rem",{"lineHeight":"1rem","letterSpacing":"0.025em","fontWeight":"600"}],"body-lg":["0.9375rem",{"lineHeight":"1.375rem","fontWeight":"400"}],"body-md":["0.875rem",{"lineHeight":"1.25rem","fontWeight":"400"}],"label-lg":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"0.01em","fontWeight":"600"}],"headline-lg":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.015em","fontWeight":"700"}],"body-sm":["0.8125rem",{"lineHeight":"1.125rem","fontWeight":"400"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 h-14 bg-[#002f6c] text-white z-50 shadow-[0_1px_8px_rgba(0,0,0,0.12)] flex items-center px-space-lg justify-end"><div class="flex items-center gap-space-md"><div class="hidden sm:flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded border border-white/10 font-tabular-data text-body-sm text-white/95"></div><div class="flex items-center gap-2.5 pl-2"><div class="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-white text-[13px]"><span class="material-symbols-outlined text-[18px]">person</span></div><div class="hidden md:flex flex-col text-left leading-tight"><span class="text-[12px] font-bold text-white">Carlos Eduardo (SEDUC/RH)</span><span class="text-[10px] text-white/70">Matrícula: 84920 • Administrador</span></div></div><button class="p-1.5 rounded hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center justify-center" title="Encerrar Sessão" type="button"><span class="material-symbols-outlined text-[20px]">logout</span></button></div></header><aside class="fixed left-0 top-14 bottom-0 w-64 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex flex-col overflow-y-auto"><div class="p-space-md border-b border-surface-container-highest"><div class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider">Prefeitura de Americana</div><div class="font-headline-sm text-headline-sm text-primary">Gestão de Vagas</div></div><nav class="flex-1 px-space-xs py-space-sm space-y-space-md" data-active-classes="bg-primary-container text-on-primary-container font-semibold rounded"><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Evento ao Vivo</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="central-de-atendimento-presencial" href="#"><span class="material-symbols-outlined text-[18px]">record_voice_over</span><span class="">Central de Atendimento Presencial</span></a></div><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Gestão &amp; Cadastros</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="dashboard-geral" href="#"><span class="material-symbols-outlined text-[18px]">dashboard</span><span class="">Dashboard Geral</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="unidades-escolares" href="#"><span class="material-symbols-outlined text-[18px]">school</span><span class="">Unidades Escolares</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="profissionais" href="#"><span class="material-symbols-outlined text-[18px]">badge</span><span class="">Profissionais</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="postos-de-trabalho-e-vagas" href="#"><span class="material-symbols-outlined text-[18px]">work</span><span class="">Postos de Trabalho &amp; Vagas</span></a></div><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Controle &amp; Relatórios</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="historico-de-movimentacoes" href="#"><span class="material-symbols-outlined text-[18px]">history</span><span class="">Histórico de Movimentações</span></a></div></nav></aside><div class="pl-64 flex flex-col min-h-screen"><main class="flex-1 pt-14 bg-surface w-full px-space-lg"><div class="flex flex-col w-full">
+<!-- BREADCRUMB & HEADER -->
+<div class="flex flex-col gap-space-xs mb-space-lg">
+<div class="flex items-center gap-space-xs font-label-md text-label-md text-tertiary">
+<span class="">SEDUC Americana</span>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+
+
+<span class="text-primary font-semibold">Profissionais</span>
+</div>
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-space-md">
+<div class="flex items-center gap-space-md">
+<div class="w-12 h-12 rounded-xl bg-primary-container/15 text-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[30px]" style="font-variation-settings: 'FILL' 1;">badge</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Profissionais</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Consulte, cadastre e atualize os profissionais da rede municipal de ensino de Americana.</p>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="h-9 px-3.5 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-lg text-label-lg transition-colors flex items-center gap-1.5 shadow-sm" id="btn-export-csv">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="">Exportar Relação</span>
+</button>
+<button class="h-9 px-4 rounded bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg transition-all shadow flex items-center gap-2" id="btn-open-new-prof">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+<span class="">Cadastrar novo profissional</span>
+</button>
+</div>
+</div>
+</div>
+<!-- METRIC KPI STRIP -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md mb-space-lg">
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-tertiary">Total de Servidores</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface mt-0.5">1.248</span>
+<span class="font-label-sm text-label-sm text-primary font-medium mt-1">100% da rede ativa</span>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[22px]">groups</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-tertiary">Inscritos em Remoção</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface mt-0.5">386</span>
+<span class="font-label-sm text-label-sm text-[#002f6c] font-semibold mt-1">Processo Atribuição 2025</span>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-[#002f6c]">
+<span class="material-symbols-outlined text-[22px]">swap_calls</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-tertiary">Professores Sem Sede</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface mt-0.5">42</span>
+<span class="font-label-sm text-label-sm text-[#b25e00] font-semibold mt-1">Aguardando chamada geral</span>
+</div>
+<div class="w-10 h-10 rounded-lg bg-[#fff4e5] flex items-center justify-center text-[#b25e00]">
+<span class="material-symbols-outlined text-[22px]">domain_disabled</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-tertiary">Inscritos em Permuta</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface mt-0.5">18</span>
+<span class="font-label-sm text-label-sm text-[#00695c] font-semibold mt-1">Manifestações prévias registradas</span>
+</div>
+<div class="w-10 h-10 rounded-lg bg-[#e0f2f1] flex items-center justify-center text-[#00695c]">
+<span class="material-symbols-outlined text-[22px]">published_with_changes</span>
+</div>
+</div>
+</div>
+<!-- SEARCH & ADVANCED FILTERS PANEL -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm mb-space-lg flex flex-col gap-space-md">
+<!-- Top Search Line -->
+<div class="flex flex-col md:flex-row gap-space-md items-center">
+<div class="relative flex-1 w-full">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="w-full h-10 pl-11 pr-4 bg-surface-container-low focus:bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-inner transition-all placeholder:text-outline" id="filter-search-input" placeholder="Buscar por nome, matrícula ou CPF..." type="text">
+</div>
+<div class="flex items-center gap-space-sm w-full md:w-auto justify-between">
+<button class="h-10 px-4 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center gap-1.5 transition-colors" id="btn-clear-filters">
+<span class="material-symbols-outlined text-[18px]">clear_all</span>
+<span class="">Limpar Filtros</span>
+</button>
+<button class="h-10 px-4 rounded bg-primary/10 hover:bg-primary/20 text-primary font-label-md text-label-md flex items-center gap-1.5 transition-colors" id="btn-toggle-advanced">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span class="">Filtros Rápidos</span>
+</button>
+</div>
+</div>
+<!-- Dropdowns & Toggles Line -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-space-sm pt-space-xs">
+<!-- Cargo -->
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Cargo / Função</label>
+<select class="h-9 px-2.5 bg-surface-container-low rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" id="filter-cargo">
+<option value="">Todos os Cargos</option>
+<option value="PEB 1">PEB 1 - Ensino Fundamental</option>
+<option value="PEB 2 - MAT">PEB 2 - Matemática</option>
+<option value="PEB 2 - POR">PEB 2 - Língua Portuguesa</option>
+<option value="PEB 2 - ING">PEB 2 - Inglês</option>
+<option value="PEB 2 - EDU">PEB 2 - Educação Física</option>
+<option value="PEB 2 - ART">PEB 2 - Arte</option>
+<option value="ADI">ADI - Auxiliar de Desenv. Infantil</option>
+<option value="DIRETOR">Diretor de Escola</option>
+<option value="COORDENADOR">Coordenador Pedagógico</option>
+</select>
+</div>
+<!-- Sede Atual -->
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Unidade de Lotação / Sede</label>
+<select class="h-9 px-2.5 bg-surface-container-low rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" id="filter-sede">
+<option value="">Todas as Unidades</option>
+<option value="EMEF Maria Pavan">EMEF Maria Pavan Daphnis</option>
+<option value="CIEP São Jerônimo">CIEP São Jerônimo</option>
+<option value="EMEF Darcy Ribeiro">EMEF Darcy Ribeiro</option>
+<option value="EMEF Paulo Freire">EMEF Prof. Paulo Freire</option>
+<option value="CIEP Cidade Jardim">CIEP Profª Philomena M. Rossetti</option>
+<option value="CASA DA CRIANÇA">Casa da Criança Curió</option>
+</select>
+</div>
+<!-- Situação -->
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Situação de Sede</label>
+<select class="h-9 px-2.5 bg-surface-container-low rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" id="filter-situacao">
+<option value="">Todas as Situações</option>
+<option value="COM SEDE">Com Sede Fixada</option>
+<option value="SEM SEDE">Sem Sede (Adido / Vaga)</option>
+</select>
+</div>
+<!-- Status -->
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Status Funcional</label>
+<select class="h-9 px-2.5 bg-surface-container-low rounded font-body-sm text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" id="filter-status">
+<option value="">Todos</option>
+<option selected="" value="ATIVO">Ativo em Exercício</option>
+<option value="LICENCA">Licença / Afastamento</option>
+<option value="DESLIGADO">Desligado / Aposentado</option>
+</select>
+</div>
+<!-- Toggles Manifestações -->
+<div class="flex flex-col justify-end">
+<label class="flex items-center gap-2 cursor-pointer h-9 px-2 rounded bg-surface-container-low hover:bg-surface-container transition-colors">
+<input class="w-4 h-4 rounded text-primary focus:ring-primary" id="chk-filter-remocao" type="checkbox">
+<span class="font-label-md text-label-md text-on-surface select-none">Apenas Remoção</span>
+</label>
+</div>
+<div class="flex flex-col justify-end">
+<label class="flex items-center gap-2 cursor-pointer h-9 px-2 rounded bg-surface-container-low hover:bg-surface-container transition-colors">
+<input class="w-4 h-4 rounded text-[#00695c] focus:ring-[#00695c]" id="chk-filter-permuta" type="checkbox">
+<span class="font-label-md text-label-md text-on-surface select-none">Apenas Permuta</span>
+</label>
+</div>
+</div>
+</div>
+<!-- TABLE CONTAINER (DATA TABLE) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col mb-space-lg">
+<div class="overflow-x-auto">
+<table class="w-full text-left font-body-sm text-body-sm">
+<thead class="bg-surface-container-low text-tertiary uppercase font-label-sm text-label-sm tracking-wider select-none">
+<tr>
+<th class="py-3 px-space-md font-bold">Nome Completo</th>
+<th class="py-3 px-space-md font-bold">Matrícula</th>
+<th class="py-3 px-space-md font-bold">CPF</th>
+<th class="py-3 px-space-md font-bold">Cargo / Função</th>
+<th class="py-3 px-space-md font-bold">Unidade Sede</th>
+<th class="py-3 px-space-md font-bold text-center">Situação</th>
+<th class="py-3 px-space-md font-bold text-right">Pontuação</th>
+<th class="py-3 px-space-md font-bold text-center">Processos 2025</th>
+<th class="py-3 px-space-md font-bold text-center">Status</th>
+<th class="py-3 px-space-md font-bold text-center">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container" id="professionals-tbody">
+<!-- Row 1: Ana Paula Ferreira (Primary interactive demo row) -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(1)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[12px] group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                  AP
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Ana Paula Ferreira</span>
+<span class="text-tertiary text-label-sm font-label-sm">ana.ferreira@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">48.912-3</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">289.412.890-44</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">PEB 1 - Ensino Fundamental</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Manhã (30h semanais)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">EMEF Maria Pavan Daphnis</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Região Praia Azul</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e3f2fd] text-[#0d47a1] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1976d2]"></span>
+                COM SEDE
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data">
+<span class="inline-block px-2 py-0.5 rounded bg-surface-container font-bold text-primary">84,50 pts</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<div class="flex items-center justify-center gap-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#002f6c] text-white" title="Inscrição Ativa em Remoção Ordinária">
+                  REMOÇÃO
+                </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#004d40] text-[#e0f2f1]" title="Inscrição de Permuta Aberta">
+                  PERMUTA
+                </span>
+</div>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e8f5e9] text-[#1b5e20] font-semibold">
+                ATIVO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(1);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Carlos Eduardo Martins -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(2)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center font-bold text-[12px] group-hover:bg-secondary group-hover:text-on-secondary transition-colors">
+                  CM
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Carlos Eduardo Martins</span>
+<span class="text-tertiary text-label-sm font-label-sm">carlos.martins@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">39.102-1</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">154.892.408-11</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">PEB 2 - Matemática</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Tarde (24h semanais)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">CIEP São Jerônimo</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Região São Jerônimo</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e3f2fd] text-[#0d47a1] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1976d2]"></span>
+                COM SEDE
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data">
+<span class="inline-block px-2 py-0.5 rounded bg-surface-container font-bold text-primary">91,20 pts</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#002f6c] text-white">
+                REMOÇÃO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e8f5e9] text-[#1b5e20] font-semibold">
+                ATIVO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(2);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Juliana Castilho -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(3)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-[#e65100]/10 text-[#e65100] flex items-center justify-center font-bold text-[12px] group-hover:bg-[#e65100] group-hover:text-white transition-colors">
+                  JC
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Juliana Castilho</span>
+<span class="text-tertiary text-label-sm font-label-sm">juliana.castilho@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">52.883-0</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">332.901.448-90</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">PEB 1 - Ensino Fundamental</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Manhã (30h semanais)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-semibold text-[#b25e00]">Aguardando Alocação</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Ex-EMEF Darcy Ribeiro</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#fff3e0] text-[#e65100] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#e65100]"></span>
+                SEM SEDE
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data">
+<span class="inline-block px-2 py-0.5 rounded bg-surface-container font-bold text-primary">63,40 pts</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#002f6c] text-white">
+                REMOÇÃO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e8f5e9] text-[#1b5e20] font-semibold">
+                ATIVO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(3);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Patrícia Mendes Rocha -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(4)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[12px] group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                  PM
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Patrícia Mendes Rocha</span>
+<span class="text-tertiary text-label-sm font-label-sm">patricia.mendes@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">44.119-8</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">410.771.208-02</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">ADI - Desenv. Infantil</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Integral (40h semanais)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">Casa da Criança Curió</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Região Jd. Ipiranga</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e3f2fd] text-[#0d47a1] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1976d2]"></span>
+                COM SEDE
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data text-tertiary">
+              —
+            </td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#004d40] text-[#e0f2f1]" title="Inscrição de Permuta Aberta">
+                PERMUTA
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e8f5e9] text-[#1b5e20] font-semibold">
+                ATIVO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(4);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: Marcos Vinícius Prado -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(5)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[12px] group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                  MV
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Marcos Vinícius Prado</span>
+<span class="text-tertiary text-label-sm font-label-sm">marcos.prado@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">36.782-4</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">211.554.808-72</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">PEB 2 - Educação Física</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Manhã (26h semanais)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">EMEF Prof. Paulo Freire</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Região Pq. das Nações</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e3f2fd] text-[#0d47a1] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1976d2]"></span>
+                COM SEDE
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data">
+<span class="inline-block px-2 py-0.5 rounded bg-surface-container font-bold text-primary">79,50 pts</span>
+</td>
+<td class="py-2.5 px-space-md text-center text-outline text-[12px]">
+              Nenhum
+            </td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e8f5e9] text-[#1b5e20] font-semibold">
+                ATIVO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(5);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</td>
+</tr>
+<!-- Row 6: Fernanda Alcântara Silveira -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(6)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[12px] group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                  FA
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Fernanda Alcântara Silveira</span>
+<span class="text-tertiary text-label-sm font-label-sm">fernanda.silveira@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">51.209-6</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">309.288.741-65</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">PEB 2 - Língua Portuguesa</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Tarde (24h semanais)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">CIEP Profª Philomena M. Rossetti</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Região Cidade Jardim</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e3f2fd] text-[#0d47a1] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1976d2]"></span>
+                COM SEDE
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data">
+<span class="inline-block px-2 py-0.5 rounded bg-surface-container font-bold text-primary">68,90 pts</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#002f6c] text-white">
+                REMOÇÃO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-[#e8f5e9] text-[#1b5e20] font-semibold">
+                ATIVO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(6);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+</td>
+</tr>
+<!-- Row 7: Roberto Camargo -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group" onclick="openProfessionalModal(7)">
+<td class="py-2.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-outline/20 text-on-surface-variant flex items-center justify-center font-bold text-[12px] group-hover:bg-outline group-hover:text-white transition-colors">
+                  RC
+                </div>
+<div>
+<span class="font-semibold text-on-surface font-body-md text-body-md block group-hover:text-primary transition-colors">Roberto Camargo</span>
+<span class="text-tertiary text-label-sm font-label-sm">roberto.camargo@americana.sp.gov.br</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data font-semibold text-on-surface">22.401-9</td>
+<td class="py-2.5 px-space-md font-tabular-data text-tabular-data text-on-surface-variant">098.341.229-30</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">Diretor de Escola</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Dedicação Plena (40h)</span>
+</td>
+<td class="py-2.5 px-space-md">
+<span class="font-medium text-on-surface">EMEF Darcy Ribeiro</span>
+<span class="block text-tertiary text-label-sm font-label-sm">Região Jd. Guanabara</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-[#f5f5f5] text-outline font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                DESLIGADO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-right font-tabular-data text-tabular-data text-tertiary">
+              —
+            </td>
+<td class="py-2.5 px-space-md text-center text-outline text-[12px]">
+              Nenhum
+            </td>
+<td class="py-2.5 px-space-md text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-surface-container-high text-on-surface-variant font-semibold">
+                APOSENTADO
+              </span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<button class="p-1 rounded text-primary hover:bg-primary/10 transition-colors" onclick="event.stopPropagation(); openProfessionalModal(7);" title="Abrir Ficha Cadastral">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="p-space-md bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md text-tertiary font-body-sm text-body-sm">
+<span class="">Exibindo <strong>1-7</strong> de <strong>142</strong> profissionais cadastrados</span>
+<div class="flex items-center gap-1.5">
+<span class="text-label-sm font-label-sm">Linhas por página:</span>
+<select class="h-7 px-1.5 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm">
+<option>10</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-outline hover:bg-surface-container transition-colors disabled:opacity-40" disabled="">
+<span class="material-symbols-outlined text-[18px]">first_page</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-outline hover:bg-surface-container transition-colors disabled:opacity-40" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-primary text-on-primary font-bold text-label-sm font-label-sm shadow-sm">
+          1
+        </button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-sm transition-colors">
+          2
+        </button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-sm transition-colors">
+          3
+        </button>
+<span class="px-1 text-tertiary">...</span>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-container font-label-sm transition-colors">
+          15
+        </button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">last_page</span>
+</button>
+</div>
+</div>
+</div>
+<!-- TOAST NOTIFICATION DEMO (Subtle & Institutional) -->
+<div class="fixed bottom-6 right-6 z-50 bg-[#1b5e20] text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 transition-all duration-300 transform translate-y-16 opacity-0 pointer-events-none" id="system-toast">
+<span class="material-symbols-outlined text-[22px]">check_circle</span>
+<span class="font-label-lg text-label-lg" id="toast-message">Dados do profissional atualizados com sucesso.</span>
+</div>
+<!-- MODAL / DIALOG: FICHA DO PROFISSIONAL (OPEN BY DEFAULT FOR SEAMLESS DEMO) -->
+<div class="fixed inset-0 z-50 items-center justify-center p-space-md sm:p-space-lg bg-[#001c3a]/50 backdrop-blur-sm transition-opacity duration-200 hidden" id="modal-professional">
+<div class="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+<!-- Modal Header (Institutional Top) -->
+<div class="px-space-lg py-space-md bg-gradient-to-r from-[#002f6c] to-[#1976d2] text-white flex items-start justify-between">
+<div class="flex items-center gap-space-md">
+<div class="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
+<span class="material-symbols-outlined text-[28px]">badge</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline-md text-headline-md font-bold text-white tracking-tight" id="modal-title">Ficha do Profissional: Juliana Castilho</h2>
+<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 font-label-sm text-label-sm font-semibold" id="modal-status-badge">ATIVO</span>
+</div>
+<p class="font-body-sm text-body-sm text-white/80 mt-0.5" id="modal-subtitle">Matrícula: 52.883-0 • CPF: 332.901.448-90 • PEB 1 - Ensino Fundamental</p>
+</div>
+</div>
+<button class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors" onclick="closeProfessionalModal()" title="Fechar (Esc)">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Quasar / Material Nav Tabs Strip -->
+<div class="bg-surface-container-low px-space-lg flex items-center gap-1 overflow-x-auto select-none border-b border-surface-container-highest">
+<button class="modal-tab flex items-center gap-1.5 py-3 px-4 font-label-md text-label-md transition-all text-primary border-b-2 border-primary bg-surface-container-lowest font-bold" id="btn-tab-pessoais" onclick="switchTab('tab-pessoais')">
+<span class="material-symbols-outlined text-[18px]">person</span>
+<span class="">Dados Pessoais</span>
+</button>
+<button class="modal-tab flex items-center gap-1.5 py-3 px-4 font-label-md text-label-md font-semibold text-tertiary hover:text-on-surface transition-all" id="btn-tab-funcionais" onclick="switchTab('tab-funcionais')">
+<span class="material-symbols-outlined text-[18px]">work</span>
+<span class="">Dados Funcionais</span>
+</button>
+<button class="modal-tab flex items-center gap-1.5 py-3 px-4 font-label-md text-label-md font-semibold text-tertiary hover:text-on-surface transition-all" id="btn-tab-processos" onclick="switchTab('tab-processos')">
+<span class="material-symbols-outlined text-[18px]">sync_alt</span>
+<span class="">Processos (Remoção / Permuta)</span>
+<span class="w-2 h-2 rounded-full bg-primary ml-1"></span>
+</button>
+<button class="modal-tab flex items-center gap-1.5 py-3 px-4 font-label-md text-label-md font-semibold text-tertiary hover:text-on-surface transition-all" id="btn-tab-pontuacao" onclick="switchTab('tab-pontuacao')">
+<span class="material-symbols-outlined text-[18px]">stars</span>
+<span class="">Pontuação (Classificação)</span>
+</button>
+<button class="modal-tab flex items-center gap-1.5 py-3 px-4 font-label-md text-label-md font-semibold text-tertiary hover:text-on-surface transition-all" id="btn-tab-historico" onclick="switchTab('tab-historico')">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span class="">Histórico &amp; Auditoria</span>
+</button>
+</div>
+<!-- Modal Body (Scrollable container with tabs content) -->
+<div class="p-space-lg flex-1 overflow-y-auto bg-surface-bright">
+<!-- TAB 1: DADOS PESSOAIS -->
+<div class="tab-pane flex flex-col gap-space-lg" id="tab-pessoais">
+<div class="flex items-center gap-2 text-primary font-label-lg text-label-lg font-bold">
+<span class="material-symbols-outlined text-[20px]">badge</span>
+<span class="">Identificação Pessoal e Endereço</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<div class="flex flex-col md:col-span-2">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Nome Completo do Servidor *</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="inp-nome" type="text" value="Ana Paula Ferreira">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Matrícula Municipal *</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-tabular-data text-tabular-data font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="inp-matricula" type="text" value="48.912-3">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">CPF *</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-tabular-data text-tabular-data text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="inp-cpf" type="text" value="289.412.890-44">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Data de Nascimento</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="date" value="1984-06-18">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Número de Filhos Dependentes</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="number" value="2">
+</div>
+<div class="flex flex-col md:col-span-2">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">E-mail Institucional (@americana.sp.gov.br)</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="email" value="ana.ferreira@americana.sp.gov.br">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Celular / WhatsApp *</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-tabular-data text-tabular-data text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="(19) 99812-4011">
+</div>
+</div>
+<div class="pt-space-sm border-t border-surface-container flex items-center gap-2 text-primary font-label-lg text-label-lg font-bold">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+<span class="">Residência e Contato</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-space-md">
+<div class="flex flex-col md:col-span-2">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Logradouro (Rua / Av.)</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="Rua das Garças">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Número</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="382">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Complemento</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="Apto 42 - Bloco B">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Bairro</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="Jardim dos Lírios">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Cidade / UF</label>
+<input class="h-10 px-3 bg-surface-container-high rounded-lg font-body-md text-body-md text-on-surface-variant cursor-not-allowed shadow-inner" readonly="" type="text" value="Americana / SP">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">CEP</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-tabular-data text-tabular-data text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="13469-120">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Telefone Fixo / Recado</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-tabular-data text-tabular-data text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="(19) 3461-8890">
+</div>
+</div>
+</div>
+<!-- TAB 2: DADOS FUNCIONAIS -->
+<div class="tab-pane hidden flex flex-col gap-space-lg" id="tab-funcionais">
+<div class="flex items-center gap-2 text-primary font-label-lg text-label-lg font-bold">
+<span class="material-symbols-outlined text-[20px]">domain</span>
+<span class="">Vínculo Estatutário e Lotação de Exercício</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Cargo / Função *</label>
+<select class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="sel-cargo-modal">
+<option selected="">PEB 1 - Ensino Fundamental</option>
+<option>PEB 2 - Matemática</option>
+<option>PEB 2 - Língua Portuguesa</option>
+<option>PEB 2 - Educação Física</option>
+<option>ADI - Auxiliar de Desenv. Infantil</option>
+<option>Diretor de Escola</option>
+</select>
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Data de Admissão na Prefeitura</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="date" value="2012-03-12">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Data de Desligamento (quando houver)</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="date">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Unidade Sede Atual *</label>
+<select class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm">
+<option selected="">EMEF Maria Pavan Daphnis</option>
+<option>CIEP São Jerônimo</option>
+<option>EMEF Darcy Ribeiro</option>
+<option>EMEF Prof. Paulo Freire</option>
+<option>CIEP Profª Philomena M. Rossetti</option>
+</select>
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Exercício Efetivo Atual</label>
+<input class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="EMEF Maria Pavan Daphnis">
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Período / Turno</label>
+<select class="h-10 px-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm">
+<option selected="">Manhã (07h00 - 11h45)</option>
+<option>Tarde (12h45 - 17h30)</option>
+<option>Integral (07h30 - 16h30)</option>
+<option>Noite (18h30 - 22h30)</option>
+</select>
+</div>
+</div>
+<!-- Radio Situação -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-2">
+<span class="font-label-sm text-label-sm text-tertiary uppercase font-bold">Situação da Sede</span>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-lowest cursor-pointer shadow-sm">
+<input checked="" class="w-4 h-4 text-primary focus:ring-primary" name="situacao_sede" type="radio" value="COM_SEDE">
+<div>
+<span class="font-semibold text-on-surface font-body-sm text-body-sm block">Com Sede Fixada</span>
+<span class="text-tertiary text-label-sm font-label-sm">Titular permanente na unidade</span>
+</div>
+</label>
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-lowest cursor-pointer shadow-sm">
+<input class="w-4 h-4 text-primary focus:ring-primary" name="situacao_sede" type="radio" value="SEM_SEDE">
+<div>
+<span class="font-semibold text-on-surface font-body-sm text-body-sm block">Sem Sede (Adido / Vaga)</span>
+<span class="text-tertiary text-label-sm font-label-sm">Concorre compulsoriamente</span>
+</div>
+</label>
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-lowest cursor-pointer shadow-sm">
+<input class="w-4 h-4 text-primary focus:ring-primary" name="situacao_sede" type="radio" value="SUBST">
+<div>
+<span class="font-semibold text-on-surface font-body-sm text-body-sm block">Substituição Temporária</span>
+<span class="text-tertiary text-label-sm font-label-sm">Exercício por licença do titular</span>
+</div>
+</label>
+</div>
+</div>
+<div class="flex flex-col">
+<label class="font-label-sm text-label-sm text-tertiary mb-1">Observações do RH / Histórico Complementar</label>
+<textarea class="p-3 bg-surface-container-lowest rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" placeholder="Anotações internas do departamento de recursos humanos da SEDUC..." rows="3"></textarea>
+</div>
+</div>
+<!-- TAB 3: PROCESSOS (REMOÇÃO / PERMUTA) -->
+<div class="tab-pane hidden flex flex-col gap-space-lg" id="tab-processos">
+<div class="p-space-md rounded-xl bg-primary/10 border-l-4 border-primary flex items-start gap-space-md">
+<span class="material-symbols-outlined text-primary text-[26px]">info</span>
+<div>
+<h4 class="font-label-lg text-label-lg font-bold text-primary">Manifestação Prévia Institucional - Concurso de Remoção 2025</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">As manifestações aqui registradas habilitam a participação nas rodadas presenciais e conferência prévia pelo sistema de gestão.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- Box Remoção -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between gap-space-md mb-space-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-[#002f6c]/10 text-[#002f6c] flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">swap_horiz</span>
+</div>
+<div>
+<h5 class="font-label-lg text-label-lg font-bold text-on-surface">Concurso de Remoção Geral</h5>
+<span class="text-tertiary text-label-sm font-label-sm">Ano Letivo 2025 • Edital 002/2024</span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" id="switch-remocao" type="checkbox">
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">
+                A profissional confirmou interesse formal em concorrer a vagas remanescentes de PEB 1. Posição estimada no ranking geral: <strong>14º lugar</strong>.
+              </p>
+<div class="p-2.5 rounded bg-surface-container-low font-tabular-data text-tabular-data text-tertiary flex items-center justify-between">
+<span class="">Protocolo: <strong>REM-2025-0849A</strong></span>
+<span class="">Validado em: <strong>15/10/2024 às 14:22</strong></span>
+</div>
+</div>
+<!-- Box Permuta Mútua -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between gap-space-md mb-space-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-[#00695c]/10 text-[#00695c] flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">published_with_changes</span>
+</div>
+<div>
+<h5 class="font-label-lg text-label-lg font-bold text-on-surface">Manifestação Prévia de Permuta</h5>
+<span class="text-tertiary text-label-sm font-label-sm">Intenção comunicada previamente para participar de Permuta</span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" id="switch-permuta" type="checkbox">
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00695c]"></div>
+</label>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">
+                Indicador cadastral registrado antes do evento. O pareamento da permuta, quando aplicável, será validado pelo operador no evento.
+              </p>
+<div class="p-2.5 rounded bg-surface-container-low font-tabular-data text-tabular-data text-tertiary flex items-center justify-between">
+<span class="">Indicador cadastral: <strong>permuta = TRUE</strong></span>
+<span class="text-[#00695c] font-semibold">Somente leitura para o Operador</span>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 4: PONTUAÇÃO (CLASSIFICAÇÃO) -->
+<div class="tab-pane hidden flex flex-col gap-space-lg" id="tab-pontuacao">
+<!-- Administrative Lock Notice -->
+<div class="p-space-md rounded-xl bg-amber-500/10 border-l-4 border-amber-600 flex items-start gap-space-md">
+<span class="material-symbols-outlined text-amber-700 text-[26px]">lock</span>
+<div>
+<h4 class="font-label-lg text-label-lg font-bold text-amber-800">Pontuação Oficial do Professor</h4>
+<p class="font-body-sm text-body-sm text-amber-900 mt-0.5">A pontuação é um valor cadastral informado à aplicação. O sistema não calcula a pontuação. Somente o perfil Administrador pode alterá-la; demais perfis visualizam em modo somente leitura.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Total Score Big Display -->
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-center items-center text-center">
+<span class="font-label-sm text-label-sm uppercase text-tertiary font-bold">Pontuação Oficial Consolidada</span>
+<span class="font-headline-lg text-[40px] leading-tight font-extrabold text-primary my-2">84,50</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Classificação Geral na Modalidade: <strong>14º Lugar</strong></span>
+<div class="mt-3 flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px]">verified</span>
+<span class="">Validado pela Comissão Municipal</span>
+</div>
+</div>
+<!-- Administrative score edit -->
+<div class="md:col-span-2 p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-md">
+<h5 class="font-label-lg text-label-lg font-bold text-on-surface">Controle Administrativo da Pontuação</h5>
+<div class="p-space-md rounded bg-surface-container-low">
+<div class="font-label-sm text-label-sm text-tertiary uppercase font-bold mb-1">Regra do sistema</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">O sistema armazena apenas a pontuação oficial consolidada. Não existe cálculo automático por tempo de serviço, títulos ou assiduidade nesta versão.</p>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<div><label class="font-label-md text-label-md text-on-surface-variant block mb-1">Pontuação atual</label><input class="w-full h-10 px-3 bg-surface-container-low rounded font-tabular-data font-bold text-primary" value="84,50" type="text"></div>
+<div><label class="font-label-md text-label-md text-on-surface-variant block mb-1">Permissão</label><div class="h-10 px-3 bg-primary-fixed rounded flex items-center font-label-md text-label-md text-on-primary-fixed">Editável somente por Administrador</div></div>
+</div>
+<div class="flex justify-end"><button class="px-4 py-2 rounded bg-primary text-on-primary font-label-md text-label-md font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[17px]">save</span>Salvar nova pontuação</button></div>
+</div>
+</div>
+</div>
+<!-- TAB 5: HISTÓRICO & AUDITORIA -->
+<div class="tab-pane hidden flex flex-col gap-space-md" id="tab-historico">
+<div class="flex items-center justify-between">
+<h5 class="font-label-lg text-label-lg font-bold text-on-surface">Trilha Cronológica de Movimentações</h5>
+<span class="font-label-sm text-label-sm text-tertiary">3 eventos registrados</span>
+</div>
+<div class="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-container-highest">
+<!-- Event 1 -->
+<div class="relative flex items-start gap-3">
+<div class="absolute -left-6 mt-1 w-3 h-3 rounded-full bg-primary ring-4 ring-white"></div>
+<div class="flex-1 p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Manifestação de Remoção 2025</span>
+<span class="font-tabular-data text-tabular-data text-tertiary">15/10/2024 às 14:22</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Manifestação prévia de Remoção registrada no cadastro antes do evento.</p>
+<span class="inline-block mt-2 font-label-sm text-label-sm text-tertiary">Registrado por usuário cadastral autorizado (Administrador/Diretor/Secretário)</span>
+</div>
+</div>
+<!-- Event 2 -->
+<div class="relative flex items-start gap-3">
+<div class="absolute -left-6 mt-1 w-3 h-3 rounded-full bg-secondary ring-4 ring-white"></div>
+<div class="flex-1 p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Fixação de Sede na EMEF Maria Pavan Daphnis</span>
+<span class="font-tabular-data text-tabular-data text-tertiary">04/08/2018</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Remoção a pedido homologada no Processo Administrativo nº 4128/2018.</p>
+<span class="inline-block mt-2 font-label-sm text-label-sm text-tertiary">Homologado por: SEDUC Americana / Gabinete</span>
+</div>
+</div>
+<!-- Event 3 -->
+<div class="relative flex items-start gap-3">
+<div class="absolute -left-6 mt-1 w-3 h-3 rounded-full bg-outline ring-4 ring-white"></div>
+<div class="flex-1 p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-lg text-label-lg font-bold text-on-surface">Admissão por Concurso Público</span>
+<span class="font-tabular-data text-tabular-data text-tertiary">12/03/2012</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Posse no cargo efetivo de PEB 1 - Ensino Fundamental. Edital 01/2011.</p>
+<span class="inline-block mt-2 font-label-sm text-label-sm text-tertiary">Registro Original: Livro RH-04, Folha 89</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer (Action Buttons) -->
+<div class="px-space-lg py-space-md bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm border-t border-surface-container-highest">
+<div class="flex items-center gap-2 text-tertiary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">verified_user</span>
+<span class="">Alterações registradas sob Matrícula 84920 (Carlos Eduardo / Operador)</span>
+</div>
+<div class="flex items-center gap-space-sm w-full sm:w-auto justify-end">
+<button class="h-10 px-4 rounded bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-lg text-label-lg transition-colors" onclick="closeProfessionalModal()">
+            Cancelar
+          </button>
+<button class="h-10 px-5 rounded bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg transition-all shadow flex items-center gap-2" onclick="saveProfessionalChanges()">
+<span class="material-symbols-outlined text-[20px]">save</span>
+<span class="">Salvar Alterações</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Demo dataset for quick preview switching
+  const sampleProfessionals = {
+    1: {
+      nome: "Ana Paula Ferreira",
+      matricula: "48.912-3",
+      cpf: "289.412.890-44",
+      cargo: "PEB 1 - Ensino Fundamental",
+      status: "ATIVO"
+    },
+    2: {
+      nome: "Carlos Eduardo Martins",
+      matricula: "39.102-1",
+      cpf: "154.892.408-11",
+      cargo: "PEB 2 - Matemática",
+      status: "ATIVO"
+    },
+    3: {
+      nome: "Juliana Castilho",
+      matricula: "52.883-0",
+      cpf: "332.901.448-90",
+      cargo: "PEB 1 - Ensino Fundamental",
+      status: "ATIVO"
+    },
+    4: {
+      nome: "Patrícia Mendes Rocha",
+      matricula: "44.119-8",
+      cpf: "410.771.208-02",
+      cargo: "ADI - Auxiliar de Desenv. Infantil",
+      status: "ATIVO"
+    },
+    5: {
+      nome: "Marcos Vinícius Prado",
+      matricula: "36.782-4",
+      cpf: "211.554.808-72",
+      cargo: "PEB 2 - Educação Física",
+      status: "ATIVO"
+    },
+    6: {
+      nome: "Fernanda Alcântara Silveira",
+      matricula: "51.209-6",
+      cpf: "309.288.741-65",
+      cargo: "PEB 2 - Língua Portuguesa",
+      status: "ATIVO"
+    },
+    7: {
+      nome: "Roberto Camargo",
+      matricula: "22.401-9",
+      cpf: "098.341.229-30",
+      cargo: "Diretor de Escola",
+      status: "APOSENTADO"
+    }
+  };
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+
+    document.querySelectorAll('.modal-tab').forEach(btn => {
+      btn.classList.remove('text-primary', 'border-b-2', 'border-primary', 'bg-surface-container-lowest', 'font-bold');
+      btn.classList.add('text-tertiary', 'font-semibold');
+    });
+
+    const activeBtn = document.getElementById('btn-' + tabId);
+    if (activeBtn) {
+      activeBtn.classList.remove('text-tertiary', 'font-semibold');
+      activeBtn.classList.add('text-primary', 'border-b-2', 'border-primary', 'bg-surface-container-lowest', 'font-bold');
+    }
+  }
+
+  function openProfessionalModal(id) {
+    const data = sampleProfessionals[id] || sampleProfessionals[1];
+    document.getElementById('modal-title').textContent = "Ficha do Profissional: " + data.nome;
+    document.getElementById('modal-subtitle').textContent = "Matrícula: " + data.matricula + " • CPF: " + data.cpf + " • " + data.cargo;
+    document.getElementById('inp-nome').value = data.nome;
+    document.getElementById('inp-matricula').value = data.matricula;
+    document.getElementById('inp-cpf').value = data.cpf;
+    
+    // Switch to first tab by default
+    switchTab('tab-pessoais');
+    
+    const modal = document.getElementById('modal-professional');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeProfessionalModal() {
+    const modal = document.getElementById('modal-professional');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('system-toast');
+    const toastMsg = document.getElementById('toast-message');
+    if (message) toastMsg.textContent = message;
+
+    toast.classList.remove('translate-y-16', 'opacity-0', 'pointer-events-none');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-16', 'opacity-0', 'pointer-events-none');
+    }, 3500);
+  }
+
+  function saveProfessionalChanges() {
+    closeProfessionalModal();
+    showToast("✓ Dados do profissional atualizados com sucesso.");
+  }
+
+  // Button new professional
+  document.getElementById('btn-open-new-prof')?.addEventListener('click', () => {
+    document.getElementById('modal-title').textContent = "Cadastrar Novo Profissional";
+    document.getElementById('modal-subtitle').textContent = "Preencha as informações para inclusão no quadro da SEDUC Americana";
+    document.getElementById('inp-nome').value = "";
+    document.getElementById('inp-matricula').value = "";
+    document.getElementById('inp-cpf').value = "";
+    switchTab('tab-pessoais');
+    const modal = document.getElementById('modal-professional');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  });
+
+  // Export CSV mock trigger
+  document.getElementById('btn-export-csv')?.addEventListener('click', () => {
+    showToast("Exportando arquivo CSV com os profissionais filtrados...");
+  });
+
+  // Filter clear action
+  document.getElementById('btn-clear-filters')?.addEventListener('click', () => {
+    document.getElementById('filter-search-input').value = "";
+    document.getElementById('filter-cargo').selectedIndex = 0;
+    document.getElementById('filter-sede').selectedIndex = 0;
+    document.getElementById('filter-situacao').selectedIndex = 0;
+    document.getElementById('chk-filter-remocao').checked = false;
+    document.getElementById('chk-filter-permuta').checked = false;
+    showToast("Filtros redefinidos.");
+  });
+
+  // Close on Escape key press
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeProfessionalModal();
+    }
+  });
+</script></main><footer class="w-full bg-surface-container-high py-space-sm px-space-lg shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col sm:flex-row items-center justify-between gap-space-xs text-on-surface-variant font-label-sm text-label-sm"></div></footer></div>
+
+
+</body></html>

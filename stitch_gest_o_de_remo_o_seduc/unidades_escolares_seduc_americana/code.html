@@ -1,0 +1,667 @@
+<!DOCTYPE html><html lang="pt-BR" style="width: 1280px; height: 1629px; overflow: hidden; position: relative;"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface":"#fbf9f8","on-error-container":"#93000a","primary-container":"#1976d2","surface-dim":"#dcd9d9","error-container":"#ffdad6","primary-fixed-dim":"#a5c8ff","on-background":"#1b1c1c","primary":"#005dac","surface-container-highest":"#e4e2e1","on-tertiary-fixed-variant":"#344861","on-primary-fixed-variant":"#004786","on-primary":"#ffffff","tertiary-container":"#637792","outline":"#717783","tertiary-fixed-dim":"#b3c8e6","inverse-on-surface":"#f3f0f0","tertiary-fixed":"#d2e4ff","surface-bright":"#fbf9f8","surface-container":"#f0eded","on-surface":"#1b1c1c","surface-variant":"#e4e2e1","error":"#ba1a1a","on-primary-container":"#fffdff","secondary-fixed":"#d3e4ff","secondary-fixed-dim":"#a2c9ff","surface-tint":"#005faf","on-tertiary-container":"#fffeff","on-error":"#ffffff","background":"#fbf9f8","surface-container-low":"#f6f3f2","primary-fixed":"#d4e3ff","on-tertiary":"#ffffff","on-secondary":"#ffffff","on-secondary-container":"#004b85","inverse-surface":"#303030","secondary-container":"#89bcfe","on-secondary-fixed":"#001c38","on-secondary-fixed-variant":"#004881","surface-container-high":"#eae8e7","secondary":"#27609c","inverse-primary":"#a5c8ff","on-tertiary-fixed":"#051c33","outline-variant":"#c1c6d4","on-surface-variant":"#414752","surface-container-lowest":"#ffffff","on-primary-fixed":"#001c3a","tertiary":"#4a5e78"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"gutter":"1rem","space-xl":"1.5rem","space-sm":"0.5rem","space-lg":"1rem","space-md":"0.75rem","space-xs":"0.25rem","gutter-dense":"0.5rem","margin-mobile":"0.75rem","margin":"1.25rem"},fontFamily:{"headline-md":["Roboto Flex"],"headline-sm":["Roboto Flex"],"label-sm":["Roboto Flex"],"tabular-data":["Roboto Flex"],"label-md":["Roboto Flex"],"body-lg":["Roboto Flex"],"body-md":["Roboto Flex"],"label-lg":["Roboto Flex"],"headline-lg":["Roboto Flex"],"body-sm":["Roboto Flex"]},fontSize:{"headline-md":["1.375rem",{"lineHeight":"1.75rem","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","fontWeight":"600"}],"label-sm":["0.6875rem",{"lineHeight":"0.875rem","letterSpacing":"0.05em","fontWeight":"700"}],"tabular-data":["0.8125rem",{"lineHeight":"1.125rem","fontWeight":"500"}],"label-md":["0.75rem",{"lineHeight":"1rem","letterSpacing":"0.025em","fontWeight":"600"}],"body-lg":["0.9375rem",{"lineHeight":"1.375rem","fontWeight":"400"}],"body-md":["0.875rem",{"lineHeight":"1.25rem","fontWeight":"400"}],"label-lg":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"0.01em","fontWeight":"600"}],"headline-lg":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.015em","fontWeight":"700"}],"body-sm":["0.8125rem",{"lineHeight":"1.125rem","fontWeight":"400"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 h-14 bg-[#002f6c] text-white z-50 shadow-[0_1px_8px_rgba(0,0,0,0.12)] flex items-center px-space-lg justify-end"><div class="flex items-center gap-space-md"><div class="hidden sm:flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded border border-white/10 font-tabular-data text-body-sm text-white/95"></div><div class="flex items-center gap-2.5 pl-2"><div class="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-white text-[13px]"><span class="material-symbols-outlined text-[18px]">person</span></div><div class="hidden md:flex flex-col text-left leading-tight"><span class="text-[12px] font-bold text-white">Carlos Eduardo (SEDUC/RH)</span><span class="text-[10px] text-white/70">Matrícula: 84920 • Administrador</span></div></div><button class="p-1.5 rounded hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center justify-center" title="Encerrar Sessão" type="button"><span class="material-symbols-outlined text-[20px]">logout</span></button></div></header><aside class="fixed left-0 top-14 bottom-0 w-64 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex flex-col overflow-y-auto"><div class="p-space-md border-b border-surface-container-highest"><div class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider">Prefeitura de Americana</div><div class="font-headline-sm text-headline-sm text-primary">Gestão de Vagas</div></div><nav class="flex-1 px-space-xs py-space-sm space-y-space-md" data-active-classes="bg-primary-container text-on-primary-container font-semibold rounded"><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Evento ao Vivo</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="central-de-atendimento-presencial" href="#"><span class="material-symbols-outlined text-[18px]">record_voice_over</span><span class="">Central de Atendimento Presencial</span></a></div><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Gestão &amp; Cadastros</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="dashboard-geral" href="#"><span class="material-symbols-outlined text-[18px]">dashboard</span><span class="">Dashboard Geral</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded hover:text-on-surface transition-colors font-body-sm text-body-sm bg-primary-container text-on-primary-container font-semibold" data-path="unidades-escolares" href="#"><span class="material-symbols-outlined text-[18px]">school</span><span class="">Unidades Escolares</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="profissionais" href="#"><span class="material-symbols-outlined text-[18px]">badge</span><span class="">Profissionais</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="postos-de-trabalho-e-vagas" href="#"><span class="material-symbols-outlined text-[18px]">work</span><span class="">Postos de Trabalho &amp; Vagas</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="quadro-de-necessidades" href="#"></a></div><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Controle &amp; Relatórios</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="historico-de-movimentacoes" href="#"><span class="material-symbols-outlined text-[18px]">history</span><span class="">Histórico de Movimentações</span></a></div></nav></aside><div class="pl-64 flex flex-col min-h-screen"><main class="flex-1 pt-14 bg-surface w-full px-space-lg"><div class="flex flex-col w-full font-body-md text-on-surface">
+<!-- TOPO: Breadcrumb, Cabeçalho da Página e Botão de Ação -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-lg">
+<div class="space-y-space-xs">
+<nav aria-label="Navegação estrutural" class="flex items-center gap-1.5 font-label-md text-label-md text-tertiary">
+<span class="">SEDUC Americana</span>
+<span class="text-outline-variant font-normal">/</span>
+
+
+<span class="text-primary font-semibold">Unidades Escolares</span>
+</nav>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Unidades Escolares</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Gerencie as unidades da rede municipal de ensino de Americana.</p>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-start md:self-auto">
+<button class="inline-flex items-center gap-space-xs bg-primary hover:bg-secondary text-on-primary font-label-lg text-label-lg px-space-lg py-2.5 rounded-lg shadow-sm transition-colors duration-150" id="btn-nova-unidade" type="button">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="">Nova Unidade</span>
+</button>
+</div>
+</div>
+<!-- BARRA DE BUSCA E FILTROS -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm mb-space-lg flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md">
+<div class="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-space-md">
+<!-- Input de Busca -->
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest transition-all" id="filtro-busca" placeholder="Buscar por nome da unidade, código ou bairro..." type="text">
+</div>
+<!-- Select Tipo -->
+<div class="w-full sm:w-52">
+<select class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest cursor-pointer" id="filtro-tipo">
+<option value="">Todos os tipos</option>
+<option value="CIEP">CIEP</option>
+<option value="EMEF">EMEF</option>
+<option value="CRECHE">Creche / EMEI</option>
+<option value="POLO">Polo Administrativo</option>
+</select>
+</div>
+<!-- Select Status -->
+<div class="w-full sm:w-48">
+<select class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest cursor-pointer" id="filtro-status">
+<option value="">Todas as situações</option>
+<option value="ATIVA">Ativas</option>
+<option value="INATIVA">Inativas</option>
+</select>
+</div>
+</div>
+<!-- Indicador de Registros e Limpar Filtro -->
+<div class="flex items-center justify-between lg:justify-end gap-space-md pt-2 lg:pt-0">
+<span class="font-tabular-data text-tabular-data text-on-surface-variant font-medium">
+<strong class="text-primary font-bold">52</strong> unidades na rede
+      </span>
+<button class="text-tertiary hover:text-primary font-label-md text-label-md transition-colors underline decoration-dotted" id="btn-limpar-filtros" type="button">
+        Limpar filtros
+      </button>
+</div>
+</div>
+<!-- TABELA DE UNIDADES ESCOLARES -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col mb-space-lg">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider h-10 select-none">
+<th class="px-space-lg py-2 font-semibold">Nome da Unidade / INEP</th>
+<th class="px-space-md py-2 font-semibold">Tipo</th>
+<th class="px-space-md py-2 font-semibold">Bairro &amp; Endereço</th>
+<th class="px-space-md py-2 font-semibold">Telefone Institucional</th>
+<th class="px-space-md py-2 font-semibold text-center">Status</th>
+<th class="px-space-lg py-2 font-semibold text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low text-body-sm font-body-sm">
+<!-- Linha 1 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-primary-fixed flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">CIEP Profº Octávio César Borghi</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35019821 • Polo Região Sul</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary-fixed text-on-primary-fixed-variant tracking-wide">CIEP</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Cidade Jardim</p>
+<p class="text-[12px] text-outline">Rua das Rosas, 320</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3461-8200
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 2 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">EMEF Profª Maria Pavan Daphnis</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35018742 • Polo Região Leste</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed-variant tracking-wide">EMEF</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Jd. Nossa Senhora de Fátima</p>
+<p class="text-[12px] text-outline">Av. Nossa Senhora de Fátima, 810</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3462-1145
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 3 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">EMEF Darcy Ribeiro</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35020119 • Polo Região Oeste</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed-variant tracking-wide">EMEF</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Jd. Alvorada</p>
+<p class="text-[12px] text-outline">Rua dos Eucaliptos, 105</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3468-9920
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 4 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-primary-fixed flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">CIEP São Jerônimo</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35017551 • Polo Região Sul</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary-fixed text-on-primary-fixed-variant tracking-wide">CIEP</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">São Jerônimo</p>
+<p class="text-[12px] text-outline">Rua dos Cravos, 740</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3405-3310
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 5 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">EMEF Florestan Fernandes</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35022304 • Polo Região Norte</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed-variant tracking-wide">EMEF</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Morada do Sol</p>
+<p class="text-[12px] text-outline">Av. Estados Unidos, 1200</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3467-5421
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 6 (CRECHE) -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary shrink-0">
+<span class="material-symbols-outlined text-[18px]">child_care</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">Creche Curumim</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35016482 • Polo Central</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed tracking-wide">CRECHE</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Vila Jones</p>
+<p class="text-[12px] text-outline">Rua Carioba, 45</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3406-1890
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 7 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">EMEF Paulo Freire</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35019011 • Polo Região Centro</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-fixed text-on-secondary-fixed-variant tracking-wide">EMEF</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Parque Novo Mundo</p>
+<p class="text-[12px] text-outline">Rua Limeira, 512</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3465-7280
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                ATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-error hover:bg-error-container/40 transition" title="Inativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Linha 8 (Inativa para validação visual) -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group opacity-80">
+<td class="px-space-lg py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-outline shrink-0">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface text-body-md truncate">CIEP Carmine Botta</p>
+<p class="font-tabular-data text-label-sm text-outline">INEP: 35014390 • Desativada Provisória</p>
+</div>
+</div>
+</td>
+<td class="px-space-md py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-highest text-on-surface-variant tracking-wide">CIEP</span>
+</td>
+<td class="px-space-md py-3 text-on-surface-variant">
+<p class="text-on-surface font-medium">Praia Azul</p>
+<p class="text-[12px] text-outline">Rua Maranhão, 89</p>
+</td>
+<td class="px-space-md py-3 font-tabular-data text-on-surface-variant whitespace-nowrap">
+              (19) 3469-1002
+            </td>
+<td class="px-space-md py-3 text-center whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                INATIVA
+              </span>
+</td>
+<td class="px-space-lg py-3 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Visualizar detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="btn-editar-modal p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Editar dados da unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="btn-acao p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container-high transition" title="Reativar unidade" type="button">
+<span class="material-symbols-outlined text-[18px]">restart_alt</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- PAGINAÇÃO DISCRETA NO RODAPÉ -->
+<div class="px-space-lg py-space-sm bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md">
+<span class="font-tabular-data text-tabular-data text-on-surface-variant">
+          Exibindo <span class="font-semibold text-on-surface">1-8</span> de <span class="font-semibold text-on-surface">52</span> unidades
+        </span>
+<div class="hidden sm:flex items-center gap-1.5 text-tabular-data font-tabular-data text-on-surface-variant">
+<span class="">Linhas por página:</span>
+<select class="bg-surface-container-lowest text-on-surface font-tabular-data text-tabular-data px-2 py-0.5 rounded focus:outline-none cursor-pointer">
+<option>8</option>
+<option>15</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+</div>
+<nav aria-label="Controle de Paginação" class="flex items-center gap-1">
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:bg-surface-container-highest transition disabled:opacity-40 disabled:hover:bg-transparent font-label-md text-label-md flex items-center gap-1" disabled="" type="button">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+<span class="">Anterior</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-label-md text-label-md font-bold" type="button">1</button>
+<button class="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-container-highest transition font-label-md text-label-md" type="button">2</button>
+<button class="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-container-highest transition font-label-md text-label-md" type="button">3</button>
+<span class="px-1 text-outline font-label-md text-label-md">...</span>
+<button class="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-container-highest transition font-label-md text-label-md" type="button">7</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:bg-surface-container-highest transition font-label-md text-label-md flex items-center gap-1" type="button">
+<span class="">Próxima</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</nav>
+</div>
+</div>
+<!-- MODAL DE CADASTRO / EDIÇÃO DE UNIDADE ESCOLAR -->
+<div class="fixed inset-0 z-50 bg-[#0d233a]/50 backdrop-blur-xs items-center justify-center p-space-md hidden" id="modal-unidade">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in duration-200">
+<!-- Cabeçalho do Modal -->
+<div class="px-space-xl py-space-md bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-md">
+<div class="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[24px]">school</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface" id="modal-titulo">Editar Unidade Escolar</h2>
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary text-on-primary tracking-wide">CIEP • Polo 01</span>
+</div>
+<p class="font-body-sm text-body-sm text-outline">Identificador de cadastro: #Americana-84920</p>
+</div>
+</div>
+<button class="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high transition" id="btn-fechar-modal" title="Fechar formulário" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+</div>
+<!-- Formulário do Modal com Grid Espaçado -->
+<form class="p-space-xl overflow-y-auto space-y-space-md" id="form-unidade">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- Nome da Unidade -->
+<div class="md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Nome da Unidade Escolar *</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" required="" type="text" value="CIEP Profº Octávio César Borghi">
+</div>
+<!-- Tipo da Unidade -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Tipo da Unidade *</label>
+<select class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all cursor-pointer">
+<option selected="">CIEP - Centro Integrado de Educação Pública</option>
+<option>EMEF - Escola Municipal de Ensino Fundamental</option>
+<option>Creche / EMEI - Educação Infantil</option>
+<option>Polo Administrativo</option>
+</select>
+</div>
+<!-- Código INEP -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Código INEP (MEC)</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" type="text" value="35019821">
+</div>
+<!-- Endereço / Logradouro -->
+<div class="md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Logradouro *</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" required="" type="text" value="Rua das Rosas">
+</div>
+<!-- Número -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Número *</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" required="" type="text" value="320">
+</div>
+<!-- Complemento -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Complemento</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" type="text" value="Próximo à Praça Central">
+</div>
+<!-- Bairro -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Bairro *</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" required="" type="text" value="Cidade Jardim">
+</div>
+<!-- Município / UF -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Município / Estado</label>
+<input class="w-full px-3 py-2 bg-surface-container text-on-surface-variant font-body-md text-body-md rounded-lg focus:outline-none cursor-not-allowed" readonly="" type="text" value="Americana / SP">
+</div>
+<!-- CEP -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">CEP *</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" type="text" value="13466-500">
+</div>
+<!-- Telefone -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Telefones de Contato *</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all" type="text" value="(19) 3461-8200 / (19) 3461-8201">
+</div>
+<!-- Status da Unidade -->
+<div class="md:col-span-2 pt-2">
+<label class="font-label-md text-label-md text-on-surface-variant block mb-2">Situação da Unidade Escolar</label>
+<div class="flex items-center gap-space-lg">
+<label class="inline-flex items-center gap-2 cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary focus:ring-primary" name="status_unidade" type="radio" value="ativa">
+<span class="font-body-md text-body-md text-on-surface">Ativa (em pleno funcionamento)</span>
+</label>
+<label class="inline-flex items-center gap-2 cursor-pointer">
+<input class="w-4 h-4 text-primary focus:ring-primary" name="status_unidade" type="radio" value="inativa">
+<span class="font-body-md text-body-md text-on-surface-variant">Inativa (sem atividades escolares)</span>
+</label>
+</div>
+</div>
+<!-- Observações Administrativas -->
+<div class="md:col-span-2 space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant block">Observações Administrativas / Infraestrutura</label>
+<textarea class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md text-body-md rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all resize-none" rows="3">Unidade polo com 24 salas de aula, polos esportivos e funcionamento em período integral e parcial.</textarea>
+</div>
+</div>
+<!-- Aviso de Auditoria e Integridade -->
+<div class="p-space-md rounded-lg bg-surface-container flex items-start gap-space-sm text-outline">
+<span class="material-symbols-outlined text-[20px] text-tertiary shrink-0 mt-0.5">info</span>
+<p class="font-body-sm text-body-sm leading-relaxed">
+<strong>Aviso de integridade:</strong> Para exclusão definitiva de registros, certifique-se de que não haja vagas docentes ativas vinculadas no quadro de atribuição. Unidades históricas devem ser preferencialmente mantidas como Inativas.
+          </p>
+</div>
+</form>
+<!-- Rodapé com Ações -->
+<div class="px-space-xl py-space-md bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<button class="text-error hover:text-on-error-container hover:bg-error-container/30 px-3 py-2 rounded-lg font-label-lg text-label-lg transition-colors flex items-center gap-1 self-start sm:self-auto" id="btn-inativar-modal" type="button">
+<span class="material-symbols-outlined text-[18px]">block</span>
+<span class="">Inativar Unidade</span>
+</button>
+<div class="flex items-center gap-space-sm w-full sm:w-auto justify-end">
+<button class="px-space-lg py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high font-label-lg text-label-lg transition-colors" id="btn-cancelar-modal" type="button">
+            Cancelar
+          </button>
+<button class="px-space-xl py-2 bg-primary hover:bg-secondary text-on-primary rounded-lg font-label-lg text-label-lg shadow-sm transition-colors" form="form-unidade" id="btn-salvar-modal" type="submit">
+            Salvar Alterações
+          </button>
+</div>
+</div>
+</div>
+</div>
+<script>
+    (function() {
+      // Destacar item 'Unidades Escolares' no menu lateral do App Shell
+      const navLinks = document.querySelectorAll('aside nav a[data-path="unidades-escolares"]');
+      navLinks.forEach(link => {
+        link.classList.remove('text-on-surface-variant', 'hover:bg-surface-container-high');
+        link.classList.add('bg-primary-container', 'text-on-primary-container', 'font-semibold', 'rounded');
+      });
+
+      // Elementos do Modal
+      const modal = document.getElementById('modal-unidade');
+      const btnNovaUnidade = document.getElementById('btn-nova-unidade');
+      const btnFecharModal = document.getElementById('btn-fechar-modal');
+      const btnCancelarModal = document.getElementById('btn-cancelar-modal');
+      const botoesEditar = document.querySelectorAll('.btn-editar-modal');
+      const modalTitulo = document.getElementById('modal-titulo');
+      const formUnidade = document.getElementById('form-unidade');
+      const btnLimpar = document.getElementById('btn-limpar-filtros');
+      const inputBusca = document.getElementById('filtro-busca');
+      const selectTipo = document.getElementById('filtro-tipo');
+      const selectStatus = document.getElementById('filtro-status');
+
+      function abrirModal(modo) {
+        if (modo === 'novo') {
+          modalTitulo.textContent = 'Nova Unidade Escolar';
+          formUnidade.reset();
+        } else {
+          modalTitulo.textContent = 'Editar Unidade Escolar';
+        }
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function fecharModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      if (btnNovaUnidade) {
+        btnNovaUnidade.addEventListener('click', () => abrirModal('novo'));
+      }
+
+      botoesEditar.forEach(btn => {
+        btn.addEventListener('click', () => abrirModal('editar'));
+      });
+
+      if (btnFecharModal) btnFecharModal.addEventListener('click', fecharModal);
+      if (btnCancelarModal) btnCancelarModal.addEventListener('click', fecharModal);
+
+      // Fechar modal ao clicar fora
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          fecharModal();
+        }
+      });
+
+      // Fechar com ESC
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+          fecharModal();
+        }
+      });
+
+      // Formulário submit
+      formUnidade.addEventListener('submit', (e) => {
+        e.preventDefault();
+        fecharModal();
+      });
+
+      // Limpar Filtros
+      if (btnLimpar) {
+        btnLimpar.addEventListener('click', () => {
+          inputBusca.value = '';
+          selectTipo.value = '';
+          selectStatus.value = '';
+        });
+      }
+    })();
+  </script>
+</div></main><footer class="w-full bg-surface-container-high py-space-sm px-space-lg shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col sm:flex-row items-center justify-between gap-space-xs text-on-surface-variant font-label-sm text-label-sm"></div></footer></div>
+
+
+</body></html>

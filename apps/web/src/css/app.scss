@@ -1,0 +1,92 @@
+:root {
+  color: #1b1c1c;
+  font-family: 'Roboto Flex Variable', 'Roboto Flex', Roboto, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  --seduc-header: #002f6c;
+  --seduc-surface: #fbf9f8;
+  --seduc-surface-low: #f6f3f2;
+  --seduc-outline: #c1c6d4;
+}
+
+body {
+  background: var(--seduc-surface);
+}
+
+.foundation-layout {
+  background: var(--seduc-surface);
+}
+
+.institutional-header {
+  background: var(--seduc-header);
+}
+
+.foundation-toolbar {
+  min-height: 56px;
+  padding-inline: 24px;
+}
+
+.brand-mark {
+  align-items: center;
+  background: #1976d2;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 8px;
+  color: #fff;
+  display: flex;
+  font-size: 18px;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  margin-right: 12px;
+  width: 36px;
+}
+
+.brand-title,
+.brand-subtitle {
+  display: block;
+  line-height: 1.2;
+}
+
+.brand-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.brand-subtitle {
+  color: rgb(255 255 255 / 75%);
+  font-size: 11px;
+}
+
+.foundation-page {
+  align-items: center;
+  background:
+    radial-gradient(circle at 80% 15%, rgb(25 118 210 / 8%), transparent 28%), var(--seduc-surface);
+  display: flex;
+  justify-content: center;
+  min-height: calc(100vh - 56px);
+  padding: 24px;
+}
+
+.foundation-content {
+  max-width: 680px;
+  width: 100%;
+}
+
+.foundation-card {
+  background: #fff;
+  border-color: var(--seduc-outline);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgb(13 35 58 / 6%);
+}
+
+@media (max-width: 599px) {
+  .foundation-toolbar {
+    padding-inline: 12px;
+  }
+
+  .foundation-page {
+    padding: 16px;
+  }
+}

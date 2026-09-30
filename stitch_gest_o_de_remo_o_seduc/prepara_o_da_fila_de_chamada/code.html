@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt-BR" style="width: 1280px; height: 1629px; overflow: hidden; position: relative;"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface":"#fbf9f8","on-error-container":"#93000a","primary-container":"#1976d2","surface-dim":"#dcd9d9","error-container":"#ffdad6","primary-fixed-dim":"#a5c8ff","on-background":"#1b1c1c","primary":"#005dac","surface-container-highest":"#e4e2e1","on-tertiary-fixed-variant":"#344861","on-primary-fixed-variant":"#004786","on-primary":"#ffffff","tertiary-container":"#637792","outline":"#717783","tertiary-fixed-dim":"#b3c8e6","inverse-on-surface":"#f3f0f0","tertiary-fixed":"#d2e4ff","surface-bright":"#fbf9f8","surface-container":"#f0eded","on-surface":"#1b1c1c","surface-variant":"#e4e2e1","error":"#ba1a1a","on-primary-container":"#fffdff","secondary-fixed":"#d3e4ff","secondary-fixed-dim":"#a2c9ff","surface-tint":"#005faf","on-tertiary-container":"#fffeff","on-error":"#ffffff","background":"#fbf9f8","surface-container-low":"#f6f3f2","primary-fixed":"#d4e3ff","on-tertiary":"#ffffff","on-secondary":"#ffffff","on-secondary-container":"#004b85","inverse-surface":"#303030","secondary-container":"#89bcfe","on-secondary-fixed":"#001c38","on-secondary-fixed-variant":"#004881","surface-container-high":"#eae8e7","secondary":"#27609c","inverse-primary":"#a5c8ff","on-tertiary-fixed":"#051c33","outline-variant":"#c1c6d4","on-surface-variant":"#414752","surface-container-lowest":"#ffffff","on-primary-fixed":"#001c3a","tertiary":"#4a5e78"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"gutter":"1rem","space-xl":"1.5rem","space-sm":"0.5rem","space-lg":"1rem","space-md":"0.75rem","space-xs":"0.25rem","gutter-dense":"0.5rem","margin-mobile":"0.75rem","margin":"1.25rem"},fontFamily:{"headline-md":["Roboto Flex"],"headline-sm":["Roboto Flex"],"label-sm":["Roboto Flex"],"tabular-data":["Roboto Flex"],"label-md":["Roboto Flex"],"body-lg":["Roboto Flex"],"body-md":["Roboto Flex"],"label-lg":["Roboto Flex"],"headline-lg":["Roboto Flex"],"body-sm":["Roboto Flex"]},fontSize:{"headline-md":["1.375rem",{"lineHeight":"1.75rem","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","fontWeight":"600"}],"label-sm":["0.6875rem",{"lineHeight":"0.875rem","letterSpacing":"0.05em","fontWeight":"700"}],"tabular-data":["0.8125rem",{"lineHeight":"1.125rem","fontWeight":"500"}],"label-md":["0.75rem",{"lineHeight":"1rem","letterSpacing":"0.025em","fontWeight":"600"}],"body-lg":["0.9375rem",{"lineHeight":"1.375rem","fontWeight":"400"}],"body-md":["0.875rem",{"lineHeight":"1.25rem","fontWeight":"400"}],"label-lg":["0.875rem",{"lineHeight":"1.25rem","letterSpacing":"0.01em","fontWeight":"600"}],"headline-lg":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.015em","fontWeight":"700"}],"body-sm":["0.8125rem",{"lineHeight":"1.125rem","fontWeight":"400"}]}}}}</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 h-14 bg-[#002f6c] text-white z-50 shadow-[0_1px_8px_rgba(0,0,0,0.12)] flex items-center px-space-lg justify-end"><div class="flex items-center gap-space-md"><div class="hidden sm:flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded border border-white/10 font-tabular-data text-body-sm text-white/95"></div><div class="flex items-center gap-2.5 pl-2"><div class="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center font-bold text-white text-[13px]"><span class="material-symbols-outlined text-[18px]">person</span></div><div class="hidden md:flex flex-col text-left leading-tight"><span class="text-[12px] font-bold text-white">Carlos Eduardo (SEDUC/RH)</span><span class="text-[10px] text-white/70">Matrícula: 84920 • Operador</span></div></div><button class="p-1.5 rounded hover:bg-white/10 text-white/80 hover:text-white transition-colors flex items-center justify-center" title="Encerrar Sessão" type="button"><span class="material-symbols-outlined text-[20px]">logout</span></button></div></header><aside class="fixed left-0 top-14 bottom-0 w-64 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex flex-col overflow-y-auto"><div class="p-space-md border-b border-surface-container-highest"><div class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider">Prefeitura de Americana</div><div class="font-headline-sm text-headline-sm text-primary">Gestão de Vagas</div></div><nav class="flex-1 px-space-xs py-space-sm space-y-space-md" data-active-classes="bg-primary-container text-on-primary-container font-semibold rounded"><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Evento ao Vivo</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="central-de-atendimento-presencial" href="#"><span class="material-symbols-outlined text-[18px]">record_voice_over</span><span class="">Central de Atendimento Presencial</span></a></div><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Gestão &amp; Cadastros</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="dashboard-geral" href="#"><span class="material-symbols-outlined text-[18px]">dashboard</span><span class="">Dashboard Geral</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="unidades-escolares" href="#"><span class="material-symbols-outlined text-[18px]">school</span><span class="">Unidades Escolares</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="profissionais" href="#"><span class="material-symbols-outlined text-[18px]">badge</span><span class="">Profissionais</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="postos-de-trabalho-e-vagas" href="#"><span class="material-symbols-outlined text-[18px]">work</span><span class="">Postos de Trabalho &amp; Vagas</span></a></div><div class="space-y-1"><div class="px-space-sm py-1 font-label-sm text-label-sm text-outline uppercase tracking-wider">Controle &amp; Relatórios</div><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="historico-de-movimentacoes" href="#"><span class="material-symbols-outlined text-[18px]">history</span><span class="">Histórico de Movimentações</span></a><a class="flex items-center gap-space-xs px-space-sm py-2 rounded text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-sm text-body-sm" data-path="relatorios-finais" href="#"></a></div></nav></aside><div class="pl-64 flex flex-col min-h-screen"><main class="flex-1 pt-14 bg-surface w-full px-space-lg"><div class="flex flex-col w-full">
+<!-- BREADCRUMB & HEADER DA ETAPA -->
+<section class="py-space-md">
+<nav class="flex items-center gap-space-xs font-label-md text-label-md text-tertiary mb-space-xs">
+<span class="">SEDUC Americana</span>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<span class="">Concurso de Remoção Presencial 2025</span>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<span class="text-primary font-semibold">Preparação da Fila de Chamada</span>
+</nav>
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-sm pb-space-sm">
+<div class="flex items-start gap-space-sm">
+<div class="w-10 h-10 rounded bg-primary-container text-on-primary-container flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[24px]">queue_play_next</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface leading-tight">
+            Preparação da Fila de Chamada
+          </h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Selecione o cargo/função, utilize os seletores de seleção rápida ou marque manualmente os profissionais para consolidar a ordem oficial de convocação.
+          </p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs bg-surface-container-high px-space-md py-space-xs rounded text-on-surface-variant font-label-md text-label-md self-start lg:self-center">
+<span class="material-symbols-outlined text-[18px] text-secondary">verified_user</span>
+<span class="">Etapa Prévia Vinculante • Auditável</span>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 1: FILTROS E CONTEXTO DO CARGO -->
+<section class="mb-space-md">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-md items-end">
+<div class="md:col-span-6 flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface-variant" for="select-cargo">
+            Cargo / Especialidade Docente:
+          </label>
+<div class="relative">
+<select class="w-full bg-surface-container-low text-on-surface font-body-md text-body-md rounded px-space-md py-2 pr-8 appearance-none focus:outline-none focus:ring-2 focus:ring-primary" id="select-cargo">
+<option selected="" value="peb1-fundamental">PEB 1 - Ensino Fundamental (Jornada Integral 30h)</option>
+<option value="peb1-infantil">PEB 1 - Educação Infantil (Creche e Pré-Escola 30h)</option>
+<option value="peb2-portugues">PEB 2 - Língua Portuguesa (Jornada Docente 24h)</option>
+<option value="peb2-matematica">PEB 2 - Matemática (Jornada Docente 24h)</option>
+<option value="pedagogo">Professor Coordenador Pedagógico</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2.5 pointer-events-none text-outline text-[20px]">expand_more</span>
+</div>
+</div>
+<div class="md:col-span-3 flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface-variant">
+            Filtro de Vagas da Rodada:
+          </label>
+<div class="relative">
+<select class="w-full bg-surface-container-low text-on-surface font-body-md text-body-md rounded px-space-md py-2 pr-8 appearance-none focus:outline-none focus:ring-2 focus:ring-primary"><option class="" selected="" value="todas">Todas as Vagas Disponíveis</option>
+<option class="" value="com-sede">Apenas Vagas com Sede</option>
+<option class="" value="sem-sede">Apenas Sem Sede</option></select>
+<span class="material-symbols-outlined absolute right-2.5 top-2.5 pointer-events-none text-outline text-[20px]">filter_alt</span>
+</div>
+</div>
+<div class="md:col-span-3 flex items-center justify-end">
+<div class="w-full bg-surface-container-high rounded p-2.5 flex items-center gap-space-sm justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-tertiary">Quadro Total</span>
+<span class="font-headline-sm text-headline-sm text-primary font-bold">48 servidores</span>
+</div>
+<span class="material-symbols-outlined text-[28px] text-primary-fixed-dim">groups</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 2: PAINEL DE CONTROLE DE MARCAÇÃO EM MASSA & AVISO AUDITÁVEL -->
+<section class="mb-space-md">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md space-y-space-md">
+<!-- Aviso Institucional -->
+<!-- Barra de Seletores Rápidos e Busca -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container rounded p-space-sm">
+<!-- Pills / Botões em Lote -->
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider pr-1">Marcação Rápida:</span>
+<button class="px-space-sm py-1 rounded bg-surface-container-lowest hover:bg-surface-container-high text-primary font-label-md text-label-md transition shadow-xs flex items-center gap-1" id="btn-select-all" type="button">
+<span class="material-symbols-outlined text-[16px]">select_all</span>
+            TODOS
+          </button>
+<button class="px-space-sm py-1 rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition shadow-xs flex items-center gap-1" id="btn-select-sede" type="button">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+            COM SEDE
+          </button>
+<button class="px-space-sm py-1 rounded bg-surface-container-lowest hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition shadow-xs flex items-center gap-1" id="btn-select-no-sede" type="button">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+            SEM SEDE
+          </button>
+<button class="px-space-sm py-1 rounded bg-secondary-fixed text-on-secondary-fixed hover:bg-secondary-fixed-dim font-label-md text-label-md transition shadow-xs flex items-center gap-1" id="btn-select-remocao" type="button">
+<span class="material-symbols-outlined text-[16px]">swap_horiz</span>
+            REMOÇÃO
+          </button>
+<button class="px-space-sm py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed hover:bg-tertiary-fixed-dim font-label-md text-label-md transition shadow-xs flex items-center gap-1" id="btn-select-permuta" type="button">
+<span class="material-symbols-outlined text-[16px]">handshake</span>
+            PERMUTA
+          </button>
+<button class="px-space-sm py-1 rounded bg-surface-container-lowest hover:bg-error-container text-error font-label-md text-label-md transition shadow-xs flex items-center gap-1" id="btn-deselect-all" type="button">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span>
+            DESMARCAR TODOS
+          </button>
+</div>
+<!-- Busca Textual & Contador -->
+<div class="flex items-center gap-space-sm">
+<div class="relative w-64">
+<input class="w-full bg-surface-container-lowest text-on-surface font-body-sm text-body-sm rounded pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary shadow-xs" id="input-search" placeholder="Buscar por nome ou matrícula..." type="text"/>
+<span class="material-symbols-outlined absolute left-2 top-2 text-outline text-[18px]">search</span>
+</div>
+<span class="font-tabular-data text-tabular-data text-on-surface-variant whitespace-nowrap">
+            Exibindo todos os <strong class="text-on-surface">48</strong> profissionais
+          </span>
+</div>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 3: TABELA DE CONFERÊNCIA GERAL DOS SERVIDORES -->
+<section class="mb-space-md"><div class="mb-space-sm px-space-md py-2 rounded bg-primary-fixed/40 text-on-primary-fixed font-body-sm text-body-sm" id="eligibility-note"><strong>Evento atual: REMOÇÃO.</strong> Todos os profissionais do cargo permanecem visíveis para conferência; somente quem possui manifestação prévia de Remoção pode compor a fila final.</div>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left font-body-md text-body-md">
+<thead class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<tr>
+<th class="py-2.5 px-space-md w-12 text-center" scope="col">
+<input class="w-4 h-4 rounded text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer align-middle" id="master-checkbox" type="checkbox"/>
+</th>
+<th class="py-2.5 px-space-sm" scope="col">Nome do Servidor</th>
+<th class="py-2.5 px-space-sm" scope="col">Matrícula</th>
+<th class="py-2.5 px-space-sm" scope="col">Situação Vínculo</th>
+<th class="py-2.5 px-space-sm" scope="col">Unidade de Lotação / Sede</th>
+<th class="py-2.5 px-space-sm text-right" scope="col">Pontuação Oficial</th>
+<th class="py-2.5 px-space-sm" scope="col">Admissão</th>
+<th class="py-2.5 px-space-md text-center" scope="col">Manifestação Prévia (Travada)</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-highest" id="prof-table-body"><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest" data-has-sede="true" data-id="1" data-permuta="false" data-remocao="true"><td class="py-2 px-space-md text-center"><input checked="" class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer align-middle" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Maria Helena Souza</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">31.204-1</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">COM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">EMEF Darcy Ribeiro</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">84,50 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">10/02/2005</td><td class="py-2 px-space-md text-center"><div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm shadow-xs"><span class="material-symbols-outlined text-[14px]">lock</span><span>REMOÇÃO</span></div></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest" data-has-sede="true" data-id="2" data-permuta="false" data-remocao="true"><td class="py-2 px-space-md text-center"><input checked="" class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer align-middle" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Roberto Camargo</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">39.811-1</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">COM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">CIEP Praia Azul</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">82,00 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">11/02/2006</td><td class="py-2 px-space-md text-center"><div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm shadow-xs"><span class="material-symbols-outlined text-[14px]">lock</span><span>REMOÇÃO</span></div></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest" data-has-sede="true" data-id="3" data-permuta="false" data-remocao="true"><td class="py-2 px-space-md text-center"><input checked="" class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer align-middle" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Ana Paula Ferreira</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">48.912-3</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">COM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">EMEF Profª Maria Pavan Daphnis</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">79,50 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">04/08/2007</td><td class="py-2 px-space-md text-center"><div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm shadow-xs"><span class="material-symbols-outlined text-[14px]">lock</span><span>REMOÇÃO</span></div></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest" data-has-sede="false" data-id="4" data-permuta="false" data-remocao="true"><td class="py-2 px-space-md text-center"><input checked="" class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer align-middle" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Carlos Eduardo Lima</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">48.930-1</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container-highest text-on-surface-variant font-bold">SEM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">EMEF Milton Santos</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">79,50 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">04/08/2007</td><td class="py-2 px-space-md text-center"><div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm shadow-xs"><span class="material-symbols-outlined text-[14px]">lock</span><span>REMOÇÃO</span></div></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest" data-has-sede="true" data-id="5" data-permuta="false" data-remocao="true"><td class="py-2 px-space-md text-center"><input checked="" class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer align-middle" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Patrícia Mendes</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">52.109-8</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">COM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">CIEP São Jerônimo</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">76,00 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">13/03/2009</td><td class="py-2 px-space-md text-center"><div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm shadow-xs"><span class="material-symbols-outlined text-[14px]">lock</span><span>REMOÇÃO</span></div></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest opacity-60" data-has-sede="true" data-id="6" data-permuta="true" data-remocao="false"><td class="py-2 px-space-md text-center"><input class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-not-allowed align-middle" disabled="" title="Não inscrito previamente em Remoção" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Juliana Castilho</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">55.441-2</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">COM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">EMEF Darcy Ribeiro</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">74,50 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">15/06/2010</td><td class="py-2 px-space-md text-center"><div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm shadow-xs"><span class="material-symbols-outlined text-[14px]">lock</span><span>PERMUTA</span></div></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest opacity-60" data-has-sede="true" data-id="7" data-permuta="false" data-remocao="false"><td class="py-2 px-space-md text-center"><input class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-not-allowed align-middle" disabled="" title="Não inscrito previamente em Remoção" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Fernanda Alcântara</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">58.330-2</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-bold">COM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">CIEP Prof. Octávio César Borghi</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">73,20 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">20/01/2018</td><td class="py-2 px-space-md text-center"><span class="font-label-sm text-label-sm text-outline">Sem manifestação para este evento</span></td></tr><tr class="hover:bg-surface-container-low transition-colors bg-surface-container-lowest opacity-60" data-has-sede="false" data-id="8" data-permuta="false" data-remocao="false"><td class="py-2 px-space-md text-center"><input class="server-checkbox w-4 h-4 rounded text-primary focus:ring-primary cursor-not-allowed align-middle" disabled="" title="Não inscrito previamente em Remoção" type="checkbox"/></td><td class="py-2 px-space-sm"><div class="font-label-lg text-label-lg text-on-surface font-semibold">Luciana Silveira</div><div class="font-body-sm text-body-sm text-tertiary">PEB 1 - Ensino Fundamental</div></td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">63.811-0</td><td class="py-2 px-space-sm"><span class="inline-flex items-center px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container-highest text-on-surface-variant font-bold">SEM SEDE</span></td><td class="py-2 px-space-sm font-body-sm text-body-sm text-on-surface">CIEP Maria P. Zanaga</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-right font-bold text-primary">70,50 pts</td><td class="py-2 px-space-sm font-tabular-data text-tabular-data text-on-surface-variant">03/03/2019</td><td class="py-2 px-space-md text-center"><span class="font-label-sm text-label-sm text-outline">Sem manifestação para este evento</span></td></tr></tbody>
+</table>
+</div>
+<!-- Paginação compacta institucional -->
+<div class="p-space-sm bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm font-body-sm text-body-sm text-on-surface-variant">
+<span class="">Mostrando <strong>8 de 48</strong> servidores principais deste lote de amostragem</span>
+<div class="flex items-center gap-1 font-label-md text-label-md">
+<button class="px-2 py-1 rounded bg-surface-container-lowest shadow-xs hover:bg-surface-container-high disabled:opacity-40" disabled="">Anterior</button>
+<span class="px-2 py-1 bg-primary text-on-primary rounded font-bold">1</span>
+<button class="px-2 py-1 rounded bg-surface-container-lowest shadow-xs hover:bg-surface-container-high">2</button>
+<button class="px-2 py-1 rounded bg-surface-container-lowest shadow-xs hover:bg-surface-container-high">3</button>
+<button class="px-2 py-1 rounded bg-surface-container-lowest shadow-xs hover:bg-surface-container-high">Próxima</button>
+</div>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 4: BARRA DE RESUMO EM TEMPO REAL -->
+<section class="mb-space-md">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Métrica 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex items-center justify-between">
+<div>
+<div class="font-label-sm text-label-sm uppercase text-tertiary">Cargo Ativo</div>
+<div class="font-label-lg text-label-lg text-on-surface font-semibold truncate max-w-[170px]" title="PEB 1 - Ensino Fundamental">
+            PEB 1 - EF (30h)
+          </div>
+</div>
+<div class="w-9 h-9 rounded bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">badge</span>
+</div>
+</div>
+<!-- Métrica 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex items-center justify-between">
+<div>
+<div class="font-label-sm text-label-sm uppercase text-tertiary">Total do Cargo</div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-bold">48 servidores</div>
+</div>
+<div class="w-9 h-9 rounded bg-surface-container flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[20px]">group</span>
+</div>
+</div>
+<!-- Métrica 3 (Destaque) -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex items-center justify-between">
+<div>
+<div class="font-label-sm text-label-sm uppercase text-primary font-bold">Selecionados para Chamada</div>
+<div class="font-headline-sm text-headline-sm text-primary font-bold" id="metric-selected-count">5 profissionais</div>
+</div>
+<div class="w-9 h-9 rounded bg-primary-fixed flex items-center justify-center text-on-primary-fixed">
+<span class="material-symbols-outlined text-[20px]">how_to_reg</span>
+</div>
+</div>
+<!-- Métrica 4 -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex items-center justify-between">
+<div>
+<div class="font-label-sm text-label-sm uppercase text-tertiary">Taxa de Convocação</div>
+<div class="font-headline-sm text-headline-sm text-secondary font-bold" id="metric-percentage">10,4% da categoria</div>
+</div>
+<div class="w-9 h-9 rounded bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+</div>
+</div>
+</div>
+</section>
+<!-- SEÇÃO 5: PRÉVIA DA FILA DE CHAMADA (ORDENADA AUTOMATICAMENTE) -->
+<section class="mb-space-lg">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[24px]">low_priority</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">
+            Prévia da Fila Oficial de Chamada
+          </h2>
+</div>
+<div class="inline-flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-error">lock</span>
+<span class="">Prévia Automática — Ordem Não Editável</span>
+</div>
+</div>
+<!-- Box Regra de Desempate / Auditoria -->
+<div class="bg-surface-container-low rounded p-space-sm mb-space-md flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-outline text-[18px] mt-0.5">balance</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+<strong class="text-on-surface font-semibold">Critério Legal de Desempate e Ordenação para Professores:</strong>
+          1º Maior Pontuação Oficial → 2º Data de Admissão mais antiga → 3º Data de Nascimento mais antiga. A lista abaixo atualiza instantaneamente conforme os profissionais marcados e não permite reordenação manual por segurança jurídica e compliance do concurso.
+        </p>
+</div>
+<!-- Grid de Cards Ordenados -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-sm" id="queue-preview-container"><div class="bg-surface-container-lowest rounded p-space-sm flex items-start gap-space-sm relative shadow-xs"><div class="w-1 absolute top-0 bottom-0 left-0 bg-primary rounded-l"></div><div class="w-8 h-8 rounded bg-primary text-on-primary font-tabular-data text-tabular-data font-bold flex items-center justify-center shrink-0">#01</div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-1"><span class="font-label-lg text-label-lg text-on-surface font-bold truncate">Maria Helena Souza</span><span class="font-tabular-data text-tabular-data font-bold text-primary shrink-0">84,50 pts</span></div><div class="font-body-sm text-body-sm text-tertiary truncate">EMEF Darcy Ribeiro</div><div class="flex items-center gap-space-xs mt-1 font-label-sm text-label-sm text-on-surface-variant"><span>Adm: 10/02/2005</span><span>•</span><span>Nasc: 03/02/1975</span></div><div class="mt-1.5 flex items-center gap-1"><span class="px-1.5 py-0.5 rounded font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed">REMOÇÃO</span></div></div></div><div class="bg-surface-container-lowest rounded p-space-sm flex items-start gap-space-sm relative shadow-xs"><div class="w-1 absolute top-0 bottom-0 left-0 bg-primary rounded-l"></div><div class="w-8 h-8 rounded bg-primary text-on-primary font-tabular-data text-tabular-data font-bold flex items-center justify-center shrink-0">#02</div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-1"><span class="font-label-lg text-label-lg text-on-surface font-bold truncate">Roberto Camargo</span><span class="font-tabular-data text-tabular-data font-bold text-primary shrink-0">82,00 pts</span></div><div class="font-body-sm text-body-sm text-tertiary truncate">CIEP Praia Azul</div><div class="flex items-center gap-space-xs mt-1 font-label-sm text-label-sm text-on-surface-variant"><span>Adm: 11/02/2006</span><span>•</span><span>Nasc: 18/09/1978</span></div><div class="mt-1.5 flex items-center gap-1"><span class="px-1.5 py-0.5 rounded font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed">REMOÇÃO</span></div></div></div><div class="bg-surface-container-lowest rounded p-space-sm flex items-start gap-space-sm relative shadow-xs"><div class="w-1 absolute top-0 bottom-0 left-0 bg-primary rounded-l"></div><div class="w-8 h-8 rounded bg-primary text-on-primary font-tabular-data text-tabular-data font-bold flex items-center justify-center shrink-0">#03</div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-1"><span class="font-label-lg text-label-lg text-on-surface font-bold truncate">Ana Paula Ferreira</span><span class="font-tabular-data text-tabular-data font-bold text-primary shrink-0">79,50 pts</span></div><div class="font-body-sm text-body-sm text-tertiary truncate">EMEF Profª Maria Pavan Daphnis</div><div class="flex items-center gap-space-xs mt-1 font-label-sm text-label-sm text-on-surface-variant"><span>Adm: 04/08/2007</span><span>•</span><span>Nasc: 14/05/1979</span></div><div class="mt-1.5 flex items-center gap-1"><span class="px-1.5 py-0.5 rounded font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed">REMOÇÃO</span></div></div></div><div class="bg-surface-container-lowest rounded p-space-sm flex items-start gap-space-sm relative shadow-xs"><div class="w-1 absolute top-0 bottom-0 left-0 bg-primary rounded-l"></div><div class="w-8 h-8 rounded bg-primary text-on-primary font-tabular-data text-tabular-data font-bold flex items-center justify-center shrink-0">#04</div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-1"><span class="font-label-lg text-label-lg text-on-surface font-bold truncate">Carlos Eduardo Lima</span><span class="font-tabular-data text-tabular-data font-bold text-primary shrink-0">79,50 pts</span></div><div class="font-body-sm text-body-sm text-tertiary truncate">Sem sede • EMEF Milton Santos</div><div class="flex items-center gap-space-xs mt-1 font-label-sm text-label-sm text-on-surface-variant"><span>Adm: 04/08/2007</span><span>•</span><span>Nasc: 21/11/1982</span></div><div class="mt-1.5 flex items-center gap-1"><span class="px-1.5 py-0.5 rounded font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed">REMOÇÃO</span></div></div></div><div class="bg-surface-container-lowest rounded p-space-sm flex items-start gap-space-sm relative shadow-xs"><div class="w-1 absolute top-0 bottom-0 left-0 bg-primary rounded-l"></div><div class="w-8 h-8 rounded bg-primary text-on-primary font-tabular-data text-tabular-data font-bold flex items-center justify-center shrink-0">#05</div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-1"><span class="font-label-lg text-label-lg text-on-surface font-bold truncate">Patrícia Mendes</span><span class="font-tabular-data text-tabular-data font-bold text-primary shrink-0">76,00 pts</span></div><div class="font-body-sm text-body-sm text-tertiary truncate">CIEP São Jerônimo</div><div class="flex items-center gap-space-xs mt-1 font-label-sm text-label-sm text-on-surface-variant"><span>Adm: 13/03/2009</span><span>•</span><span>Nasc: 30/09/1980</span></div><div class="mt-1.5 flex items-center gap-1"><span class="px-1.5 py-0.5 rounded font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed">REMOÇÃO</span></div></div></div></div>
+</div>
+</section>
+<!-- SEÇÃO 6: RODAPÉ DE AÇÃO E SINCRONIZAÇÃO -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md mb-space-xl">
+<div class="flex flex-col md:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm self-start md:self-center">
+<button class="px-space-md py-2 rounded bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">save</span>
+<span class="">Salvar Rascunho da Fila</span>
+</button>
+<button class="px-space-md py-2 rounded bg-surface-container-high hover:bg-surface-dim text-on-surface font-label-lg text-label-lg transition flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+<span class="">Exportar Lista em PDF</span>
+</button>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-space-md w-full md:w-auto">
+<button class="w-full sm:w-auto px-space-xl py-2.5 rounded bg-primary hover:bg-primary-container text-on-primary font-label-lg text-label-lg transition shadow-sm flex items-center justify-center gap-space-xs" id="btn-confirm-queue" type="button">
+<span class="">Confirmar fila e iniciar evento</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Nota de Auditoria -->
+<div class="mt-space-md pt-space-sm border-t border-surface-container-highest flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-tertiary text-[18px]">broadcast_on_home</span>
+<span class="">
+<strong>Preparação do Evento:</strong> Ao confirmar, a seleção será salva. A fila e os critérios serão congelados somente ao iniciar o evento.</span>
+</div>
+</section>
+</div>
+<script>
+  (function () {
+    const tableBody = document.getElementById('prof-table-body');
+    const masterCheckbox = document.getElementById('master-checkbox');
+    const checkboxes = tableBody.querySelectorAll('.server-checkbox');
+    const selectedCountEl = document.getElementById('metric-selected-count');
+    const percentageEl = document.getElementById('metric-percentage');
+    const searchInput = document.getElementById('input-search');
+
+    const btnAll = document.getElementById('btn-select-all');
+    const btnSede = document.getElementById('btn-select-sede');
+    const btnNoSede = document.getElementById('btn-select-no-sede');
+    const btnRemocao = document.getElementById('btn-select-remocao');
+    const btnPermuta = document.getElementById('btn-select-permuta');
+    const btnDeselect = document.getElementById('btn-deselect-all');
+
+    const totalInBatch = Array.from(checkboxes).filter(cb => !cb.disabled).length;
+    const totalCargo = 48; // Dado global conforme especificação
+
+    function updateMetrics() {
+      let count = 0;
+      checkboxes.forEach((cb) => {
+        if (cb.checked && !cb.disabled) count++;
+      });
+
+      // Atualiza o contador de selecionados
+      if (selectedCountEl) {
+        selectedCountEl.textContent = `${count} ${count === 1 ? 'profissional' : 'profissionais'}`;
+      }
+
+      // Atualiza percentual calculado sobre o cargo completo
+      if (percentageEl) {
+        const pct = ((count / totalCargo) * 100).toFixed(1).replace('.', ',');
+        percentageEl.textContent = `${pct}% da categoria`;
+      }
+
+      // Atualiza estado do masterCheckbox
+      if (masterCheckbox) {
+        masterCheckbox.checked = count === totalInBatch && totalInBatch > 0;
+        masterCheckbox.indeterminate = count > 0 && count < totalInBatch;
+      }
+    }
+
+    // Escuta mudanças individuais nas checkboxes
+    checkboxes.forEach((cb) => {
+      cb.addEventListener('change', () => {
+        const row = cb.closest('tr');
+        if (cb.checked) {
+          row.classList.remove('opacity-75');
+        } else {
+          row.classList.add('opacity-75');
+        }
+        updateMetrics();
+      });
+    });
+
+    // Selecionar / Desmarcar Todos no cabeçalho
+    if (masterCheckbox) {
+      masterCheckbox.addEventListener('change', () => {
+        const shouldCheck = masterCheckbox.checked;
+        checkboxes.forEach((cb) => {
+          if (cb.disabled) return;
+          cb.checked = shouldCheck;
+          const row = cb.closest('tr');
+          if (shouldCheck) {
+            row.classList.remove('opacity-75');
+          } else {
+            row.classList.add('opacity-75');
+          }
+        });
+        updateMetrics();
+      });
+    }
+
+    // Ações Rápidas em Lote
+    if (btnAll) {
+      btnAll.addEventListener('click', () => {
+        checkboxes.forEach((cb) => {
+          if (cb.disabled) return;
+          cb.checked = true;
+          cb.closest('tr').classList.remove('opacity-75');
+        });
+        updateMetrics();
+      });
+    }
+
+    if (btnDeselect) {
+      btnDeselect.addEventListener('click', () => {
+        checkboxes.forEach((cb) => {
+          if (cb.disabled) return;
+          cb.checked = false;
+          cb.closest('tr').classList.add('opacity-75');
+        });
+        updateMetrics();
+      });
+    }
+
+    if (btnSede) {
+      btnSede.addEventListener('click', () => {
+        tableBody.querySelectorAll('tr').forEach((row) => {
+          const hasSede = row.getAttribute('data-has-sede') === 'true';
+          const cb = row.querySelector('.server-checkbox');
+          if (cb) {
+            cb.checked = !cb.disabled && hasSede;
+            if (hasSede) {
+              row.classList.remove('opacity-75');
+            } else {
+              row.classList.add('opacity-75');
+            }
+          }
+        });
+        updateMetrics();
+      });
+    }
+
+    if (btnNoSede) {
+      btnNoSede.addEventListener('click', () => {
+        tableBody.querySelectorAll('tr').forEach((row) => {
+          const noSede = row.getAttribute('data-has-sede') === 'false';
+          const cb = row.querySelector('.server-checkbox');
+          if (cb) {
+            cb.checked = !cb.disabled && noSede;
+            if (noSede) {
+              row.classList.remove('opacity-75');
+            } else {
+              row.classList.add('opacity-75');
+            }
+          }
+        });
+        updateMetrics();
+      });
+    }
+
+    if (btnRemocao) {
+      btnRemocao.addEventListener('click', () => {
+        tableBody.querySelectorAll('tr').forEach((row) => {
+          const rem = row.getAttribute('data-remocao') === 'true';
+          const cb = row.querySelector('.server-checkbox');
+          if (cb) {
+            cb.checked = !cb.disabled && rem;
+            if (rem) {
+              row.classList.remove('opacity-75');
+            } else {
+              row.classList.add('opacity-75');
+            }
+          }
+        });
+        updateMetrics();
+      });
+    }
+
+    if (btnPermuta) {
+      btnPermuta.addEventListener('click', () => {
+        tableBody.querySelectorAll('tr').forEach((row) => {
+          const perm = row.getAttribute('data-permuta') === 'true';
+          const cb = row.querySelector('.server-checkbox');
+          if (cb) {
+            cb.checked = !cb.disabled && perm;
+            if (perm) {
+              row.classList.remove('opacity-75');
+            } else {
+              row.classList.add('opacity-75');
+            }
+          }
+        });
+        updateMetrics();
+      });
+    }
+
+    // Busca textual sem ocultar linhas (realça ou esmaece para manter visibilidade de auditoria)
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        tableBody.querySelectorAll('tr').forEach((row) => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = '';
+          if (query === '' || text.includes(query)) { row.classList.remove('opacity-30'); } else { row.classList.add('opacity-30'); }
+        });
+      });
+    }
+
+    // Botão de Confirmação Final
+    const confirmBtn = document.getElementById('btn-confirm-queue');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        confirmBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[20px] animate-spin">sync</span>
+          <span>Iniciando evento e congelando fila...</span>
+        `;
+        confirmBtn.disabled = true;
+        setTimeout(() => {
+          confirmBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[20px]">check_circle</span>
+            <span>Fila congelada e evento iniciado!</span>
+          `;
+          confirmBtn.classList.remove('bg-primary');
+          confirmBtn.classList.add('bg-secondary');
+        }, 800);
+      });
+    }
+
+    // Inicialização
+    updateMetrics();
+  })();
+</script></main><footer class="w-full bg-surface-container-high py-space-sm px-space-lg shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col sm:flex-row items-center justify-between gap-space-xs text-on-surface-variant font-label-sm text-label-sm"></div></footer></div>
+</body></html>

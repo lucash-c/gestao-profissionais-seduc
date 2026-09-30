@@ -1,0 +1,16 @@
+MOCKUPS V4 - SEDUC AMERICANA
+
+Referencia funcional: code.html de cada pasta.
+Referencia visual: screen_stitch_original.png (captura original do Stitch, preservada apenas para layout/identidade).
+Regras de negocio finais: Documentacao V4.
+
+Principais correcoes no HTML V4:
+- CRUDs administrativos em contexto ADMINISTRADOR; OPERADOR somente nas telas de evento.
+- Login por login/e-mail, sem auto-cadastro publico.
+- Pontuacao oficial sem formula automatica.
+- Remocao/Permuta como manifestacoes previas.
+- Preparacao da fila com elegibilidade obrigatoria pelo tipo do evento e lista sempre visivel.
+- Fila congelada apenas ao iniciar o evento.
+- Postos/Vagas com inativacao historica, nao exclusao fisica.
+- Consulta de vagas compativel com cargo e periodo.
+- Telao com ultimas 5 escolhas e acesso aos registros anteriores.

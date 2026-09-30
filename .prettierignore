@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+packages/database/src/generated/
+stitch_gest_o_de_remo_o_seduc/
+*.pdf
+*.docx
+Prompt_Codex_*.txt
+pnpm-lock.yaml
