@@ -3,6 +3,10 @@ import { createDatabaseConnection } from '@seduc/database';
 import { z } from 'zod';
 
 import { BCRYPT_COST, hashPassword } from '../modules/auth/auth.crypto.js';
+import {
+  bootstrapFirstAdministrator,
+  type BootstrapAdminRepository,
+} from '../modules/users/bootstrap-admin.service.js';
 
 const optionalEmail = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
@@ -29,43 +33,43 @@ async function main(): Promise<void> {
   const database = createDatabaseConnection(input.DATABASE_URL);
 
   try {
-    const matches = await database.client.usuario.findMany({
-      where: {
-        OR: [
-          { login: input.BOOTSTRAP_ADMIN_LOGIN },
-          ...(input.BOOTSTRAP_ADMIN_EMAIL ? [{ email: input.BOOTSTRAP_ADMIN_EMAIL }] : []),
-        ],
+    const repository: BootstrapAdminRepository = {
+      async createAdmin(admin) {
+        await database.client.usuario.create({
+          data: {
+            email: admin.email,
+            login: admin.login,
+            nome: admin.nome,
+            perfil: 'ADMINISTRADOR',
+            senhaHash: admin.senhaHash,
+          },
+        });
       },
-    });
-
-    if (matches.length > 0) {
-      const existing = matches[0];
-      const sameIdentity =
-        matches.length === 1 &&
-        existing?.login === input.BOOTSTRAP_ADMIN_LOGIN &&
-        (!input.BOOTSTRAP_ADMIN_EMAIL || existing.email === input.BOOTSTRAP_ADMIN_EMAIL) &&
-        existing.perfil === 'ADMINISTRADOR';
-
-      if (sameIdentity) {
-        console.info('Administrador inicial já existe; nenhuma alteração foi realizada.');
-        return;
-      }
-
-      throw new Error('Login ou e-mail já pertence a outra conta; bootstrap cancelado.');
-    }
-
-    const senhaHash = await hashPassword(input.BOOTSTRAP_ADMIN_PASSWORD);
-    await database.client.usuario.create({
-      data: {
+      async findByIdentifiers(identifiers) {
+        return database.client.usuario.findMany({
+          select: { email: true, id: true, login: true, perfil: true },
+          where: {
+            OR: [{ login: { in: [...identifiers] } }, { email: { in: [...identifiers] } }],
+          },
+        });
+      },
+    };
+    const result = await bootstrapFirstAdministrator(
+      repository,
+      {
         email: input.BOOTSTRAP_ADMIN_EMAIL ?? null,
         login: input.BOOTSTRAP_ADMIN_LOGIN,
         nome: input.BOOTSTRAP_ADMIN_NAME,
-        perfil: 'ADMINISTRADOR',
-        senhaHash,
+        password: input.BOOTSTRAP_ADMIN_PASSWORD,
       },
-    });
+      hashPassword,
+    );
 
-    console.info(`Administrador inicial criado com bcrypt custo ${BCRYPT_COST}.`);
+    console.info(
+      result === 'created'
+        ? `Administrador inicial criado com bcrypt custo ${BCRYPT_COST}.`
+        : 'Administrador inicial já existe; nenhuma alteração foi realizada.',
+    );
   } finally {
     await database.disconnect();
   }

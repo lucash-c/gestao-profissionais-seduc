@@ -339,10 +339,20 @@ model Usuario {
   movimentacoes    Movimentacao[]
   auditorias       Auditoria[]
   sessoes          SessaoUsuario[]
+  identificadores  UsuarioIdentificador[]
 
   @@index([unidadeId], map: "usuario_unidade_idx")
   @@index([perfil, ativo], map: "usuario_perfil_ativo_idx")
   @@map("usuario")
+}
+
+model UsuarioIdentificador {
+  identificador String  @id(map: "usuario_identificador_namespace_key") @db.VarChar(254)
+  usuarioId     String  @map("usuario_id") @db.Uuid
+  usuario       Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([usuarioId], map: "usuario_identificador_usuario_idx")
+  @@map("usuario_identificador")
 }
 
 model SessaoUsuario {

@@ -5,6 +5,7 @@ import request from 'supertest';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../src/app.js';
+import type { Environment } from '../../src/config/env.js';
 import { BCRYPT_COST, hashPassword } from '../../src/modules/auth/auth.crypto.js';
 import type {
   AuthRepository,
@@ -64,7 +65,13 @@ beforeAll(async () => {
   passwordHash = await hashPassword(validPassword);
 });
 
-function createScenario(options: { active?: boolean; profile?: UserProfile } = {}) {
+function createScenario(
+  options: {
+    active?: boolean;
+    environment?: Partial<Environment>;
+    profile?: UserProfile;
+  } = {},
+) {
   const repository = new InMemoryAuthRepository();
   repository.users.set(userId, {
     ativo: options.active ?? true,
@@ -80,7 +87,7 @@ function createScenario(options: { active?: boolean; profile?: UserProfile } = {
   const app = createApp({
     authRepository: repository,
     database: createDatabase(),
-    environment: createTestEnvironment(),
+    environment: createTestEnvironment(options.environment),
   });
 
   return { app, repository };
@@ -268,21 +275,70 @@ describe('authentication endpoints', () => {
     expect(cookie).toContain('Max-Age=');
   });
 
-  it('aplica proteção básica contra repetidas falhas de login', async () => {
-    const { app } = createScenario();
+  it('mantém limites independentes para IPs diferentes atrás do proxy confiável', async () => {
+    const { app } = createScenario({ environment: { TRUST_PROXY_HOPS: 1 } });
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       await request(app)
         .post('/auth/login')
+        .set('X-Forwarded-For', '198.51.100.10')
+        .send({ identifier: 'admin.seduc', password: 'senha-errada' })
+        .expect(401);
+    }
+
+    await request(app)
+      .post('/auth/login')
+      .set('X-Forwarded-For', '198.51.100.20')
+      .send({ identifier: 'admin.seduc', password: 'senha-errada' })
+      .expect(401);
+
+    await request(app)
+      .post('/auth/login')
+      .set('X-Forwarded-For', '198.51.100.10')
+      .send({ identifier: 'admin.seduc', password: 'senha-errada' })
+      .expect(429);
+  });
+
+  it('bloqueia a sexta falha do mesmo IP atrás do proxy confiável', async () => {
+    const { app } = createScenario({ environment: { TRUST_PROXY_HOPS: 1 } });
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request(app)
+        .post('/auth/login')
+        .set('X-Forwarded-For', '203.0.113.10')
         .send({ identifier: 'admin.seduc', password: 'senha-errada' })
         .expect(401);
     }
 
     const response = await request(app)
       .post('/auth/login')
+      .set('X-Forwarded-For', '203.0.113.10')
       .send({ identifier: 'admin.seduc', password: 'senha-errada' })
       .expect(429);
     expect(response.body.error).toBe('TOO_MANY_REQUESTS');
+  });
+
+  it('ignora X-Forwarded-For quando nenhum proxy está configurado como confiável', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { app } = createScenario({ environment: { TRUST_PROXY_HOPS: 0 } });
+
+    try {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        await request(app)
+          .post('/auth/login')
+          .set('X-Forwarded-For', `198.51.100.${attempt + 1}`)
+          .send({ identifier: 'admin.seduc', password: 'senha-errada' })
+          .expect(401);
+      }
+
+      await request(app)
+        .post('/auth/login')
+        .set('X-Forwarded-For', '198.51.100.200')
+        .send({ identifier: 'admin.seduc', password: 'senha-errada' })
+        .expect(429);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('gera hashes bcrypt com custo 12', () => {

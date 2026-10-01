@@ -34,6 +34,7 @@ export function createApp({
   });
 
   app.disable('x-powered-by');
+  app.set('trust proxy', environment.TRUST_PROXY_HOPS);
   app.use(
     pinoHttp({
       logger,

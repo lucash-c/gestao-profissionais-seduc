@@ -1,20 +1,16 @@
 # SEDUC Americana - Remoção, Permuta e Listão
 
-Fundação técnica do sistema administrativo da Secretaria Municipal de Educação de Americana/SP.
+Sistema administrativo da Secretaria Municipal de Educação de Americana/SP.
 
 ## Estado atual
 
-Este repositório contém **somente a Etapa 0**:
+O projeto contém as etapas aprovadas até o momento:
 
-- monorepo Node.js com pnpm;
-- API Express + TypeScript;
-- frontend Vue 3 + Quasar + TypeScript;
-- Prisma configurado para PostgreSQL, sem tabelas de domínio;
-- Docker Compose para PostgreSQL, API e frontend;
-- Vitest, Supertest e Vue Test Utils;
-- lint, formatação, typecheck, builds e healthchecks.
+- **Etapa 0 — Fundação técnica:** monorepo pnpm, Express, Vue 3, Quasar, Prisma, Docker Compose e verificações de qualidade;
+- **Etapa 1 — Banco base:** estrutura relacional, históricos, constraints e migrations PostgreSQL;
+- **Etapa 2 — Autenticação e RBAC:** login administrativo, sessões HttpOnly, autorização por perfil e escopo de unidade.
 
-Ainda não existem autenticação, RBAC, cadastros, eventos, postos, vagas ou movimentações.
+Ainda não existem CRUDs funcionais de domínio, eventos operacionais, fila, cálculo de vagas ou movimentações.
 
 ## Requisitos
 
@@ -38,7 +34,25 @@ Bash:
 cp .env.example .env
 ```
 
-As credenciais do exemplo são apenas locais e não devem ser usadas em produção.
+As credenciais e segredos do exemplo são apenas placeholders locais e não devem ser usados em produção. Configure `SESSION_SECRET` com um valor aleatório de pelo menos 32 caracteres e ajuste `SESSION_TTL_HOURS` conforme a política do ambiente.
+
+## Autenticação administrativa
+
+O login aceita exclusivamente `usuario.login` ou `usuario.email`. A sessão fica em cookie HttpOnly; profissionais não são usuários da aplicação e não autenticam por CPF ou matrícula.
+
+Para criar o primeiro administrador, informe explicitamente `DATABASE_URL`, `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_LOGIN`, `BOOTSTRAP_ADMIN_PASSWORD` e, opcionalmente, `BOOTSTRAP_ADMIN_EMAIL`. Depois execute:
+
+```bash
+pnpm --filter @seduc/api auth:bootstrap-admin
+```
+
+Não existe senha ou administrador padrão.
+
+### Proxy reverso e HTTPS
+
+`TRUST_PROXY_HOPS` informa quantos proxies conhecidos existem entre o navegador e a API. O padrão `0` não confia em `X-Forwarded-For`, adequado à execução direta. Use `1` somente quando houver exatamente um proxy confiável antes da API, como na topologia do Compose; não use um valor maior que o número real de proxies. Com valor maior que zero, a API não deve ficar acessível publicamente por um caminho que contorne o proxy.
+
+Em `NODE_ENV=production`, o cookie é sempre `Secure`. Portanto, a conexão do navegador até a entrada pública do sistema deve usar HTTPS. É aceitável haver HTTP entre o proxy reverso e o container da API quando o TLS termina no Traefik, Coolify ou proxy equivalente.
 
 ## Execução local
 
@@ -94,7 +108,7 @@ docker compose down --volumes
 
 ## Qualidade
 
-Execute toda a verificação da Etapa 0:
+Execute toda a verificação do projeto:
 
 ```bash
 pnpm verify
@@ -133,6 +147,8 @@ DATABASE_TEST_URL='postgresql://seduc:senha@localhost:5432/seduc_test?schema=pub
 ```
 
 Sem `DATABASE_TEST_URL`, esse teste é marcado como ignorado; os testes unitários dos estados saudável e indisponível continuam obrigatórios.
+
+O GitHub Actions executa as migrations e os testes de integração em PostgreSQL 17 descartável.
 
 ## Healthchecks
 

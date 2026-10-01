@@ -9,6 +9,7 @@ export function createTestEnvironment(overrides: Partial<Environment> = {}): Env
     NODE_ENV: 'test',
     SESSION_SECRET: 'test-session-secret-with-at-least-32-characters',
     SESSION_TTL_HOURS: 8,
+    TRUST_PROXY_HOPS: 0,
     corsOrigins: ['http://localhost:9000'],
     ...overrides,
   };

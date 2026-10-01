@@ -15,6 +15,7 @@ const domainTables = [
   'evento_participante',
   'evento',
   'sessao_usuario',
+  'usuario_identificador',
   'usuario',
   'afastamento_profissional',
   'exercicio_profissional',
@@ -259,8 +260,68 @@ describeDatabase('Etapa 1 database schema', () => {
        WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`,
     );
     expect(migrations.rows.map(({ migration_name }) => migration_name)).toEqual(
-      expect.arrayContaining(['20261001000000_banco_base', '20261001120000_autenticacao_sessoes']),
+      expect.arrayContaining([
+        '20261001000000_banco_base',
+        '20261001120000_autenticacao_sessoes',
+        '20261001160000_usuario_identificador_unico',
+      ]),
     );
+  });
+
+  it('keeps login and email in one unique identifier namespace', async () => {
+    await pool.query(
+      `INSERT INTO "usuario" ("id", "nome", "login", "email", "senha_hash", "perfil")
+       VALUES ($1, 'Usuário existente', 'identificador.login', 'identificador@email.test',
+               '$2b$12$hash-de-teste', 'ADMINISTRADOR')`,
+      [randomUUID()],
+    );
+
+    await expectConstraint(
+      pool.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "email", "senha_hash", "perfil")
+         VALUES ($1, 'Conflito pelo login', 'identificador@email.test', 'outro@email.test',
+                 '$2b$12$hash-de-teste', 'ADMINISTRADOR')`,
+        [randomUUID()],
+      ),
+      'usuario_identificador_namespace_key',
+    );
+    await expectConstraint(
+      pool.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "email", "senha_hash", "perfil")
+         VALUES ($1, 'Conflito pelo email', 'outro.login', 'identificador.login',
+                 '$2b$12$hash-de-teste', 'ADMINISTRADOR')`,
+        [randomUUID()],
+      ),
+      'usuario_identificador_namespace_key',
+    );
+  });
+
+  it('rejects concurrent cross-field identifier conflicts', async () => {
+    const results = await Promise.allSettled([
+      pool.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "email", "senha_hash", "perfil")
+         VALUES ($1, 'Concorrente A', 'concorrente-a', 'identificador-concorrente',
+                 '$2b$12$hash-de-teste', 'ADMINISTRADOR')`,
+        [randomUUID()],
+      ),
+      pool.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "email", "senha_hash", "perfil")
+         VALUES ($1, 'Concorrente B', 'identificador-concorrente', 'concorrente-b@email.test',
+                 '$2b$12$hash-de-teste', 'ADMINISTRADOR')`,
+        [randomUUID()],
+      ),
+    ]);
+    const fulfilled = results.filter(({ status }) => status === 'fulfilled');
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]?.reason as PostgresError).toMatchObject({
+      code: '23505',
+      constraint: 'usuario_identificador_namespace_key',
+    });
   });
 
   it('requires password hashes and protects persisted sessions with unique tokens and foreign keys', async () => {

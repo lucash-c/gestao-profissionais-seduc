@@ -23,6 +23,7 @@ const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   SESSION_SECRET: sessionSecretSchema,
   SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(8),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
 });
 
 export type Environment = z.infer<typeof environmentSchema> & {
