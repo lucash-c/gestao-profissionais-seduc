@@ -2,6 +2,7 @@
 import {
   QAvatar,
   QBadge,
+  QBtn,
   QCard,
   QCardSection,
   QChip,
@@ -13,14 +14,25 @@ import {
   QToolbar,
   QToolbarTitle,
 } from 'quasar';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { getApiReadiness } from '@/services/health.service';
+import { sessionStore } from '@/stores/session.store';
 
 type ApiState = 'checking' | 'ready' | 'unavailable';
 
 const apiState = ref<ApiState>('checking');
 const controller = new AbortController();
+const router = useRouter();
+const authenticatedUser = computed(() => sessionStore.state.user);
+
+const profileLabels = {
+  ADMINISTRADOR: 'Administrador',
+  DIRETOR: 'Diretor de Unidade',
+  OPERADOR: 'Operador',
+  SECRETARIO: 'Secretário Escolar',
+} as const;
 
 onMounted(async () => {
   try {
@@ -32,6 +44,14 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => controller.abort());
+
+async function logout(): Promise<void> {
+  try {
+    await sessionStore.logout();
+  } finally {
+    await router.replace({ name: 'login' });
+  }
+}
 </script>
 
 <template>
@@ -43,7 +63,25 @@ onBeforeUnmount(() => controller.abort());
           <span class="brand-title">SEDUC AMERICANA</span>
           <span class="brand-subtitle">Gestão de Remoção e Vagas</span>
         </QToolbarTitle>
-        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 0" />
+        <div v-if="authenticatedUser" class="session-summary">
+          <span>{{ authenticatedUser.nome }}</span>
+          <small>
+            {{ profileLabels[authenticatedUser.perfil] }}
+            <span v-if="authenticatedUser.unidade"> · {{ authenticatedUser.unidade.nome }}</span>
+          </small>
+        </div>
+        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 2" />
+        <QBtn
+          v-if="authenticatedUser"
+          aria-label="Sair do sistema"
+          class="q-ml-sm"
+          color="white"
+          data-testid="logout-button"
+          flat
+          icon="logout"
+          round
+          @click="logout"
+        />
       </QToolbar>
     </QHeader>
 
@@ -54,11 +92,11 @@ onBeforeUnmount(() => controller.abort());
             <QCardSection class="row items-start no-wrap q-gutter-md">
               <QAvatar color="primary" text-color="white" icon="foundation" size="52px" />
               <div>
-                <div class="text-overline text-primary">Fundação técnica</div>
-                <h1 class="text-h5 q-my-xs">Ambiente base do sistema</h1>
+                <div class="text-overline text-primary">Área autenticada</div>
+                <h1 class="text-h5 q-my-xs">Estrutura administrativa protegida</h1>
                 <p class="text-body2 text-grey-8 q-mb-none">
-                  Vue 3, Quasar, Express, Prisma e PostgreSQL preparados. Nenhum fluxo de negócio
-                  foi implementado nesta etapa.
+                  Autenticação e controle de acesso estão ativos. Os módulos funcionais do negócio
+                  permanecem fora desta etapa.
                 </p>
               </div>
             </QCardSection>

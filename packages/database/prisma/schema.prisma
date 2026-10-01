@@ -328,7 +328,7 @@ model Usuario {
   nome             String         @db.VarChar(200)
   login            String         @unique(map: "usuario_login_key") @db.VarChar(100)
   email            String?        @unique(map: "usuario_email_key") @db.VarChar(254)
-  senhaHash        String?        @map("senha_hash") @db.VarChar(255)
+  senhaHash        String         @map("senha_hash") @db.VarChar(255)
   perfil           PerfilUsuario
   unidadeId        String?        @map("unidade_id") @db.Uuid
   ativo            Boolean        @default(true)
@@ -338,10 +338,24 @@ model Usuario {
   eventosIniciados Evento[]
   movimentacoes    Movimentacao[]
   auditorias       Auditoria[]
+  sessoes          SessaoUsuario[]
 
   @@index([unidadeId], map: "usuario_unidade_idx")
   @@index([perfil, ativo], map: "usuario_perfil_ativo_idx")
   @@map("usuario")
+}
+
+model SessaoUsuario {
+  id        String   @id @default(uuid()) @db.Uuid
+  usuarioId String   @map("usuario_id") @db.Uuid
+  tokenHash String   @unique(map: "sessao_usuario_token_hash_key") @map("token_hash") @db.Char(64)
+  expiraEm  DateTime @map("expira_em") @db.Timestamptz(3)
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([usuarioId], map: "sessao_usuario_usuario_idx")
+  @@index([expiraEm], map: "sessao_usuario_expira_em_idx")
+  @@map("sessao_usuario")
 }
 
 model Evento {

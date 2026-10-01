@@ -9,6 +9,7 @@ const fixedDate = new Date('2026-09-30T15:00:00.000Z');
 
 function createDatabase(overrides: Partial<DatabaseConnection> = {}): DatabaseConnection {
   return {
+    client: {} as DatabaseConnection['client'],
     disconnect: vi.fn().mockResolvedValue(undefined),
     ping: vi.fn().mockResolvedValue(undefined),
     ...overrides,

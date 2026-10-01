@@ -23,3 +23,30 @@ export interface UnreadyHealthResponse {
 }
 
 export type HealthResponse = ReadyHealthResponse | UnreadyHealthResponse;
+
+export const USER_PROFILES = ['ADMINISTRADOR', 'OPERADOR', 'DIRETOR', 'SECRETARIO'] as const;
+
+export type UserProfile = (typeof USER_PROFILES)[number];
+
+export interface AuthenticatedUnit {
+  id: string;
+  nome: string;
+}
+
+export interface AuthenticatedUser {
+  email: string | null;
+  id: string;
+  login: string;
+  nome: string;
+  perfil: UserProfile;
+  unidade: AuthenticatedUnit | null;
+}
+
+export interface LoginRequest {
+  identifier: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: AuthenticatedUser;
+}

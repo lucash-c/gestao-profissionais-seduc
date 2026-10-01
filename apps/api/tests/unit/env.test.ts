@@ -10,9 +10,12 @@ describe('loadEnvironment', () => {
       DATABASE_URL: 'postgresql://user:password@localhost:5432/seduc',
       LOG_LEVEL: 'warn',
       NODE_ENV: 'test',
+      SESSION_SECRET: 'test-session-secret-with-at-least-32-characters',
+      SESSION_TTL_HOURS: '12',
     });
 
     expect(environment.API_PORT).toBe(3100);
+    expect(environment.SESSION_TTL_HOURS).toBe(12);
     expect(environment.corsOrigins).toEqual([
       'http://localhost:9000',
       'https://seduc.example.test',
@@ -23,7 +26,24 @@ describe('loadEnvironment', () => {
     expect(() =>
       loadEnvironment({
         DATABASE_URL: 'mysql://user:password@localhost:3306/seduc',
+        SESSION_SECRET: 'test-session-secret-with-at-least-32-characters',
       }),
     ).toThrow('DATABASE_URL');
+  });
+
+  it('rejeita segredo de sessão curto ou mantido como placeholder', () => {
+    expect(() =>
+      loadEnvironment({
+        DATABASE_URL: 'postgresql://user:password@localhost:5432/seduc',
+        SESSION_SECRET: 'curto',
+      }),
+    ).toThrow('SESSION_SECRET');
+
+    expect(() =>
+      loadEnvironment({
+        DATABASE_URL: 'postgresql://user:password@localhost:5432/seduc',
+        SESSION_SECRET: 'change-me-generate-at-least-32-random-characters',
+      }),
+    ).toThrow('SESSION_SECRET');
   });
 });

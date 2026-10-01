@@ -1,11 +1,12 @@
 import { Quasar } from 'quasar';
 import { flushPromises, mount } from '@vue/test-utils';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import FoundationPage from '@/pages/FoundationPage.vue';
 
 describe('FoundationPage', () => {
-  it('explicita o limite funcional da Etapa 0 e exibe a prontidão', async () => {
+  it('explicita o limite funcional da Etapa 2 e exibe a prontidão', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -21,15 +22,24 @@ describe('FoundationPage', () => {
       ),
     );
 
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ component: FoundationPage, path: '/' }],
+    });
+    await router.push('/');
+    await router.isReady();
+
     const wrapper = mount(FoundationPage, {
       global: {
-        plugins: [Quasar],
+        plugins: [Quasar, router],
       },
     });
     await flushPromises();
 
-    expect(wrapper.text()).toContain('Fundação técnica');
-    expect(wrapper.text()).toContain('Nenhum fluxo de negócio foi implementado');
+    expect(wrapper.text()).toContain('Área autenticada');
+    expect(wrapper.text()).toContain(
+      'Os módulos funcionais do negócio permanecem fora desta etapa',
+    );
     expect(wrapper.text()).toContain('API e PostgreSQL disponíveis');
   });
 });

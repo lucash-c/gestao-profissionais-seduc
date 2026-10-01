@@ -14,6 +14,7 @@ const domainTables = [
   'movimentacao',
   'evento_participante',
   'evento',
+  'sessao_usuario',
   'usuario',
   'afastamento_profissional',
   'exercicio_profissional',
@@ -43,6 +44,7 @@ interface BaseGraph {
 
 interface PostgresError extends Error {
   code?: string;
+  column?: string;
   constraint?: string;
 }
 
@@ -238,7 +240,7 @@ describeDatabase('Etapa 1 database schema', () => {
     return id;
   }
 
-  it('applies the initial migration to a clean PostgreSQL database', async () => {
+  it('applies every migration to a clean PostgreSQL database', async () => {
     const result = await pool.query<{ table_name: string }>(
       `SELECT table_name
        FROM information_schema.tables
@@ -250,6 +252,60 @@ describeDatabase('Etapa 1 database schema', () => {
       expect(migratedTables.has(table)).toBe(true);
     }
     expect(migratedTables.has('_prisma_migrations')).toBe(true);
+
+    const migrations = await pool.query<{ migration_name: string }>(
+      `SELECT migration_name
+       FROM "_prisma_migrations"
+       WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`,
+    );
+    expect(migrations.rows.map(({ migration_name }) => migration_name)).toEqual(
+      expect.arrayContaining(['20261001000000_banco_base', '20261001120000_autenticacao_sessoes']),
+    );
+  });
+
+  it('requires password hashes and protects persisted sessions with unique tokens and foreign keys', async () => {
+    const usuarioId = randomUUID();
+    const tokenHash = 'a'.repeat(64);
+
+    try {
+      await pool.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "perfil")
+         VALUES ($1, 'Sem senha', $2, 'ADMINISTRADOR')`,
+        [randomUUID(), `sem-senha-${randomUUID()}`],
+      );
+      throw new Error('Expected usuario.senha_hash to reject NULL.');
+    } catch (error) {
+      expect(error as PostgresError).toMatchObject({ code: '23502', column: 'senha_hash' });
+    }
+
+    await pool.query(
+      `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+       VALUES ($1, 'Administrador', $2, '$2b$12$hash-de-teste', 'ADMINISTRADOR')`,
+      [usuarioId, `admin-${usuarioId}`],
+    );
+    await pool.query(
+      `INSERT INTO "sessao_usuario" ("id", "usuario_id", "token_hash", "expira_em")
+       VALUES ($1, $2, $3, NOW() + INTERVAL '1 hour')`,
+      [randomUUID(), usuarioId, tokenHash],
+    );
+
+    await expectConstraint(
+      pool.query(
+        `INSERT INTO "sessao_usuario" ("id", "usuario_id", "token_hash", "expira_em")
+         VALUES ($1, $2, $3, NOW() + INTERVAL '1 hour')`,
+        [randomUUID(), usuarioId, tokenHash],
+      ),
+      'sessao_usuario_token_hash_key',
+    );
+    await expectConstraint(
+      pool.query(
+        `INSERT INTO "sessao_usuario" ("id", "usuario_id", "token_hash", "expira_em")
+         VALUES ($1, $2, $3, NOW() + INTERVAL '1 hour')`,
+        [randomUUID(), randomUUID(), 'b'.repeat(64)],
+      ),
+      'sessao_usuario_usuario_id_fkey',
+      '23503',
+    );
   });
 
   it('creates all active-record and staffing-scope partial unique indexes', async () => {
@@ -511,8 +567,8 @@ describeDatabase('Etapa 1 database schema', () => {
   it('requires a linked unit for directors and school secretaries', async () => {
     await expectConstraint(
       pool.query(
-        `INSERT INTO "usuario" ("id", "nome", "login", "perfil")
-         VALUES ($1, 'Diretor sem unidade', $2, 'DIRETOR')`,
+        `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+         VALUES ($1, 'Diretor sem unidade', $2, '$2b$12$hash-de-teste', 'DIRETOR')`,
         [randomUUID(), `diretor-${randomUUID()}`],
       ),
       'usuario_unidade_perfil_check',
@@ -520,8 +576,8 @@ describeDatabase('Etapa 1 database schema', () => {
     );
     await expectConstraint(
       pool.query(
-        `INSERT INTO "usuario" ("id", "nome", "login", "perfil")
-         VALUES ($1, 'Secretario sem unidade', $2, 'SECRETARIO')`,
+        `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+         VALUES ($1, 'Secretario sem unidade', $2, '$2b$12$hash-de-teste', 'SECRETARIO')`,
         [randomUUID(), `secretario-${randomUUID()}`],
       ),
       'usuario_unidade_perfil_check',
@@ -706,8 +762,8 @@ describeDatabase('Etapa 1 database schema', () => {
     const movimentacaoId = randomUUID();
 
     await pool.query(
-      `INSERT INTO "usuario" ("id", "nome", "login", "perfil")
-       VALUES ($1, 'Operador de teste', $2, 'OPERADOR')`,
+      `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+       VALUES ($1, 'Operador de teste', $2, '$2b$12$hash-de-teste', 'OPERADOR')`,
       [usuarioId, `operador-${usuarioId}`],
     );
     await pool.query(

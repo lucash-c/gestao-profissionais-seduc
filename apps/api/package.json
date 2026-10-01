@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "auth:bootstrap-admin": "tsx src/scripts/bootstrap-admin.ts",
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
@@ -15,8 +16,10 @@
   "dependencies": {
     "@seduc/contracts": "workspace:*",
     "@seduc/database": "workspace:*",
+    "bcryptjs": "3.0.3",
     "cors": "2.8.6",
     "express": "5.2.1",
+    "express-rate-limit": "8.7.0",
     "helmet": "8.3.0",
     "pino": "10.3.1",
     "pino-http": "11.0.0",

@@ -35,6 +35,8 @@ services:
       DATABASE_TEST_URL: postgresql://${POSTGRES_USER:-seduc}:${POSTGRES_PASSWORD:-change-me-before-use}@db:5432/seduc_test?schema=public
       LOG_LEVEL: ${LOG_LEVEL:-info}
       NODE_ENV: development
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
     ports:
       - '127.0.0.1:${API_PORT:-3000}:3000'
     volumes:

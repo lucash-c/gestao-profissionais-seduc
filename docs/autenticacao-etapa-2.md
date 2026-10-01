@@ -1,0 +1,52 @@
+# Autenticação e autorização - Etapa 2
+
+## Senhas
+
+As senhas administrativas usam bcrypt por meio da biblioteca `bcryptjs`, com custo 12 e salt gerado pela própria biblioteca. A API rejeita senhas que excedam o limite de 72 bytes do bcrypt. Senhas em texto não são armazenadas nem registradas em logs.
+
+## Sessões
+
+O navegador recebe um cookie `seduc_session` com estas propriedades:
+
+- `HttpOnly`;
+- `SameSite=Lax`;
+- `Secure` quando `NODE_ENV=production`;
+- expiração configurada por `SESSION_TTL_HOURS`.
+
+O cookie contém um identificador aleatório de 256 bits assinado com HMAC-SHA-256. O segredo vem exclusivamente de `SESSION_SECRET`, deve ter pelo menos 32 caracteres e não pode permanecer com o placeholder do `.env.example`.
+
+Somente o hash SHA-256 do identificador é armazenado em `sessao_usuario`. Cada requisição autenticada consulta novamente a sessão e o usuário no PostgreSQL; inativação e alterações de perfil ou unidade têm efeito imediato. Logout remove a sessão no servidor e limpa o cookie.
+
+As variáveis obrigatórias são `SESSION_SECRET` (segredo aleatório com pelo menos 32 caracteres) e `SESSION_TTL_HOURS` (entre 1 e 168 horas; padrão 8). O login limita cada endereço IP a cinco falhas por janela de 15 minutos. Respostas bem-sucedidas não consomem o limite.
+
+## Rotas
+
+- `POST /auth/login`: recebe `identifier` e `password`, usando somente `usuario.login` ou `usuario.email`;
+- `GET /auth/me`: exige sessão válida e devolve apenas a identidade administrativa segura;
+- `POST /auth/logout`: invalida a sessão persistida e limpa o cookie.
+
+Não existe cadastro público, autenticação por CPF/matrícula ou recuperação de senha nesta etapa.
+
+## Primeiro administrador
+
+Não há administrador ou senha padrão. Em um banco novo, configure explicitamente:
+
+```text
+DATABASE_URL=postgresql://...
+BOOTSTRAP_ADMIN_NAME=Nome do administrador
+BOOTSTRAP_ADMIN_LOGIN=login-administrativo
+BOOTSTRAP_ADMIN_EMAIL=admin@example.invalid
+BOOTSTRAP_ADMIN_PASSWORD=uma-senha-forte-sem-valor-padrao
+```
+
+O e-mail é opcional; os demais valores são obrigatórios. Execute:
+
+```text
+pnpm --filter @seduc/api auth:bootstrap-admin
+```
+
+Se a mesma identidade administrativa já existir, o comando termina sem alterar a conta. Conflitos de login/e-mail ou perfil cancelam a operação. A senha nunca é exibida.
+
+## RBAC
+
+A política do backend é deny-by-default. Permissões e escopo de unidade ficam centralizados no módulo `authorization`. Diretor e Secretário usam exclusivamente a unidade carregada do usuário autenticado no banco; valores enviados pelo cliente não definem autorização.

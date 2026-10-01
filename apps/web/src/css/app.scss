@@ -12,6 +12,7 @@
 
 body {
   background: var(--seduc-surface);
+  margin: 0;
 }
 
 .foundation-layout {
@@ -81,6 +82,73 @@ body {
   box-shadow: 0 1px 3px rgb(13 35 58 / 6%);
 }
 
+.session-summary {
+  display: flex;
+  flex-direction: column;
+  margin-right: 16px;
+  text-align: right;
+}
+
+.session-summary small {
+  color: rgb(255 255 255 / 75%);
+}
+
+.login-page {
+  align-items: center;
+  background:
+    linear-gradient(120deg, rgb(0 47 108 / 96%), rgb(0 75 135 / 88%)), var(--seduc-header);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.login-content {
+  align-items: center;
+  display: grid;
+  gap: 64px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  max-width: 1040px;
+  width: 100%;
+}
+
+.login-introduction {
+  color: #fff;
+  max-width: 520px;
+}
+
+.login-introduction h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 0 0 24px;
+}
+
+.login-introduction > p:last-child {
+  color: rgb(255 255 255 / 78%);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.login-brand-mark {
+  background: rgb(255 255 255 / 12%);
+  height: 48px;
+  margin-bottom: 32px;
+  width: 48px;
+}
+
+.login-card {
+  border-color: rgb(255 255 255 / 35%);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgb(0 20 50 / 30%);
+  padding: 20px;
+}
+
+.login-error {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 @media (max-width: 599px) {
   .foundation-toolbar {
     padding-inline: 12px;
@@ -88,5 +156,30 @@ body {
 
   .foundation-page {
     padding: 16px;
+  }
+
+  .session-summary {
+    display: none;
+  }
+
+  .login-page {
+    padding: 20px;
+  }
+
+  .login-content {
+    gap: 32px;
+    grid-template-columns: 1fr;
+  }
+
+  .login-introduction {
+    text-align: center;
+  }
+
+  .login-brand-mark {
+    margin-inline: auto;
+  }
+
+  .login-introduction > p:last-child {
+    display: none;
   }
 }

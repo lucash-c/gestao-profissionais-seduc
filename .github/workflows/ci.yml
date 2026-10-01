@@ -35,6 +35,8 @@ jobs:
     env:
       DATABASE_TEST_URL: postgresql://seduc:ci-test-password@localhost:5432/seduc_test?schema=public
       DATABASE_TEST_ALLOW_RESET: 'true'
+      SESSION_SECRET: ci-only-session-secret-with-at-least-32-characters
+      SESSION_TTL_HOURS: 8
 
     steps:
       - name: Checkout repository
