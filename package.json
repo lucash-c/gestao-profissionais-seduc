@@ -20,10 +20,10 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
     "packages:build": "pnpm --filter \"./packages/**\" build",
-    "test": "pnpm db:generate && pnpm packages:build && pnpm --filter \"./apps/**\" test",
+    "test": "pnpm db:generate && pnpm packages:build && pnpm --filter @seduc/database test && pnpm --filter \"./apps/**\" test",
     "test:coverage": "pnpm db:generate && pnpm packages:build && pnpm --filter \"./apps/**\" test:coverage",
-    "test:integration": "pnpm db:generate && pnpm packages:build && pnpm --filter @seduc/api test:integration",
-    "typecheck": "pnpm db:generate && pnpm packages:build && pnpm --filter \"./apps/**\" typecheck",
+    "test:integration": "pnpm db:generate && pnpm packages:build && pnpm --filter @seduc/database test:integration && pnpm --filter @seduc/api test:integration",
+    "typecheck": "pnpm db:generate && pnpm packages:build && pnpm --filter @seduc/database typecheck && pnpm --filter \"./apps/**\" typecheck",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {

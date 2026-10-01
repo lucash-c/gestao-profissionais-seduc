@@ -8,5 +8,432 @@ datasource db {
   provider = "postgresql"
 }
 
-// Etapa 0: nenhuma tabela de domínio é criada.
-// Os modelos serão adicionados exclusivamente na Etapa 1, após aprovação.
+enum PerfilUsuario {
+  ADMINISTRADOR
+  OPERADOR
+  DIRETOR
+  SECRETARIO
+
+  @@map("perfil_usuario")
+}
+
+enum TipoExercicio {
+  SEDE
+  SUBSTITUICAO
+  SEM_SEDE
+
+  @@map("tipo_exercicio")
+}
+
+enum TipoEvento {
+  REMOCAO
+  PERMUTA
+  LISTAO
+
+  @@map("tipo_evento")
+}
+
+enum StatusEvento {
+  RASCUNHO
+  ATIVO
+  ENCERRADO
+  CANCELADO
+
+  @@map("status_evento")
+}
+
+enum StatusEventoParticipante {
+  SELECIONADO
+  AGUARDANDO
+  ATENDIDO
+  EMPATE_PENDENTE
+
+  @@map("status_evento_participante")
+}
+
+enum TipoMovimentacao {
+  REMOCAO
+  PERMUTA
+  LISTAO
+
+  @@map("tipo_movimentacao")
+}
+
+enum TipoDestinoMovimentacao {
+  SEDE
+  SEM_SEDE
+
+  @@map("tipo_destino_movimentacao")
+}
+
+enum AcaoAuditoria {
+  CREATE
+  UPDATE
+  DELETE
+
+  @@map("acao_auditoria")
+}
+
+model TipoUnidade {
+  id           String             @id @default(uuid()) @db.Uuid
+  nome         String             @unique(map: "tipo_unidade_nome_key") @db.VarChar(120)
+  ativo        Boolean            @default(true)
+  criadoEm     DateTime           @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime           @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  unidades     Unidade[]
+  cargos       CargoTipoUnidade[]
+
+  @@map("tipo_unidade")
+}
+
+model Unidade {
+  id            String              @id @default(uuid()) @db.Uuid
+  tipoUnidadeId String              @map("tipo_unidade_id") @db.Uuid
+  nome          String              @db.VarChar(200)
+  endereco      String?             @db.VarChar(200)
+  numero        String?             @db.VarChar(20)
+  complemento   String?             @db.VarChar(120)
+  bairro        String?             @db.VarChar(120)
+  cidade        String?             @db.VarChar(120)
+  cep           String?             @db.VarChar(8)
+  observacoes   String?
+  ativo         Boolean             @default(true)
+  codigoInep    String?             @map("codigo_inep") @db.VarChar(20)
+  poloRegiao    String?             @map("polo_regiao") @db.VarChar(120)
+  criadoEm      DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  tipoUnidade   TipoUnidade         @relation(fields: [tipoUnidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  telefones     UnidadeTelefone[]
+  quadros       QuadroNecessidade[]
+  usuarios      Usuario[]
+
+  @@index([tipoUnidadeId], map: "unidade_tipo_unidade_idx")
+  @@index([nome], map: "unidade_nome_idx")
+  @@index([ativo], map: "unidade_ativo_idx")
+  @@map("unidade")
+}
+
+model UnidadeTelefone {
+  id        String  @id @default(uuid()) @db.Uuid
+  unidadeId String  @map("unidade_id") @db.Uuid
+  tipo      String  @db.VarChar(40)
+  numero    String  @db.VarChar(30)
+  unidade   Unidade @relation(fields: [unidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([unidadeId], map: "unidade_telefone_unidade_idx")
+  @@map("unidade_telefone")
+}
+
+model CargoFuncao {
+  id            String              @id @default(uuid()) @db.Uuid
+  nome          String              @unique(map: "cargo_funcao_nome_key") @db.VarChar(160)
+  ehProfessor   Boolean             @default(false) @map("eh_professor")
+  usaPontuacao  Boolean             @default(false) @map("usa_pontuacao")
+  ativo         Boolean             @default(true)
+  criadoEm      DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  tiposUnidade  CargoTipoUnidade[]
+  profissionais Profissional[]
+  quadros       QuadroNecessidade[]
+
+  @@index([ativo], map: "cargo_funcao_ativo_idx")
+  @@map("cargo_funcao")
+}
+
+model CargoTipoUnidade {
+  cargoFuncaoId String      @map("cargo_funcao_id") @db.Uuid
+  tipoUnidadeId String      @map("tipo_unidade_id") @db.Uuid
+  criadoEm      DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
+  cargoFuncao   CargoFuncao @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  tipoUnidade   TipoUnidade @relation(fields: [tipoUnidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([cargoFuncaoId, tipoUnidadeId], map: "cargo_tipo_unidade_pkey")
+  @@index([tipoUnidadeId], map: "cargo_tipo_unidade_tipo_idx")
+  @@map("cargo_tipo_unidade")
+}
+
+model Periodo {
+  id           String              @id @default(uuid()) @db.Uuid
+  nome         String              @unique(map: "periodo_nome_key") @db.VarChar(60)
+  ativo        Boolean             @default(true)
+  criadoEm     DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  quadros      QuadroNecessidade[]
+
+  @@map("periodo")
+}
+
+model SegmentoEnsino {
+  id           String              @id @default(uuid()) @db.Uuid
+  nome         String              @unique(map: "segmento_ensino_nome_key") @db.VarChar(120)
+  ativo        Boolean             @default(true)
+  criadoEm     DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  quadros      QuadroNecessidade[]
+
+  @@map("segmento_ensino")
+}
+
+model Profissional {
+  id                           String                    @id @default(uuid()) @db.Uuid
+  matricula                    String                    @unique(map: "profissional_matricula_key") @db.VarChar(50)
+  nomeCompleto                 String                    @map("nome_completo") @db.VarChar(200)
+  cpf                          String                    @db.VarChar(11)
+  cargoFuncaoId                String                    @map("cargo_funcao_id") @db.Uuid
+  pontuacao                    Decimal                   @default(0) @db.Decimal(12, 2)
+  remocao                      Boolean                   @default(false)
+  permuta                      Boolean                   @default(false)
+  dataEntradaPrefeitura        DateTime                  @map("data_entrada_prefeitura") @db.Date
+  dataNascimento               DateTime                  @map("data_nascimento") @db.Date
+  email                        String?                   @db.VarChar(254)
+  dataDesligamento             DateTime?                 @map("data_desligamento") @db.Date
+  endereco                     String?                   @db.VarChar(200)
+  numero                       String?                   @db.VarChar(20)
+  complemento                  String?                   @db.VarChar(120)
+  bairro                       String?                   @db.VarChar(120)
+  cidade                       String?                   @db.VarChar(120)
+  cep                          String?                   @db.VarChar(8)
+  numeroFilhos                 Int                       @default(0) @map("numero_filhos")
+  observacoes                  String?
+  ativo                        Boolean                   @default(true)
+  criadoEm                     DateTime                  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm                 DateTime                  @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  cargoFuncao                  CargoFuncao               @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  telefones                    ProfissionalTelefone[]
+  lotacoesSede                 LotacaoSede[]
+  exercicios                   ExercicioProfissional[]   @relation("ExercicioOcupante")
+  exerciciosComoSubstituido    ExercicioProfissional[]   @relation("ExercicioSubstituido")
+  afastamentos                 AfastamentoProfissional[]
+  eventosParticipante          EventoParticipante[]
+  itensMovimentacao            MovimentacaoItem[]        @relation("MovimentacaoProfissional")
+  itensMovimentacaoSubstituido MovimentacaoItem[]        @relation("MovimentacaoSubstituido")
+
+  @@index([nomeCompleto], map: "profissional_nome_completo_idx")
+  @@index([cpf], map: "profissional_cpf_idx")
+  @@index([cargoFuncaoId, ativo], map: "profissional_cargo_ativo_idx")
+  @@map("profissional")
+}
+
+model ProfissionalTelefone {
+  id             String       @id @default(uuid()) @db.Uuid
+  profissionalId String       @map("profissional_id") @db.Uuid
+  tipo           String       @db.VarChar(40)
+  numero         String       @db.VarChar(30)
+  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([profissionalId], map: "profissional_telefone_profissional_idx")
+  @@map("profissional_telefone")
+}
+
+model QuadroNecessidade {
+  id               String          @id @default(uuid()) @db.Uuid
+  unidadeId        String          @map("unidade_id") @db.Uuid
+  anoLetivo        Int             @map("ano_letivo")
+  cargoFuncaoId    String          @map("cargo_funcao_id") @db.Uuid
+  periodoId        String          @map("periodo_id") @db.Uuid
+  segmentoEnsinoId String?         @map("segmento_ensino_id") @db.Uuid
+  quantidade       Int
+  observacoes      String?
+  criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm     DateTime        @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  unidade          Unidade         @relation(fields: [unidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cargoFuncao      CargoFuncao     @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  periodo          Periodo         @relation(fields: [periodoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  segmentoEnsino   SegmentoEnsino? @relation(fields: [segmentoEnsinoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  postos           PostoTrabalho[]
+
+  @@unique([id, unidadeId, cargoFuncaoId, periodoId, anoLetivo], map: "quadro_necessidade_posto_ref_key")
+  @@index([unidadeId, anoLetivo], map: "quadro_necessidade_unidade_ano_idx")
+  @@index([cargoFuncaoId], map: "quadro_necessidade_cargo_idx")
+  @@index([periodoId], map: "quadro_necessidade_periodo_idx")
+  @@index([segmentoEnsinoId], map: "quadro_necessidade_segmento_idx")
+  @@map("quadro_necessidade")
+}
+
+model PostoTrabalho {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  quadroNecessidadeId String                  @map("quadro_necessidade_id") @db.Uuid
+  unidadeId           String                  @map("unidade_id") @db.Uuid
+  cargoFuncaoId       String                  @map("cargo_funcao_id") @db.Uuid
+  periodoId           String                  @map("periodo_id") @db.Uuid
+  anoLetivo           Int                     @map("ano_letivo")
+  codigo              String?                 @db.VarChar(80)
+  ativo               Boolean                 @default(true)
+  criadoEm            DateTime                @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm        DateTime                @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  quadroNecessidade   QuadroNecessidade       @relation(fields: [quadroNecessidadeId, unidadeId, cargoFuncaoId, periodoId, anoLetivo], references: [id, unidadeId, cargoFuncaoId, periodoId, anoLetivo], onDelete: Restrict, onUpdate: Restrict)
+  lotacoesSede        LotacaoSede[]
+  exercicios          ExercicioProfissional[]
+  movimentosOrigem    MovimentacaoItem[]      @relation("MovimentacaoPostoOrigem")
+  movimentosDestino   MovimentacaoItem[]      @relation("MovimentacaoPostoDestino")
+
+  @@index([unidadeId, cargoFuncaoId, periodoId, anoLetivo], map: "posto_trabalho_escopo_idx")
+  @@index([quadroNecessidadeId], map: "posto_trabalho_quadro_idx")
+  @@index([ativo], map: "posto_trabalho_ativo_idx")
+  @@map("posto_trabalho")
+}
+
+model LotacaoSede {
+  id              String        @id @default(uuid()) @db.Uuid
+  profissionalId  String        @map("profissional_id") @db.Uuid
+  postoTrabalhoId String        @map("posto_trabalho_id") @db.Uuid
+  dataInicio      DateTime      @default(now()) @map("data_inicio") @db.Timestamptz(3)
+  dataFim         DateTime?     @map("data_fim") @db.Timestamptz(3)
+  motivoFim       String?       @map("motivo_fim")
+  criadoEm        DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+  profissional    Profissional  @relation(fields: [profissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  postoTrabalho   PostoTrabalho @relation(fields: [postoTrabalhoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([profissionalId, dataFim], map: "lotacao_sede_profissional_historico_idx")
+  @@index([postoTrabalhoId, dataFim], map: "lotacao_sede_posto_historico_idx")
+  @@map("lotacao_sede")
+}
+
+model ExercicioProfissional {
+  id                      String        @id @default(uuid()) @db.Uuid
+  profissionalId          String        @map("profissional_id") @db.Uuid
+  postoTrabalhoId         String        @map("posto_trabalho_id") @db.Uuid
+  tipoExercicio           TipoExercicio @map("tipo_exercicio")
+  substituiProfissionalId String?       @map("substitui_profissional_id") @db.Uuid
+  dataInicio              DateTime      @default(now()) @map("data_inicio") @db.Timestamptz(3)
+  dataFim                 DateTime?     @map("data_fim") @db.Timestamptz(3)
+  observacoes             String?
+  criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+  profissional            Profissional  @relation("ExercicioOcupante", fields: [profissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  postoTrabalho           PostoTrabalho @relation(fields: [postoTrabalhoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  substituiProfissional   Profissional? @relation("ExercicioSubstituido", fields: [substituiProfissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([profissionalId, dataFim], map: "exercicio_profissional_historico_idx")
+  @@index([postoTrabalhoId, dataFim], map: "exercicio_posto_historico_idx")
+  @@index([substituiProfissionalId], map: "exercicio_substituido_idx")
+  @@map("exercicio_profissional")
+}
+
+model AfastamentoProfissional {
+  id             String       @id @default(uuid()) @db.Uuid
+  profissionalId String       @map("profissional_id") @db.Uuid
+  tipo           String       @db.VarChar(120)
+  dataInicio     DateTime     @default(now()) @map("data_inicio") @db.Timestamptz(3)
+  dataFim        DateTime?    @map("data_fim") @db.Timestamptz(3)
+  observacoes    String?
+  criadoEm       DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([profissionalId, dataFim], map: "afastamento_profissional_historico_idx")
+  @@map("afastamento_profissional")
+}
+
+model Usuario {
+  id               String         @id @default(uuid()) @db.Uuid
+  nome             String         @db.VarChar(200)
+  login            String         @unique(map: "usuario_login_key") @db.VarChar(100)
+  email            String?        @unique(map: "usuario_email_key") @db.VarChar(254)
+  senhaHash        String?        @map("senha_hash") @db.VarChar(255)
+  perfil           PerfilUsuario
+  unidadeId        String?        @map("unidade_id") @db.Uuid
+  ativo            Boolean        @default(true)
+  criadoEm         DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm     DateTime       @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  unidade          Unidade?       @relation(fields: [unidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  eventosIniciados Evento[]
+  movimentacoes    Movimentacao[]
+  auditorias       Auditoria[]
+
+  @@index([unidadeId], map: "usuario_unidade_idx")
+  @@index([perfil, ativo], map: "usuario_perfil_ativo_idx")
+  @@map("usuario")
+}
+
+model Evento {
+  id                   String               @id @default(uuid()) @db.Uuid
+  tipo                 TipoEvento
+  nome                 String               @db.VarChar(200)
+  ano                  Int
+  status               StatusEvento         @default(RASCUNHO)
+  iniciadoPorUsuarioId String?              @map("iniciado_por_usuario_id") @db.Uuid
+  dataInicio           DateTime?            @map("data_inicio") @db.Timestamptz(3)
+  dataFim              DateTime?            @map("data_fim") @db.Timestamptz(3)
+  criadoEm             DateTime             @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm         DateTime             @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  iniciadoPorUsuario   Usuario?             @relation(fields: [iniciadoPorUsuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  participantes        EventoParticipante[]
+  movimentacoes        Movimentacao[]
+
+  @@index([status, ano], map: "evento_status_ano_idx")
+  @@index([iniciadoPorUsuarioId], map: "evento_iniciado_por_idx")
+  @@map("evento")
+}
+
+model EventoParticipante {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  eventoId               String                   @map("evento_id") @db.Uuid
+  profissionalId         String                   @map("profissional_id") @db.Uuid
+  pontuacaoSnapshot      Decimal?                 @map("pontuacao_snapshot") @db.Decimal(12, 2)
+  dataEntradaSnapshot    DateTime?                @map("data_entrada_snapshot") @db.Date
+  dataNascimentoSnapshot DateTime?                @map("data_nascimento_snapshot") @db.Date
+  posicao                Int?
+  status                 StatusEventoParticipante @default(SELECIONADO)
+  criadoEm               DateTime                 @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm           DateTime                 @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  evento                 Evento                   @relation(fields: [eventoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  profissional           Profissional             @relation(fields: [profissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([eventoId, profissionalId], map: "evento_participante_evento_profissional_key")
+  @@unique([eventoId, posicao], map: "evento_participante_evento_posicao_key")
+  @@index([eventoId, status], map: "evento_participante_evento_status_idx")
+  @@index([profissionalId], map: "evento_participante_profissional_idx")
+  @@map("evento_participante")
+}
+
+model Movimentacao {
+  id        String             @id @default(uuid()) @db.Uuid
+  eventoId  String             @map("evento_id") @db.Uuid
+  usuarioId String             @map("usuario_id") @db.Uuid
+  dataHora  DateTime           @default(now()) @map("data_hora") @db.Timestamptz(3)
+  tipo      TipoMovimentacao
+  evento    Evento             @relation(fields: [eventoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  usuario   Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  itens     MovimentacaoItem[]
+
+  @@index([eventoId, dataHora], map: "movimentacao_evento_data_idx")
+  @@index([usuarioId], map: "movimentacao_usuario_idx")
+  @@map("movimentacao")
+}
+
+model MovimentacaoItem {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  movimentacaoId          String                  @map("movimentacao_id") @db.Uuid
+  profissionalId          String                  @map("profissional_id") @db.Uuid
+  postoOrigemId           String?                 @map("posto_origem_id") @db.Uuid
+  postoDestinoId          String                  @map("posto_destino_id") @db.Uuid
+  tipoDestino             TipoDestinoMovimentacao @map("tipo_destino")
+  substituiProfissionalId String?                 @map("substitui_profissional_id") @db.Uuid
+  movimentacao            Movimentacao            @relation(fields: [movimentacaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  profissional            Profissional            @relation("MovimentacaoProfissional", fields: [profissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  postoOrigem             PostoTrabalho?          @relation("MovimentacaoPostoOrigem", fields: [postoOrigemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  postoDestino            PostoTrabalho           @relation("MovimentacaoPostoDestino", fields: [postoDestinoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  substituiProfissional   Profissional?           @relation("MovimentacaoSubstituido", fields: [substituiProfissionalId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([movimentacaoId, profissionalId], map: "movimentacao_item_movimentacao_profissional_key")
+  @@index([postoOrigemId], map: "movimentacao_item_posto_origem_idx")
+  @@index([postoDestinoId], map: "movimentacao_item_posto_destino_idx")
+  @@index([substituiProfissionalId], map: "movimentacao_item_substituido_idx")
+  @@map("movimentacao_item")
+}
+
+model Auditoria {
+  id              String        @id @default(uuid()) @db.Uuid
+  usuarioId       String        @map("usuario_id") @db.Uuid
+  entidade        String        @db.VarChar(120)
+  registroId      String        @map("registro_id") @db.VarChar(120)
+  acao            AcaoAuditoria
+  dadosAnteriores Json?         @map("dados_anteriores") @db.JsonB
+  dadosNovos      Json?         @map("dados_novos") @db.JsonB
+  dataHora        DateTime      @default(now()) @map("data_hora") @db.Timestamptz(3)
+  usuario         Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([usuarioId, dataHora], map: "auditoria_usuario_data_idx")
+  @@index([entidade, registroId], map: "auditoria_registro_idx")
+  @@index([dataHora], map: "auditoria_data_idx")
+  @@map("auditoria")
+}
