@@ -128,7 +128,7 @@ function createServices(): RegistryServices {
         total: 1,
         totalPages: 1,
       }),
-      resourceUnitId: vi.fn(async (id: string) => (id === RECORD_ID ? UNIT_A : UNIT_B)),
+      administrativeUnitId: vi.fn(async (id: string) => (id === RECORD_ID ? UNIT_A : UNIT_B)),
       update: vi.fn().mockResolvedValue(professional),
       updatePhone: vi.fn().mockResolvedValue(professional),
       updateScore: vi.fn().mockResolvedValue({ ...professional, pontuacao: '10' }),

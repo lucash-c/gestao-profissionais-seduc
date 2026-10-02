@@ -26,11 +26,13 @@ O backend aplica o escopo nas consultas e mutações. Guards e menus do frontend
 
 A unidade administrativa usada no escopo de Diretor e Secretário é calculada sem criar uma segunda fonte de verdade:
 
-1. a unidade da `lotacao_sede` ativa tem prioridade;
-2. na ausência de sede ativa, usa-se a unidade do `exercicio_profissional` ativo;
+1. a unidade do `exercicio_profissional` ativo tem prioridade;
+2. na ausência de exercício ativo, usa-se a unidade da `lotacao_sede` ativa;
 3. sem sede e sem exercício ativos, o profissional não pertence ao escopo de unidade escolar e somente o Administrador pode administrá-lo.
 
 A criação inicial de profissionais permanece global e restrita ao `ADMINISTRADOR`. Diretor e Secretário não criam profissional novo, nem criam automaticamente lotação ou exercício.
+
+Essa precedência existe somente para o escopo administrativo/RBAC. Exercício e sede continuam históricos independentes; um não altera nem sobrescreve o outro.
 
 ## Salvamento de telefones
 

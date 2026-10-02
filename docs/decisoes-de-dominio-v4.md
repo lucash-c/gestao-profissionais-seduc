@@ -9,7 +9,7 @@ Podem cadastrar e alterar:
 - os dados da própria unidade;
 - os profissionais vinculados à própria unidade.
 
-Para fins de escopo cadastral, a unidade administrativa do profissional é a unidade da `lotacao_sede` ativa. Se não houver sede ativa, usa-se a unidade do `exercicio_profissional` ativo. Sem nenhum desses vínculos ativos, o profissional só pode ser administrado pelo `ADMINISTRADOR`. A sede sempre prevalece quando sede e exercício apontam para unidades diferentes.
+Para fins de escopo administrativo de Diretor/Secretário, o `exercicio_profissional` ativo possui prioridade sobre a `lotacao_sede` ativa. A sede é usada como fallback somente quando não existir exercício ativo. Sem nenhum desses vínculos ativos, o profissional só pode ser administrado pelo `ADMINISTRADOR`. Essa precedência vale apenas para RBAC e não altera os dois históricos independentes.
 
 A criação inicial de profissional é exclusiva do `ADMINISTRADOR`. Diretor e Secretário editam somente profissionais abrangidos pelo cálculo acima; esse cadastro não cria lotação ou exercício automaticamente.
 

@@ -144,7 +144,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.resourceUnitId(id),
+      resourceUnitId: await service.administrativeUnitId(id),
       user,
     });
     response.json(await service.update(id, professionalUpdateSchema.parse(request.body), user));
@@ -155,7 +155,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.resourceUnitId(id),
+      resourceUnitId: await service.administrativeUnitId(id),
       user,
     });
     response
@@ -168,7 +168,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.resourceUnitId(id),
+      resourceUnitId: await service.administrativeUnitId(id),
       user,
     });
     response.json(
@@ -186,7 +186,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.resourceUnitId(id),
+      resourceUnitId: await service.administrativeUnitId(id),
       user,
     });
     await service.deletePhone(id, routeId(request, 'phoneId'), user);

@@ -27,14 +27,17 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     type: randomUUID(),
     unitA: randomUUID(),
     unitB: randomUUID(),
+    unitC: randomUUID(),
   };
   const password = 'Senha de integração 2026!';
   const credentials = {
     admin: `admin.${suffix}`,
     director: `director.${suffix}`,
     directorB: `director-b.${suffix}`,
+    directorC: `director-c.${suffix}`,
     operator: `operator.${suffix}`,
     secretary: `secretary.${suffix}`,
+    secretaryB: `secretary-b.${suffix}`,
   };
 
   beforeAll(async () => {
@@ -43,6 +46,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       data: [
         { id: ids.unitA, nome: `Unidade A ${suffix}`, tipoUnidadeId: ids.type },
         { id: ids.unitB, nome: `Unidade B ${suffix}`, tipoUnidadeId: ids.type },
+        { id: ids.unitC, nome: `Unidade C ${suffix}`, tipoUnidadeId: ids.type },
       ],
     });
     await database.client.cargoFuncao.create({
@@ -75,6 +79,20 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
           senhaHash,
           unidadeId: ids.unitB,
         },
+        {
+          login: credentials.secretaryB,
+          nome: 'Secretário B Integração',
+          perfil: 'SECRETARIO',
+          senhaHash,
+          unidadeId: ids.unitB,
+        },
+        {
+          login: credentials.directorC,
+          nome: 'Diretor C Integração',
+          perfil: 'DIRETOR',
+          senhaHash,
+          unidadeId: ids.unitC,
+        },
       ],
     });
   }, 30_000);
@@ -95,10 +113,10 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     });
     await database.client.profissional.deleteMany({ where: { matricula: { contains: suffix } } });
     await database.client.postoTrabalho.deleteMany({
-      where: { unidadeId: { in: [ids.unitA, ids.unitB] } },
+      where: { unidadeId: { in: [ids.unitA, ids.unitB, ids.unitC] } },
     });
     await database.client.quadroNecessidade.deleteMany({
-      where: { unidadeId: { in: [ids.unitA, ids.unitB] } },
+      where: { unidadeId: { in: [ids.unitA, ids.unitB, ids.unitC] } },
     });
     await database.client.unidadeTelefone.deleteMany({
       where: { unidade: { nome: { contains: suffix } } },
@@ -317,7 +335,9 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       expect(list.body.items.map((item: { id: string }) => item.id)).toContain(
         exerciseOnly.body.id,
       );
-      expect(list.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
+      expect(list.body.items.map((item: { id: string }) => item.id)).not.toContain(
+        priority.body.id,
+      );
       expect(list.body.items.map((item: { id: string }) => item.id)).not.toContain(other.body.id);
       expect(list.body.items.map((item: { id: string }) => item.id)).not.toContain(
         unassigned.body.id,
@@ -332,24 +352,63 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
         .patch(`/profissionais/${unassigned.body.id}`)
         .send({ remocao: true })
         .expect(403);
+      await scoped.patch(`/profissionais/${priority.body.id}`).send({ remocao: true }).expect(403);
       await scoped.patch(`/unidades/${ids.unitA}`).send({ poloRegiao: 'Norte' }).expect(200);
       await scoped.patch(`/unidades/${ids.unitB}`).send({ poloRegiao: 'Sul' }).expect(403);
     }
 
-    const directorB = await authenticated(credentials.directorB);
-    const listB = await directorB.get('/profissionais').expect(200);
-    expect(listB.body.items.map((item: { id: string }) => item.id)).toContain(other.body.id);
-    expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(local.body.id);
-    expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(
-      exerciseOnly.body.id,
+    for (const login of [credentials.directorB, credentials.secretaryB]) {
+      const scoped = await authenticated(login);
+      const listB = await scoped.get('/profissionais').expect(200);
+      expect(listB.body.items.map((item: { id: string }) => item.id)).toContain(other.body.id);
+      expect(listB.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
+      expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(local.body.id);
+      expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(
+        exerciseOnly.body.id,
+      );
+      await scoped.patch(`/profissionais/${priority.body.id}`).send({ permuta: true }).expect(200);
+    }
+
+    await admin
+      .patch(`/profissionais/${unassigned.body.id}`)
+      .send({ observacoes: 'Sem vínculo, administrado globalmente' })
+      .expect(200);
+
+    await database.client.exercicioProfissional.updateMany({
+      data: { dataFim: new Date() },
+      where: { dataFim: null, profissionalId: priority.body.id },
+    });
+    for (const login of [credentials.director, credentials.secretary]) {
+      const scoped = await authenticated(login);
+      const fallbackList = await scoped.get('/profissionais').expect(200);
+      expect(fallbackList.body.items.map((item: { id: string }) => item.id)).toContain(
+        priority.body.id,
+      );
+      await scoped.patch(`/profissionais/${priority.body.id}`).send({ remocao: false }).expect(200);
+    }
+    const directorBAfterClose = await authenticated(credentials.directorB);
+    const listBAfterClose = await directorBAfterClose.get('/profissionais').expect(200);
+    expect(listBAfterClose.body.items.map((item: { id: string }) => item.id)).not.toContain(
+      priority.body.id,
     );
-    expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(priority.body.id);
-    await directorB
+
+    await exerciseProfessional(priority.body.id, ids.unitC, randomUUID(), 2031);
+    const directorC = await authenticated(credentials.directorC);
+    const listC = await directorC.get('/profissionais').expect(200);
+    expect(listC.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
+    await directorC
       .patch(`/profissionais/${priority.body.id}`)
       .send({ permuta: false })
+      .expect(200);
+    const directorAAfterC = await authenticated(credentials.director);
+    const listAAfterC = await directorAAfterC.get('/profissionais').expect(200);
+    expect(listAAfterC.body.items.map((item: { id: string }) => item.id)).not.toContain(
+      priority.body.id,
+    );
+    await directorAAfterC
+      .patch(`/profissionais/${priority.body.id}`)
+      .send({ remocao: true })
       .expect(403);
-
-    await admin.get(`/profissionais/${unassigned.body.id}`).expect(200);
 
     const operator = await authenticated(credentials.operator);
     await operator.get('/profissionais').expect(200);

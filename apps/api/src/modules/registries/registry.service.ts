@@ -40,7 +40,7 @@ export interface RegistryServices {
       query: ProfessionalQuery,
       user: AuthenticatedUser,
     ): Promise<PaginatedResponse<ProfessionalRecord>>;
-    resourceUnitId(id: string): Promise<string | undefined>;
+    administrativeUnitId(id: string): Promise<string | undefined>;
     update(
       id: string,
       input: ProfessionalUpdateInput,
@@ -307,27 +307,27 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
     return mapUnit(unit);
   }
 
-  async function professionalUnitId(id: string): Promise<string | undefined> {
-    const placement = await client.lotacaoSede.findFirst({
-      select: { postoTrabalho: { select: { unidadeId: true } } },
-      where: { dataFim: null, profissionalId: id },
-    });
-    if (placement) return placement.postoTrabalho.unidadeId;
-
+  async function professionalAdministrativeUnitId(id: string): Promise<string | undefined> {
     const exercise = await client.exercicioProfissional.findFirst({
       select: { postoTrabalho: { select: { unidadeId: true } } },
       where: { dataFim: null, profissionalId: id },
     });
-    return exercise?.postoTrabalho.unidadeId;
+    if (exercise) return exercise.postoTrabalho.unidadeId;
+
+    const placement = await client.lotacaoSede.findFirst({
+      select: { postoTrabalho: { select: { unidadeId: true } } },
+      where: { dataFim: null, profissionalId: id },
+    });
+    return placement?.postoTrabalho.unidadeId;
   }
 
   function administrativeUnitScope(unitId: string): Prisma.ProfissionalWhereInput {
     return {
       OR: [
-        { lotacoesSede: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } } },
+        { exercicios: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } } },
         {
-          exercicios: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } },
-          lotacoesSede: { none: { dataFim: null } },
+          exercicios: { none: { dataFim: null } },
+          lotacoesSede: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } },
         },
       ],
     };
@@ -466,7 +466,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         ]);
         return pagination(items.map(mapProfessional), query.page, query.pageSize, total);
       },
-      resourceUnitId: professionalUnitId,
+      administrativeUnitId: professionalAdministrativeUnitId,
       async update(id, input, user) {
         await getProfessional(id, user);
         const {
