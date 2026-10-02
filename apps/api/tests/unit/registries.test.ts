@@ -23,7 +23,10 @@ import {
   professionalUpdateSchema,
   userCreateSchema,
 } from '../../src/modules/registries/registry.schemas.js';
-import type { RegistryServices } from '../../src/modules/registries/registry.service.js';
+import {
+  createPrismaRegistryServices,
+  type RegistryServices,
+} from '../../src/modules/registries/registry.service.js';
 import { createTestEnvironment } from '../helpers/environment.js';
 
 const UNIT_A = '11111111-1111-4111-8111-111111111111';
@@ -330,6 +333,44 @@ describe('Etapa 3 validation rules', () => {
     expect(() =>
       professionalCreateSchema.parse({ ...professionalPayload, dataNascimento: '2026-02-31' }),
     ).toThrow();
+  });
+
+  it('mapeia respostas de usuário por allowlist e nunca expõe senhaHash', async () => {
+    const client = {
+      usuario: {
+        create: vi.fn().mockResolvedValue({
+          ativo: true,
+          atualizadoEm: new Date(),
+          criadoEm: new Date(),
+          email: null,
+          id: RECORD_ID,
+          login: 'admin-seguro',
+          nome: 'Admin seguro',
+          perfil: 'ADMINISTRADOR',
+          senhaHash: 'hash-que-nao-pode-sair',
+          unidade: null,
+          unidadeId: null,
+        }),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    };
+    const service = createPrismaRegistryServices({
+      client: client as unknown as DatabaseConnection['client'],
+      disconnect: vi.fn(),
+      ping: vi.fn(),
+    });
+
+    const output = await service.users.create(
+      userCreateSchema.parse({
+        login: 'admin-seguro',
+        nome: 'Admin seguro',
+        perfil: 'ADMINISTRADOR',
+        senha: PASSWORD,
+      }),
+    );
+
+    expect(output).not.toHaveProperty('senhaHash');
+    expect(JSON.stringify(output)).not.toContain('hash-que-nao-pode-sair');
   });
 
   it('exige Origin em produção e permite ausência apenas fora dela', async () => {

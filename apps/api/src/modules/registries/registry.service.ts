@@ -187,7 +187,16 @@ function mapUser(user: {
   unidade: { id: string; nome: string } | null;
   unidadeId: string | null;
 }): UserRecord {
-  return { ...user, perfil: user.perfil as UserRecord['perfil'] };
+  return {
+    ativo: user.ativo,
+    email: user.email,
+    id: user.id,
+    login: user.login,
+    nome: user.nome,
+    perfil: user.perfil as UserRecord['perfil'],
+    unidade: user.unidade,
+    unidadeId: user.unidadeId,
+  };
 }
 
 function scopedUnitId(user: AuthenticatedUser): string | undefined {
