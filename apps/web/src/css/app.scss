@@ -15,6 +15,120 @@ body {
   margin: 0;
 }
 
+.admin-layout {
+  background: var(--seduc-surface-low);
+  min-height: 100vh;
+}
+
+.admin-drawer {
+  background: #fff;
+  color: #263648;
+}
+
+.nav-active {
+  background: #e8f1fb;
+  color: var(--seduc-header);
+  font-weight: 700;
+}
+
+.registry-page {
+  margin: 0 auto;
+  max-width: 1440px;
+  padding: 32px;
+}
+
+.registry-heading {
+  align-items: flex-end;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.registry-heading h1,
+.registry-dialog h2 {
+  color: #17324d;
+  margin: 0;
+}
+
+.eyebrow {
+  color: #3d668c;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.heading-note {
+  color: #5d6875;
+  margin: 6px 0 0;
+}
+
+.filter-grid,
+.form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.form-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.registry-state {
+  align-items: center;
+  color: #647180;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  min-height: 180px;
+  padding: 32px;
+}
+
+.registry-dialog {
+  max-width: 760px;
+  width: min(92vw, 760px);
+}
+
+.registry-dialog.wide {
+  max-width: 960px;
+  width: min(94vw, 960px);
+}
+
+.registry-dialog.compact {
+  max-width: 520px;
+}
+
+.phone-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 2fr auto;
+  margin-top: 8px;
+}
+
+.manifestations {
+  display: flex;
+  gap: 24px;
+}
+
+.readonly-history {
+  background: #eef5fc;
+  border-left: 4px solid #1976d2;
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 12px 16px;
+}
+
 .foundation-layout {
   background: var(--seduc-surface);
 }
@@ -181,5 +295,19 @@ body {
 
   .login-introduction > p:last-child {
     display: none;
+  }
+
+  .registry-page {
+    padding: 16px;
+  }
+
+  .registry-heading {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .filter-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }

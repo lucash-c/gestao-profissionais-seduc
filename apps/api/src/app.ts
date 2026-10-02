@@ -7,17 +7,31 @@ import { pinoHttp } from 'pino-http';
 
 import type { Environment } from './config/env.js';
 import { errorHandler, notFoundHandler } from './http/error-handler.js';
+import { HttpError } from './http/http-error.js';
+import { createRequireAllowedOrigin } from './http/origin-protection.js';
+import { createRequireAuthentication } from './modules/auth/auth.middleware.js';
 import { createPrismaAuthRepository } from './modules/auth/auth.repository.js';
 import { createAuthRouter } from './modules/auth/auth.router.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { AuthRepository } from './modules/auth/auth.types.js';
 import { createHealthRouter } from './modules/health/health.router.js';
+import {
+  createLookupRouter,
+  createProfessionalRouter,
+  createUnitRouter,
+  createUserRouter,
+} from './modules/registries/registry.routers.js';
+import {
+  createPrismaRegistryServices,
+  type RegistryServices,
+} from './modules/registries/registry.service.js';
 
 export interface AppDependencies {
   authRepository?: AuthRepository;
   clock?: () => Date;
   database: DatabaseConnection;
   environment: Environment;
+  registryServices?: RegistryServices;
 }
 
 export function createApp({
@@ -25,12 +39,13 @@ export function createApp({
   clock,
   database,
   environment,
+  registryServices,
 }: AppDependencies): Express {
   const app = express();
   const logger = pino({
     enabled: environment.LOG_LEVEL !== 'silent',
     level: environment.LOG_LEVEL === 'silent' ? 'info' : environment.LOG_LEVEL,
-    redact: ['req.body.password', 'req.headers.authorization', 'req.headers.cookie'],
+    redact: ['req.body', 'req.headers.authorization', 'req.headers.cookie'],
   });
 
   app.disable('x-powered-by');
@@ -38,7 +53,7 @@ export function createApp({
   app.use(
     pinoHttp({
       logger,
-      redact: ['req.body.password', 'req.headers.authorization', 'req.headers.cookie'],
+      redact: ['req.body', 'req.headers.authorization', 'req.headers.cookie'],
     }),
   );
   app.use(helmet());
@@ -50,7 +65,7 @@ export function createApp({
           callback(null, true);
           return;
         }
-        callback(new Error('Origem não autorizada pelo CORS.'));
+        callback(new HttpError(403, 'INVALID_ORIGIN', 'Origem da solicitação não autorizada.'));
       },
     }),
   );
@@ -62,16 +77,43 @@ export function createApp({
     sessionSecret: environment.SESSION_SECRET,
     sessionTtlHours: environment.SESSION_TTL_HOURS,
   });
+  const services = registryServices ?? createPrismaRegistryServices(database);
+  const requireAuthentication = createRequireAuthentication(authService);
+  const requireAllowedOrigin = createRequireAllowedOrigin(environment);
 
   app.get('/', (_request, response) => {
     response.json({
       service: 'seduc-api',
-      stage: 2,
+      stage: 3,
       status: 'ok',
     });
   });
   app.use('/health', createHealthRouter({ database, ...(clock ? { clock } : {}) }));
   app.use('/auth', createAuthRouter({ authService, environment }));
+  app.use(
+    '/dominios',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createLookupRouter(services.lookups),
+  );
+  app.use(
+    '/unidades',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createUnitRouter(services.units),
+  );
+  app.use(
+    '/profissionais',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createProfessionalRouter(services.professionals),
+  );
+  app.use(
+    '/usuarios',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createUserRouter(services.users),
+  );
 
   app.use(notFoundHandler);
   app.use(errorHandler);

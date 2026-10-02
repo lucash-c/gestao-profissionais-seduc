@@ -1,7 +1,11 @@
 import { createRouter, createWebHistory, type Router, type RouterHistory } from 'vue-router';
 
-import FoundationPage from '@/pages/FoundationPage.vue';
+import AdminLayout from '@/layouts/AdminLayout.vue';
 import LoginPage from '@/pages/LoginPage.vue';
+import ProfessionalsPage from '@/pages/ProfessionalsPage.vue';
+import ScoresPage from '@/pages/ScoresPage.vue';
+import UnitsPage from '@/pages/UnitsPage.vue';
+import UsersPage from '@/pages/UsersPage.vue';
 import { sessionStore, type SessionStore } from '@/stores/session.store';
 
 export function createAppRouter(
@@ -18,8 +22,24 @@ export function createAppRouter(
         path: '/login',
       },
       {
-        component: FoundationPage,
-        name: 'foundation',
+        children: [
+          { path: '', redirect: { name: 'units' } },
+          { component: UnitsPage, name: 'units', path: 'unidades' },
+          { component: ProfessionalsPage, name: 'professionals', path: 'profissionais' },
+          {
+            component: ScoresPage,
+            meta: { profiles: ['ADMINISTRADOR'] },
+            name: 'scores',
+            path: 'pontuacoes',
+          },
+          {
+            component: UsersPage,
+            meta: { profiles: ['ADMINISTRADOR'] },
+            name: 'users',
+            path: 'usuarios',
+          },
+        ],
+        component: AdminLayout,
         path: '/',
       },
     ],
@@ -27,7 +47,7 @@ export function createAppRouter(
 
   appRouter.beforeEach(async (to) => {
     if (to.meta.public === true) {
-      return session.state.status === 'authenticated' ? { name: 'foundation' } : true;
+      return session.state.status === 'authenticated' ? { name: 'units' } : true;
     }
 
     try {
@@ -38,6 +58,11 @@ export function createAppRouter(
 
     if (session.state.status !== 'authenticated') {
       return { name: 'login', query: { redirect: to.fullPath } };
+    }
+
+    const profiles = to.meta.profiles as string[] | undefined;
+    if (profiles && session.state.user && !profiles.includes(session.state.user.perfil)) {
+      return { name: 'units' };
     }
 
     return true;

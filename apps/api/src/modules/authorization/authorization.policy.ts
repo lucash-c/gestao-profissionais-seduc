@@ -4,6 +4,8 @@ import { HttpError } from '../../http/http-error.js';
 
 export const AUTHORIZATION_ACTIONS = {
   ACCESS_ADMIN_CORRECTION: 'correcao-administrativa:acessar',
+  CREATE_PROFESSIONAL: 'profissional:criar',
+  CREATE_UNIT: 'unidade:criar',
   EDIT_PROFESSIONAL: 'profissional:editar',
   EDIT_PROFESSIONAL_PARTICIPATION: 'profissional:manifestacao:editar',
   EDIT_PROFESSIONAL_SCORE: 'profissional:pontuacao:editar',
@@ -22,6 +24,8 @@ type AuthorizationScope = 'GLOBAL' | 'OWN_UNIT';
 const grants: Record<UserProfile, Partial<Record<AuthorizationAction, AuthorizationScope>>> = {
   ADMINISTRADOR: {
     [AUTHORIZATION_ACTIONS.ACCESS_ADMIN_CORRECTION]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.CREATE_PROFESSIONAL]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.CREATE_UNIT]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL_PARTICIPATION]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL_SCORE]: 'GLOBAL',
@@ -50,7 +54,7 @@ const grants: Record<UserProfile, Partial<Record<AuthorizationAction, Authorizat
 
 export function isAuthorized(input: {
   action: AuthorizationAction;
-  resourceUnitId?: string;
+  resourceUnitId?: string | undefined;
   user: AuthenticatedUser;
 }): boolean {
   const scope = grants[input.user.perfil][input.action];
@@ -71,7 +75,7 @@ export function isAuthorized(input: {
 
 export function assertAuthorized(input: {
   action: AuthorizationAction;
-  resourceUnitId?: string;
+  resourceUnitId?: string | undefined;
   user: AuthenticatedUser;
 }): void {
   if (!isAuthorized(input)) {

@@ -6,7 +6,20 @@ import type { SessionStore } from '@/stores/session.store';
 
 function createSession(status: SessionStore['state']['status']): SessionStore {
   return {
-    state: { status, user: null },
+    state: {
+      status,
+      user:
+        status === 'authenticated'
+          ? {
+              email: null,
+              id: 'usuario-1',
+              login: 'operador',
+              nome: 'Operador',
+              perfil: 'OPERADOR',
+              unidade: null,
+            }
+          : null,
+    },
     login: vi.fn(),
     logout: vi.fn(),
     restore: vi.fn(),
@@ -21,7 +34,7 @@ describe('proteção de rotas', () => {
     await router.push('/');
 
     expect(router.currentRoute.value.name).toBe('login');
-    expect(router.currentRoute.value.query.redirect).toBe('/');
+    expect(router.currentRoute.value.query.redirect).toBe('/unidades');
   });
 
   it('restaura a sessão antes de liberar uma rota protegida', async () => {
@@ -35,6 +48,17 @@ describe('proteção de rotas', () => {
     await router.push('/');
 
     expect(session.restore).toHaveBeenCalledOnce();
-    expect(router.currentRoute.value.name).toBe('foundation');
+    expect(router.currentRoute.value.name).toBe('units');
+  });
+
+  it('redireciona Operador para Unidades ao tentar acessar páginas exclusivas de Admin', async () => {
+    const session = createSession('authenticated');
+    const router = createAppRouter(session, createMemoryHistory());
+
+    await router.push('/usuarios');
+    expect(router.currentRoute.value.name).toBe('units');
+
+    await router.push('/pontuacoes');
+    expect(router.currentRoute.value.name).toBe('units');
   });
 });
