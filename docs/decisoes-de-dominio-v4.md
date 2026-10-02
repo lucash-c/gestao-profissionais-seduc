@@ -9,6 +9,10 @@ Podem cadastrar e alterar:
 - os dados da própria unidade;
 - os profissionais vinculados à própria unidade.
 
+Para fins de escopo cadastral, a unidade administrativa do profissional é a unidade da `lotacao_sede` ativa. Se não houver sede ativa, usa-se a unidade do `exercicio_profissional` ativo. Sem nenhum desses vínculos ativos, o profissional só pode ser administrado pelo `ADMINISTRADOR`. A sede sempre prevalece quando sede e exercício apontam para unidades diferentes.
+
+A criação inicial de profissional é exclusiva do `ADMINISTRADOR`. Diretor e Secretário editam somente profissionais abrangidos pelo cálculo acima; esse cadastro não cria lotação ou exercício automaticamente.
+
 Não podem:
 
 - administrar quadro de necessidades;

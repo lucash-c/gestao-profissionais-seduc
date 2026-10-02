@@ -40,6 +40,10 @@ export const phoneInputSchema = z
   })
   .strict();
 
+export const phoneCollectionInputSchema = phoneInputSchema.extend({
+  id: z.string().uuid().optional(),
+});
+
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
@@ -77,6 +81,7 @@ export const unitCreateSchema = z
 export const unitUpdateSchema = unitCreateSchema
   .omit({ telefones: true })
   .partial()
+  .extend({ telefones: z.array(phoneCollectionInputSchema).max(20).optional() })
   .refine((value) => Object.keys(value).length > 0, 'Informe ao menos um campo.');
 
 export const professionalQuerySchema = paginationSchema.extend({
@@ -122,6 +127,7 @@ export const professionalCreateSchema = z
 export const professionalUpdateSchema = z
   .object(professionalFields)
   .partial()
+  .extend({ telefones: z.array(phoneCollectionInputSchema).max(20).optional() })
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'Informe ao menos um campo.');
 
@@ -177,3 +183,4 @@ export type UserQuery = z.infer<typeof userQuerySchema>;
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
 export type PhoneInput = z.infer<typeof phoneInputSchema>;
+export type PhoneCollectionInput = z.infer<typeof phoneCollectionInputSchema>;

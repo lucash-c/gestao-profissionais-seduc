@@ -185,22 +185,10 @@ async function save(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const { telefones, ...fields } = form;
     if (!editing.value) {
-      await registryApi.createProfessional({ ...fields, telefones });
+      await registryApi.createProfessional(form);
     } else {
-      await registryApi.updateProfessional(editing.value.id, fields);
-      const keptIds = new Set(telefones.flatMap((phone) => (phone.id ? [phone.id] : [])));
-      await Promise.all(
-        editing.value.telefones
-          .filter((phone) => !keptIds.has(phone.id))
-          .map((phone) => registryApi.deleteProfessionalPhone(editing.value!.id, phone.id)),
-      );
-      for (const phone of telefones) {
-        const body = { numero: phone.numero, tipo: phone.tipo };
-        if (phone.id) await registryApi.updateProfessionalPhone(editing.value.id, phone.id, body);
-        else await registryApi.addProfessionalPhone(editing.value.id, body);
-      }
+      await registryApi.updateProfessional(editing.value.id, form);
     }
     dialogOpen.value = false;
     await load();

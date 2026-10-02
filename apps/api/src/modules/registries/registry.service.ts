@@ -12,6 +12,7 @@ import { HttpError } from '../../http/http-error.js';
 import { hashPassword } from '../auth/auth.crypto.js';
 import { assertUserIdentifiersAvailable } from '../users/user-identifier.service.js';
 import type {
+  PhoneCollectionInput,
   PhoneInput,
   ProfessionalCreateInput,
   ProfessionalQuery,
@@ -228,6 +229,68 @@ function handleDatabaseError(error: unknown): never {
   throw error;
 }
 
+async function syncProfessionalPhones(
+  transaction: Prisma.TransactionClient,
+  professionalId: string,
+  phones: PhoneCollectionInput[],
+): Promise<void> {
+  const existing = phones.filter((phone): phone is PhoneCollectionInput & { id: string } =>
+    Boolean(phone.id),
+  );
+  for (const { id, ...phone } of existing) {
+    const result = await transaction.profissionalTelefone.updateMany({
+      data: phone,
+      where: { id, profissionalId: professionalId },
+    });
+    if (result.count === 0) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
+  }
+  await transaction.profissionalTelefone.deleteMany({
+    where: {
+      profissionalId: professionalId,
+      ...(existing.length ? { id: { notIn: existing.map((phone) => phone.id) } } : {}),
+    },
+  });
+  const additions = phones
+    .filter((phone) => !phone.id)
+    .map(({ numero, tipo }) => ({ numero, tipo }));
+  if (additions.length) {
+    await transaction.profissionalTelefone.createMany({
+      data: additions.map((phone) => ({ ...phone, profissionalId: professionalId })),
+    });
+  }
+}
+
+async function syncUnitPhones(
+  transaction: Prisma.TransactionClient,
+  unitId: string,
+  phones: PhoneCollectionInput[],
+): Promise<void> {
+  const existing = phones.filter((phone): phone is PhoneCollectionInput & { id: string } =>
+    Boolean(phone.id),
+  );
+  for (const { id, ...phone } of existing) {
+    const result = await transaction.unidadeTelefone.updateMany({
+      data: phone,
+      where: { id, unidadeId: unitId },
+    });
+    if (result.count === 0) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
+  }
+  await transaction.unidadeTelefone.deleteMany({
+    where: {
+      unidadeId: unitId,
+      ...(existing.length ? { id: { notIn: existing.map((phone) => phone.id) } } : {}),
+    },
+  });
+  const additions = phones
+    .filter((phone) => !phone.id)
+    .map(({ numero, tipo }) => ({ numero, tipo }));
+  if (additions.length) {
+    await transaction.unidadeTelefone.createMany({
+      data: additions.map((phone) => ({ ...phone, unidadeId: unitId })),
+    });
+  }
+}
+
 export function createPrismaRegistryServices(database: DatabaseConnection): RegistryServices {
   const { client } = database;
 
@@ -245,18 +308,34 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
   }
 
   async function professionalUnitId(id: string): Promise<string | undefined> {
-    const record = await client.lotacaoSede.findFirst({
+    const placement = await client.lotacaoSede.findFirst({
       select: { postoTrabalho: { select: { unidadeId: true } } },
       where: { dataFim: null, profissionalId: id },
     });
-    return record?.postoTrabalho.unidadeId;
+    if (placement) return placement.postoTrabalho.unidadeId;
+
+    const exercise = await client.exercicioProfissional.findFirst({
+      select: { postoTrabalho: { select: { unidadeId: true } } },
+      where: { dataFim: null, profissionalId: id },
+    });
+    return exercise?.postoTrabalho.unidadeId;
+  }
+
+  function administrativeUnitScope(unitId: string): Prisma.ProfissionalWhereInput {
+    return {
+      OR: [
+        { lotacoesSede: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } } },
+        {
+          exercicios: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } },
+          lotacoesSede: { none: { dataFim: null } },
+        },
+      ],
+    };
   }
 
   function professionalScope(user: AuthenticatedUser): Prisma.ProfissionalWhereInput {
     const unitId = scopedUnitId(user);
-    return unitId
-      ? { lotacoesSede: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } } }
-      : {};
+    return unitId ? administrativeUnitScope(unitId) : {};
   }
 
   async function getProfessional(id: string, user: AuthenticatedUser): Promise<ProfessionalRecord> {
@@ -373,13 +452,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
             : {
                 cargoFuncao: { ehProfessor: query.usaPontuacao, usaPontuacao: query.usaPontuacao },
               }),
-          ...(unitId
-            ? {
-                lotacoesSede: {
-                  some: { dataFim: null, postoTrabalho: { unidadeId: unitId } },
-                },
-              }
-            : {}),
+          ...(unitId ? administrativeUnitScope(unitId) : {}),
         };
         const [items, total] = await client.$transaction([
           client.profissional.findMany({
@@ -396,7 +469,13 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       resourceUnitId: professionalUnitId,
       async update(id, input, user) {
         await getProfessional(id, user);
-        const { dataDesligamento, dataEntradaPrefeitura, dataNascimento, ...otherFields } = input;
+        const {
+          dataDesligamento,
+          dataEntradaPrefeitura,
+          dataNascimento,
+          telefones,
+          ...otherFields
+        } = input;
         const data = {
           ...compact(otherFields),
           ...(dataDesligamento === undefined
@@ -408,9 +487,11 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
           ...(dataNascimento ? { dataNascimento: asDate(dataNascimento) } : {}),
         } as Prisma.ProfissionalUncheckedUpdateInput;
         try {
-          await client.profissional.update({
-            data,
-            where: { id },
+          await client.$transaction(async (transaction) => {
+            if (Object.keys(data).length) {
+              await transaction.profissional.update({ data, where: { id } });
+            }
+            if (telefones) await syncProfessionalPhones(transaction, id, telefones);
           });
           return getProfessional(id, user);
         } catch (error) {
@@ -496,10 +577,14 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       async update(id, input, user) {
         await getUnit(id, user);
+        const { telefones, ...fields } = input;
         try {
-          await client.unidade.update({
-            data: compact(input) as Prisma.UnidadeUncheckedUpdateInput,
-            where: { id },
+          await client.$transaction(async (transaction) => {
+            const data = compact(fields) as Prisma.UnidadeUncheckedUpdateInput;
+            if (Object.keys(data).length) {
+              await transaction.unidade.update({ data, where: { id } });
+            }
+            if (telefones) await syncUnitPhones(transaction, id, telefones);
           });
           return getUnit(id, user);
         } catch (error) {

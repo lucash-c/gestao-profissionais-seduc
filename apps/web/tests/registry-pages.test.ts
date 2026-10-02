@@ -4,7 +4,7 @@ import type {
   UnitRecord,
   UserRecord,
 } from '@seduc/contracts';
-import { QLayout, QPageContainer, Quasar } from 'quasar';
+import { QLayout, QPageContainer, QPagination, Quasar } from 'quasar';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -270,6 +270,62 @@ describe('Etapa 3 Quasar pages', () => {
     await flushPromises();
     expect(document.body.querySelector('[data-testid="user-dialog"]')).not.toBeNull();
     users.unmount();
+  });
+
+  it('pagina Pontuações usando a resposta paginada da API', async () => {
+    mocks.listProfessionals.mockResolvedValue({
+      items: [professional],
+      page: 1,
+      pageSize: 20,
+      total: 21,
+      totalPages: 2,
+    });
+    const scores = mountPage(ScoresPage);
+    await flushPromises();
+    const pagination = scores.findComponent(QPagination);
+    expect(pagination.exists()).toBe(true);
+    pagination.vm.$emit('update:modelValue', 2);
+    await flushPromises();
+    expect(mocks.listProfessionals).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 20, usaPontuacao: true }),
+    );
+  });
+
+  it('envia cadastro e coleção final de telefones em um único PATCH', async () => {
+    const unitWrapper = mountPage(UnitsPage);
+    await flushPromises();
+    const editUnit = unitWrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Editar'));
+    await editUnit!.trigger('click');
+    await flushPromises();
+    (document.body.querySelector('[data-testid="save-unit"]') as HTMLElement).click();
+    await flushPromises();
+    expect(mocks.updateUnit).toHaveBeenCalledWith(
+      UNIT_ID,
+      expect.objectContaining({ telefones: [] }),
+    );
+    expect(mocks.addUnitPhone).not.toHaveBeenCalled();
+    expect(mocks.updateUnitPhone).not.toHaveBeenCalled();
+    expect(mocks.deleteUnitPhone).not.toHaveBeenCalled();
+    unitWrapper.unmount();
+
+    const professionalWrapper = mountPage(ProfessionalsPage);
+    await flushPromises();
+    const editProfessional = professionalWrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Editar'));
+    await editProfessional!.trigger('click');
+    await flushPromises();
+    (document.body.querySelector('[data-testid="save-professional"]') as HTMLElement).click();
+    await flushPromises();
+    expect(mocks.updateProfessional).toHaveBeenCalledWith(
+      RECORD_ID,
+      expect.objectContaining({ telefones: [] }),
+    );
+    expect(mocks.addProfessionalPhone).not.toHaveBeenCalled();
+    expect(mocks.updateProfessionalPhone).not.toHaveBeenCalled();
+    expect(mocks.deleteProfessionalPhone).not.toHaveBeenCalled();
   });
 
   it('exibe menus de Usuários e Pontuações somente para Admin', () => {

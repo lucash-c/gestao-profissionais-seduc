@@ -18,15 +18,23 @@ Login e logout mantêm seu fluxo próprio. As rotas de domínio executam autenti
 
 - `ADMINISTRADOR`: escopo global; cria e altera unidades e profissionais; gerencia usuários; altera pontuação.
 - `OPERADOR`: consulta unidades e profissionais; não realiza mutações cadastrais.
-- `DIRETOR` e `SECRETARIO`: consultam e alteram sua própria unidade e profissionais cuja lotação de sede ativa pertence a essa unidade. A unidade autorizada é obtida da sessão carregada do banco.
+- `DIRETOR` e `SECRETARIO`: consultam e alteram sua própria unidade e profissionais cuja unidade administrativa calculada pertence a essa unidade. A unidade autorizada é obtida da sessão carregada do banco.
 
 O backend aplica o escopo nas consultas e mutações. Guards e menus do frontend existem apenas como melhoria de experiência.
 
-## Lacuna semântica preservada
+## Unidade administrativa calculada do profissional
 
-A V4 não define um vínculo cadastral simples entre um profissional ainda sem lotação e uma unidade administrativa. Criar `profissional.unidade_id` produziria uma segunda fonte de verdade em conflito com os históricos oficiais.
+A unidade administrativa usada no escopo de Diretor e Secretário é calculada sem criar uma segunda fonte de verdade:
 
-Por isso, nesta etapa, a criação de profissionais é global e restrita ao `ADMINISTRADOR`. Diretor e Secretário podem alterar profissionais já vinculados à sua unidade por `lotacao_sede` ativa, mas não criar um profissional novo. Essa decisão precisa de definição funcional antes de a Etapa 3 ser considerada definitivamente encerrada.
+1. a unidade da `lotacao_sede` ativa tem prioridade;
+2. na ausência de sede ativa, usa-se a unidade do `exercicio_profissional` ativo;
+3. sem sede e sem exercício ativos, o profissional não pertence ao escopo de unidade escolar e somente o Administrador pode administrá-lo.
+
+A criação inicial de profissionais permanece global e restrita ao `ADMINISTRADOR`. Diretor e Secretário não criam profissional novo, nem criam automaticamente lotação ou exercício.
+
+## Salvamento de telefones
+
+As telas de Unidade e Profissional enviam a coleção final de telefones junto com o cadastro. O backend sincroniza inclusão, alteração e remoção dos telefones na mesma transação PostgreSQL da alteração principal, impedindo persistência parcial.
 
 ## Auditoria futura
 

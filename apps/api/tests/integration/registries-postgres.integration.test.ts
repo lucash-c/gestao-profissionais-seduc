@@ -32,6 +32,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
   const credentials = {
     admin: `admin.${suffix}`,
     director: `director.${suffix}`,
+    directorB: `director-b.${suffix}`,
     operator: `operator.${suffix}`,
     secretary: `secretary.${suffix}`,
   };
@@ -67,6 +68,13 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
           senhaHash,
           unidadeId: ids.unitA,
         },
+        {
+          login: credentials.directorB,
+          nome: 'Diretor B Integração',
+          perfil: 'DIRETOR',
+          senhaHash,
+          unidadeId: ids.unitB,
+        },
       ],
     });
   }, 30_000);
@@ -87,10 +95,10 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     });
     await database.client.profissional.deleteMany({ where: { matricula: { contains: suffix } } });
     await database.client.postoTrabalho.deleteMany({
-      where: { quadroNecessidadeId: { in: [ids.quadroA, ids.quadroB] } },
+      where: { unidadeId: { in: [ids.unitA, ids.unitB] } },
     });
     await database.client.quadroNecessidade.deleteMany({
-      where: { id: { in: [ids.quadroA, ids.quadroB] } },
+      where: { unidadeId: { in: [ids.unitA, ids.unitB] } },
     });
     await database.client.unidadeTelefone.deleteMany({
       where: { unidade: { nome: { contains: suffix } } },
@@ -130,10 +138,10 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       });
   }
 
-  async function placeProfessional(professionalId: string, unitId: string, quadroId: string) {
+  async function createPost(unitId: string, quadroId: string, year: number) {
     await database.client.quadroNecessidade.create({
       data: {
-        anoLetivo: 2027,
+        anoLetivo: year,
         cargoFuncaoId: ids.cargo,
         id: quadroId,
         periodoId: ids.period,
@@ -143,16 +151,40 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     });
     const post = await database.client.postoTrabalho.create({
       data: {
-        anoLetivo: 2027,
+        anoLetivo: year,
         cargoFuncaoId: ids.cargo,
         periodoId: ids.period,
         quadroNecessidadeId: quadroId,
         unidadeId: unitId,
       },
     });
+    return post;
+  }
+
+  async function placeProfessional(
+    professionalId: string,
+    unitId: string,
+    quadroId: string,
+    year: number,
+  ) {
+    const post = await createPost(unitId, quadroId, year);
     await database.client.lotacaoSede.create({
       data: { postoTrabalhoId: post.id, profissionalId: professionalId },
     });
+    return post;
+  }
+
+  async function exerciseProfessional(
+    professionalId: string,
+    unitId: string,
+    quadroId: string,
+    year: number,
+  ) {
+    const post = await createPost(unitId, quadroId, year);
+    await database.client.exercicioProfissional.create({
+      data: { postoTrabalhoId: post.id, profissionalId: professionalId, tipoExercicio: 'SEDE' },
+    });
+    return post;
   }
 
   it('persiste unidades, profissionais normalizados, defaults e constraints reais', async () => {
@@ -168,11 +200,78 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       .expect(201);
     expect(unitResponse.body).toMatchObject({ codigoInep: null, poloRegiao: null });
     expect(unitResponse.body.telefones[0].numero).toBe('1934001000');
+    const originalUnitName = unitResponse.body.nome;
+    await admin
+      .patch(`/unidades/${unitResponse.body.id}`)
+      .send({
+        nome: `Não deve persistir ${suffix}`,
+        telefones: [{ id: randomUUID(), numero: '1934002000', tipo: 'FIXO' }],
+      })
+      .expect(404);
+    const unitAfterRollback = await database.client.unidade.findUniqueOrThrow({
+      include: { telefones: true },
+      where: { id: unitResponse.body.id },
+    });
+    expect(unitAfterRollback.nome).toBe(originalUnitName);
+    expect(unitAfterRollback.telefones).toHaveLength(1);
+    const synchronizedUnit = await admin
+      .patch(`/unidades/${unitResponse.body.id}`)
+      .send({
+        telefones: [
+          {
+            id: unitResponse.body.telefones[0].id,
+            numero: unitResponse.body.telefones[0].numero,
+            tipo: unitResponse.body.telefones[0].tipo,
+          },
+          { numero: '1934003000', tipo: 'RECADO' },
+        ],
+      })
+      .expect(200);
+    expect(synchronizedUnit.body.telefones).toHaveLength(2);
     await admin.patch(`/unidades/${unitResponse.body.id}`).send({ ativo: false }).expect(200);
 
     const first = await createProfessional(admin, `M-A-${suffix}`, '123.456.789-01').expect(201);
     expect(first.body).toMatchObject({ cpf: '12345678901', permuta: false, remocao: false });
     expect(first.body.telefones).toHaveLength(2);
+    const originalProfessionalName = first.body.nomeCompleto;
+    await admin
+      .patch(`/profissionais/${first.body.id}`)
+      .send({
+        nomeCompleto: `Não deve persistir ${suffix}`,
+        telefones: [{ id: randomUUID(), numero: '1999990000', tipo: 'CELULAR' }],
+      })
+      .expect(404);
+    const professionalAfterRollback = await database.client.profissional.findUniqueOrThrow({
+      include: { telefones: true },
+      where: { id: first.body.id },
+    });
+    expect(professionalAfterRollback.nomeCompleto).toBe(originalProfessionalName);
+    expect(professionalAfterRollback.telefones).toHaveLength(2);
+    const synchronizedProfessional = await admin
+      .patch(`/profissionais/${first.body.id}`)
+      .send({
+        telefones: [
+          {
+            id: first.body.telefones[0].id,
+            numero: '19988887777',
+            tipo: 'PESSOAL',
+          },
+          { numero: '1934004000', tipo: 'RECADO' },
+        ],
+      })
+      .expect(200);
+    expect(synchronizedProfessional.body.telefones).toHaveLength(2);
+    expect(synchronizedProfessional.body.telefones).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ numero: '19988887777', tipo: 'PESSOAL' }),
+        expect.objectContaining({ numero: '1934004000', tipo: 'RECADO' }),
+      ]),
+    );
+    expect(
+      synchronizedProfessional.body.telefones.some(
+        (phone: { id: string }) => phone.id === first.body.telefones[1].id,
+      ),
+    ).toBe(false);
     await createProfessional(admin, `M-B-${suffix}`, '12345678901').expect(201);
     await createProfessional(admin, `M-A-${suffix}`, '99999999999').expect(409);
 
@@ -192,24 +291,74 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     const admin = await authenticated(credentials.admin);
     const local = await createProfessional(admin, `M-LOCAL-${suffix}`, '11111111111').expect(201);
     const other = await createProfessional(admin, `M-OTHER-${suffix}`, '22222222222').expect(201);
-    await placeProfessional(local.body.id, ids.unitA, ids.quadroA);
-    await placeProfessional(other.body.id, ids.unitB, ids.quadroB);
+    const exerciseOnly = await createProfessional(
+      admin,
+      `M-EXERCISE-${suffix}`,
+      '33333333333',
+    ).expect(201);
+    const unassigned = await createProfessional(
+      admin,
+      `M-UNASSIGNED-${suffix}`,
+      '44444444444',
+    ).expect(201);
+    const priority = await createProfessional(admin, `M-PRIORITY-${suffix}`, '55555555555').expect(
+      201,
+    );
+    await placeProfessional(local.body.id, ids.unitA, ids.quadroA, 2027);
+    await placeProfessional(other.body.id, ids.unitB, ids.quadroB, 2027);
+    await exerciseProfessional(exerciseOnly.body.id, ids.unitA, randomUUID(), 2028);
+    await placeProfessional(priority.body.id, ids.unitA, randomUUID(), 2029);
+    await exerciseProfessional(priority.body.id, ids.unitB, randomUUID(), 2030);
 
     for (const login of [credentials.director, credentials.secretary]) {
       const scoped = await authenticated(login);
       const list = await scoped.get('/profissionais').expect(200);
       expect(list.body.items.map((item: { id: string }) => item.id)).toContain(local.body.id);
+      expect(list.body.items.map((item: { id: string }) => item.id)).toContain(
+        exerciseOnly.body.id,
+      );
+      expect(list.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
       expect(list.body.items.map((item: { id: string }) => item.id)).not.toContain(other.body.id);
+      expect(list.body.items.map((item: { id: string }) => item.id)).not.toContain(
+        unassigned.body.id,
+      );
       await scoped.patch(`/profissionais/${local.body.id}`).send({ remocao: true }).expect(200);
+      await scoped
+        .patch(`/profissionais/${exerciseOnly.body.id}`)
+        .send({ permuta: true })
+        .expect(200);
       await scoped.patch(`/profissionais/${other.body.id}`).send({ remocao: true }).expect(403);
+      await scoped
+        .patch(`/profissionais/${unassigned.body.id}`)
+        .send({ remocao: true })
+        .expect(403);
       await scoped.patch(`/unidades/${ids.unitA}`).send({ poloRegiao: 'Norte' }).expect(200);
       await scoped.patch(`/unidades/${ids.unitB}`).send({ poloRegiao: 'Sul' }).expect(403);
     }
+
+    const directorB = await authenticated(credentials.directorB);
+    const listB = await directorB.get('/profissionais').expect(200);
+    expect(listB.body.items.map((item: { id: string }) => item.id)).toContain(other.body.id);
+    expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(local.body.id);
+    expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(
+      exerciseOnly.body.id,
+    );
+    expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(priority.body.id);
+    await directorB
+      .patch(`/profissionais/${priority.body.id}`)
+      .send({ permuta: false })
+      .expect(403);
+
+    await admin.get(`/profissionais/${unassigned.body.id}`).expect(200);
 
     const operator = await authenticated(credentials.operator);
     await operator.get('/profissionais').expect(200);
     await operator.get('/unidades').expect(200);
     await operator.patch(`/profissionais/${local.body.id}`).send({ permuta: true }).expect(403);
+    await operator
+      .patch(`/profissionais/${exerciseOnly.body.id}`)
+      .send({ permuta: false })
+      .expect(403);
   }, 30_000);
 
   it('gerencia usuários em namespace único e revoga sessões ao redefinir senha', async () => {

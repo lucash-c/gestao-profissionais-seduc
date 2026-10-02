@@ -9,6 +9,7 @@ import {
   QDialog,
   QInput,
   QPage,
+  QPagination,
   QSpinner,
   QTable,
 } from 'quasar';
@@ -21,6 +22,8 @@ const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
 const search = ref('');
+const page = ref(1);
+const totalPages = ref(1);
 const selected = ref<ProfessionalRecord | null>(null);
 const newScore = ref<number | null>(null);
 const columns = [
@@ -42,16 +45,21 @@ async function load(): Promise<void> {
   try {
     const result = await registryApi.listProfessionals({
       nome: search.value,
-      page: 1,
-      pageSize: 100,
+      page: page.value,
+      pageSize: 20,
       usaPontuacao: true,
     });
     rows.value = result.items;
+    totalPages.value = Math.max(result.totalPages, 1);
   } catch (loadError) {
     error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar pontuações.';
   } finally {
     loading.value = false;
   }
+}
+async function searchScores(): Promise<void> {
+  page.value = 1;
+  await load();
 }
 function open(row: ProfessionalRecord): void {
   selected.value = row;
@@ -93,8 +101,8 @@ onMounted(load);
           label="Buscar professor"
           data-testid="score-search"
           class="col"
-          @keyup.enter="load"
-        /><QBtn outline color="primary" label="Buscar" @click="load" />
+          @keyup.enter="searchScores"
+        /><QBtn outline color="primary" label="Buscar" @click="searchScores" />
       </QCardSection>
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="scores-error">
         {{ error }}
@@ -112,6 +120,14 @@ onMounted(load);
           </td>
         </template>
       </QTable>
+      <QCardActions v-if="!loading && rows.length" align="center">
+        <QPagination
+          v-model="page"
+          data-testid="scores-pagination"
+          :max="totalPages"
+          @update:model-value="load"
+        />
+      </QCardActions>
     </QCard>
     <QDialog
       :model-value="Boolean(selected)"

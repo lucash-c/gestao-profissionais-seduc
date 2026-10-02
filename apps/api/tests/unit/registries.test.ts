@@ -267,6 +267,26 @@ describe('Etapa 3 registry API and RBAC', () => {
     expect(services.professionals.updateScore).toHaveBeenCalledWith(RECORD_ID, 123);
   });
 
+  it('aceita a coleção final de telefones nos PATCH cadastrais', async () => {
+    const { agent, services } = await scenario('ADMINISTRADOR');
+    const telefones = [{ id: PHONE_ID, numero: '19999999999', tipo: 'CELULAR' }];
+    await agent.patch(`/unidades/${UNIT_A}`).send({ nome: 'Unidade', telefones }).expect(200);
+    await agent
+      .patch(`/profissionais/${RECORD_ID}`)
+      .send({ nomeCompleto: 'Profissional', telefones })
+      .expect(200);
+    expect(services.units.update).toHaveBeenCalledWith(
+      UNIT_A,
+      expect.objectContaining({ telefones }),
+      expect.anything(),
+    );
+    expect(services.professionals.update).toHaveBeenCalledWith(
+      RECORD_ID,
+      expect.objectContaining({ telefones }),
+      expect.anything(),
+    );
+  });
+
   it('restringe a gestão de usuários ao Admin e nunca devolve senha', async () => {
     const admin = await scenario('ADMINISTRADOR');
     const response = await admin.agent
