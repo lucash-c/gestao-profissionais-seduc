@@ -59,7 +59,7 @@ O bootstrap manual parametrizado continua disponível para operações administr
 pnpm --filter @seduc/api auth:bootstrap-admin
 ```
 
-Não existe senha ou administrador padrão.
+Não existem outras credenciais padrão além da conta inicial SEDUC descrita acima. O bootstrap manual não possui credenciais predefinidas.
 
 ### Proxy reverso e HTTPS
 
