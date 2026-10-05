@@ -46,6 +46,7 @@ vi.mock('@/services/registry.service', () => ({ registryApi: mocks }));
 vi.mock('@/stores/session.store', () => ({ sessionStore: sessionMock }));
 
 const UNIT_ID = '11111111-1111-4111-8111-111111111111';
+const UNIT_B_ID = '11111111-1111-4111-8111-222222222222';
 const TYPE_ID = '22222222-2222-4222-8222-222222222222';
 const CARGO_ID = '33333333-3333-4333-8333-333333333333';
 const RECORD_ID = '44444444-4444-4444-8444-444444444444';
@@ -75,6 +76,7 @@ const professional: ProfessionalRecord = {
     ehProfessor: true,
     id: CARGO_ID,
     nome: 'Professor',
+    permiteMultiplosExercicios: false,
     usaPontuacao: true,
   },
   cargoFuncaoId: CARGO_ID,
@@ -87,12 +89,20 @@ const professional: ProfessionalRecord = {
   dataNascimento: '1980-01-01',
   email: null,
   endereco: null,
-  exercicioAtual: {
-    postoId: RECORD_ID,
-    tipo: 'SEDE',
-    unidadeId: UNIT_ID,
-    unidadeNome: 'EMEF Teste',
-  },
+  exerciciosAtuais: [
+    {
+      postoId: RECORD_ID,
+      tipo: 'SEDE',
+      unidadeId: UNIT_ID,
+      unidadeNome: 'EMEF Teste',
+    },
+    {
+      postoId: UNIT_B_ID,
+      tipo: 'SEDE',
+      unidadeId: UNIT_B_ID,
+      unidadeNome: 'EMEF Segunda',
+    },
+  ],
   id: RECORD_ID,
   matricula: 'M-1',
   nomeCompleto: 'Professora Teste',
@@ -109,11 +119,14 @@ const user: UserRecord = {
   ativo: true,
   email: null,
   id: RECORD_ID,
-  login: 'operador',
-  nome: 'Operador',
-  perfil: 'OPERADOR',
-  unidade: null,
-  unidadeId: null,
+  login: 'diretor',
+  nome: 'Diretor',
+  perfil: 'DIRETOR',
+  unidadeIds: [UNIT_ID, UNIT_B_ID],
+  unidades: [
+    { id: UNIT_ID, nome: 'EMEF Teste' },
+    { id: UNIT_B_ID, nome: 'EMEF Segunda' },
+  ],
 };
 
 function setProfile(perfil: AuthenticatedUser['perfil']): void {
@@ -123,8 +136,8 @@ function setProfile(perfil: AuthenticatedUser['perfil']): void {
     login: perfil.toLowerCase(),
     nome: perfil,
     perfil,
-    unidade:
-      perfil === 'DIRETOR' || perfil === 'SECRETARIO' ? { id: UNIT_ID, nome: 'EMEF Teste' } : null,
+    unidades:
+      perfil === 'DIRETOR' || perfil === 'SECRETARIO' ? [{ id: UNIT_ID, nome: 'EMEF Teste' }] : [],
   };
 }
 
@@ -150,7 +163,10 @@ beforeEach(() => {
   setProfile('ADMINISTRADOR');
   mocks.listTiposUnidade.mockResolvedValue([unit.tipoUnidade]);
   mocks.listCargos.mockResolvedValue([professional.cargoFuncao]);
-  mocks.listUnitOptions.mockResolvedValue([{ id: UNIT_ID, nome: unit.nome }]);
+  mocks.listUnitOptions.mockResolvedValue([
+    { id: UNIT_ID, nome: unit.nome },
+    { id: UNIT_B_ID, nome: 'EMEF Segunda' },
+  ]);
   mocks.listUnits.mockResolvedValue({
     items: [unit],
     page: 1,
@@ -251,6 +267,8 @@ describe('Etapa 3 Quasar pages', () => {
     await flushPromises();
     const history = document.body.querySelector('[data-testid="readonly-placement"]');
     expect(history?.textContent).toContain('não podem ser alterados');
+    expect(history?.textContent).toContain('EMEF Teste (SEDE)');
+    expect(history?.textContent).toContain('EMEF Segunda (SEDE)');
     expect(history?.querySelector('input')).toBeNull();
   });
 
@@ -266,6 +284,12 @@ describe('Etapa 3 Quasar pages', () => {
 
     const users = mountPage(UsersPage);
     await flushPromises();
+    expect(users.text()).toContain('EMEF Teste, EMEF Segunda');
+    const editUser = users.findAll('button').find((button) => button.text().includes('Editar'));
+    await editUser!.trigger('click');
+    await flushPromises();
+    expect(document.body.querySelector('[data-testid="user-units-multiple"]')).not.toBeNull();
+    expect(document.body.querySelector('[data-testid="user-unit-single"]')).toBeNull();
     await users.get('[data-testid="new-user"]').trigger('click');
     await flushPromises();
     expect(document.body.querySelector('[data-testid="user-dialog"]')).not.toBeNull();

@@ -336,10 +336,15 @@ onMounted(load);
             <span
               ><strong>Sede atual:</strong> {{ editing.sedeAtual?.unidadeNome ?? 'Sem sede' }}</span
             >
-            <span
-              ><strong>Exercício atual:</strong>
-              {{ editing.exercicioAtual?.unidadeNome ?? 'Sem exercício' }}</span
-            >
+            <div>
+              <strong>Exercícios atuais:</strong>
+              <span v-if="editing.exerciciosAtuais.length === 0"> Sem exercício</span>
+              <ul v-else class="q-my-xs">
+                <li v-for="exercise in editing.exerciciosAtuais" :key="exercise.postoId">
+                  {{ exercise.unidadeNome }} ({{ exercise.tipo }})
+                </li>
+              </ul>
+            </div>
             <small
               >Sede e exercício são históricos oficiais e não podem ser alterados neste
               cadastro.</small

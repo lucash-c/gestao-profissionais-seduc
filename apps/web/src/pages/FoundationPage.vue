@@ -67,7 +67,9 @@ async function logout(): Promise<void> {
           <span>{{ authenticatedUser.nome }}</span>
           <small>
             {{ profileLabels[authenticatedUser.perfil] }}
-            <span v-if="authenticatedUser.unidade"> · {{ authenticatedUser.unidade.nome }}</span>
+            <span v-if="authenticatedUser.unidades.length">
+              · {{ authenticatedUser.unidades.map((unit) => unit.nome).join(', ') }}
+            </span>
           </small>
         </div>
         <QBadge color="blue-2" text-color="blue-10" label="ETAPA 2" />

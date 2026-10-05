@@ -15,7 +15,7 @@ O navegador recebe um cookie `seduc_session` com estas propriedades:
 
 O cookie contém um identificador aleatório de 256 bits assinado com HMAC-SHA-256. O segredo vem exclusivamente de `SESSION_SECRET`, deve ter pelo menos 32 caracteres e não pode permanecer com o placeholder do `.env.example`.
 
-Somente o hash SHA-256 do identificador é armazenado em `sessao_usuario`. Cada requisição autenticada consulta novamente a sessão e o usuário no PostgreSQL; inativação e alterações de perfil ou unidade têm efeito imediato. Logout remove a sessão no servidor e limpa o cookie.
+Somente o hash SHA-256 do identificador é armazenado em `sessao_usuario`. Cada requisição autenticada consulta novamente a sessão, o usuário e seus vínculos em `usuario_unidade` no PostgreSQL; inativação e alterações de perfil ou unidades têm efeito imediato. Logout remove a sessão no servidor e limpa o cookie. `/auth/me` devolve `unidades` como coleção: uma ou mais para Diretor, exatamente uma para Secretário e vazia para Administrador/Operador.
 
 As variáveis obrigatórias são `SESSION_SECRET` (segredo aleatório com pelo menos 32 caracteres) e `SESSION_TTL_HOURS` (entre 1 e 168 horas; padrão 8). O login limita cada endereço IP a cinco falhas por janela de 15 minutos. Respostas bem-sucedidas não consomem o limite.
 
@@ -55,6 +55,6 @@ Se a mesma identidade administrativa já existir, o comando termina sem alterar 
 
 ## RBAC
 
-A política do backend é deny-by-default. Permissões e escopo de unidade ficam centralizados no módulo `authorization`. Diretor e Secretário usam exclusivamente a unidade carregada do usuário autenticado no banco; valores enviados pelo cliente não definem autorização.
+A política do backend é deny-by-default. Permissões e escopo de unidade ficam centralizados no módulo `authorization`. Diretor usa todas as unidades carregadas de `usuario_unidade`, Secretário usa seu único vínculo, e a autorização por unidade considera interseção de conjuntos. Valores enviados pelo cliente não definem autorização. Administrador permanece global e não depende de vínculo; Operador mantém a leitura cadastral global necessária às suas funções.
 
 Antes da introdução das primeiras rotas mutáveis de domínio, a proteção contra CSRF deverá ser revisada em conjunto com a topologia definitiva de implantação. Esta etapa não adiciona um mecanismo CSRF antecipado sem fluxo funcional para protegê-lo.

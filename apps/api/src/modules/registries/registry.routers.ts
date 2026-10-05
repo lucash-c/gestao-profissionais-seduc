@@ -40,7 +40,7 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
     const user = currentUser(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.READ_REGISTRIES,
-      resourceUnitId: user.unidade?.id,
+      resourceUnitIds: user.unidades.map((unit) => unit.id),
       user,
     });
     response.json(await service.list(unitQuerySchema.parse(request.query), user));
@@ -56,7 +56,7 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
     const user = currentUser(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.READ_REGISTRIES,
-      resourceUnitId: user.unidade?.id,
+      resourceUnitIds: user.unidades.map((unit) => unit.id),
       user,
     });
     response.json(await service.get(routeId(request), user));
@@ -65,14 +65,14 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
   router.patch('/:id', async (request, response) => {
     const user = currentUser(request);
     const id = routeId(request);
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitId: id, user });
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitIds: [id], user });
     response.json(await service.update(id, unitUpdateSchema.parse(request.body), user));
   });
 
   router.post('/:id/telefones', async (request, response) => {
     const user = currentUser(request);
     const id = routeId(request);
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitId: id, user });
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitIds: [id], user });
     response
       .status(201)
       .json(await service.addPhone(id, phoneInputSchema.parse(request.body), user));
@@ -81,7 +81,7 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
   router.patch('/:id/telefones/:phoneId', async (request, response) => {
     const user = currentUser(request);
     const id = routeId(request);
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitId: id, user });
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitIds: [id], user });
     response.json(
       await service.updatePhone(
         id,
@@ -95,7 +95,7 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
   router.delete('/:id/telefones/:phoneId', async (request, response) => {
     const user = currentUser(request);
     const id = routeId(request);
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitId: id, user });
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitIds: [id], user });
     await service.deletePhone(id, routeId(request, 'phoneId'), user);
     response.status(204).send();
   });
@@ -110,7 +110,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const user = currentUser(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.READ_REGISTRIES,
-      resourceUnitId: user.unidade?.id,
+      resourceUnitIds: user.unidades.map((unit) => unit.id),
       user,
     });
     response.json(await service.list(professionalQuerySchema.parse(request.query), user));
@@ -133,7 +133,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const user = currentUser(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.READ_REGISTRIES,
-      resourceUnitId: user.unidade?.id,
+      resourceUnitIds: user.unidades.map((unit) => unit.id),
       user,
     });
     response.json(await service.get(routeId(request), user));
@@ -144,7 +144,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.administrativeUnitId(id),
+      resourceUnitIds: await service.administrativeUnitIds(id),
       user,
     });
     response.json(await service.update(id, professionalUpdateSchema.parse(request.body), user));
@@ -155,7 +155,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.administrativeUnitId(id),
+      resourceUnitIds: await service.administrativeUnitIds(id),
       user,
     });
     response
@@ -168,7 +168,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.administrativeUnitId(id),
+      resourceUnitIds: await service.administrativeUnitIds(id),
       user,
     });
     response.json(
@@ -186,7 +186,7 @@ export function createProfessionalRouter(service: RegistryServices['professional
     const id = routeId(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL,
-      resourceUnitId: await service.administrativeUnitId(id),
+      resourceUnitIds: await service.administrativeUnitIds(id),
       user,
     });
     await service.deletePhone(id, routeId(request, 'phoneId'), user);
@@ -228,7 +228,7 @@ export function createLookupRouter(service: RegistryServices['lookups']): Router
     const user = currentUser(request);
     assertAuthorized({
       action: AUTHORIZATION_ACTIONS.READ_REGISTRIES,
-      resourceUnitId: user.unidade?.id,
+      resourceUnitIds: user.unidades.map((unit) => unit.id),
       user,
     });
     next();

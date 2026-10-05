@@ -9,7 +9,7 @@ const user: AuthenticatedUser = {
   login: 'admin',
   nome: 'Administrador',
   perfil: 'ADMINISTRADOR',
-  unidade: null,
+  unidades: [],
 };
 
 afterEach(() => {

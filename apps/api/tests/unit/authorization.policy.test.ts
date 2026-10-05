@@ -7,14 +7,14 @@ import {
   isAuthorized,
 } from '../../src/modules/authorization/authorization.policy.js';
 
-function createUser(perfil: UserProfile, unidadeId: string | null = null): AuthenticatedUser {
+function createUser(perfil: UserProfile, unidadeIds: string[] = []): AuthenticatedUser {
   return {
     email: `${perfil.toLowerCase()}@seduc.test`,
     id: `usuario-${perfil}`,
     login: perfil.toLowerCase(),
     nome: perfil,
     perfil,
-    unidade: unidadeId ? { id: unidadeId, nome: `Unidade ${unidadeId}` } : null,
+    unidades: unidadeIds.map((id) => ({ id, nome: `Unidade ${id}` })),
   };
 }
 
@@ -30,8 +30,28 @@ describe('central authorization policy', () => {
       ACTION.ACCESS_ADMIN_CORRECTION,
       ACTION.MANAGE_USERS,
     ]) {
-      expect(isAuthorized({ action, resourceUnitId: 'qualquer-unidade', user })).toBe(true);
+      expect(isAuthorized({ action, resourceUnitIds: ['qualquer-unidade'], user })).toBe(true);
+      expect(isAuthorized({ action, resourceUnitIds: [], user })).toBe(true);
     }
+  });
+
+  it('autoriza Diretor quando qualquer unidade vinculada intersecta o conjunto administrativo', () => {
+    const user = createUser('DIRETOR', ['unidade-a', 'unidade-b']);
+
+    expect(
+      isAuthorized({
+        action: ACTION.EDIT_PROFESSIONAL,
+        resourceUnitIds: ['unidade-b', 'unidade-c'],
+        user,
+      }),
+    ).toBe(true);
+    expect(
+      isAuthorized({
+        action: ACTION.EDIT_PROFESSIONAL,
+        resourceUnitIds: ['unidade-c'],
+        user,
+      }),
+    ).toBe(false);
   });
 
   it('nega ao ADMINISTRADOR a operação normal de evento', () => {
@@ -51,37 +71,37 @@ describe('central authorization policy', () => {
   it('nega ao OPERADOR cadastro comum, pontuação e manifestação prévia', () => {
     const user = createUser('OPERADOR');
 
-    expect(isAuthorized({ action: ACTION.EDIT_UNIT, resourceUnitId: 'a', user })).toBe(false);
-    expect(isAuthorized({ action: ACTION.EDIT_PROFESSIONAL, resourceUnitId: 'a', user })).toBe(
+    expect(isAuthorized({ action: ACTION.EDIT_UNIT, resourceUnitIds: ['a'], user })).toBe(false);
+    expect(isAuthorized({ action: ACTION.EDIT_PROFESSIONAL, resourceUnitIds: ['a'], user })).toBe(
       false,
     );
     expect(isAuthorized({ action: ACTION.EDIT_PROFESSIONAL_SCORE, user })).toBe(false);
     expect(
       isAuthorized({
         action: ACTION.EDIT_PROFESSIONAL_PARTICIPATION,
-        resourceUnitId: 'a',
+        resourceUnitIds: ['a'],
         user,
       }),
     ).toBe(false);
   });
 
   it.each(['DIRETOR', 'SECRETARIO'] as const)('%s atua somente na própria unidade', (perfil) => {
-    const user = createUser(perfil, 'unidade-a');
+    const user = createUser(perfil, ['unidade-a']);
 
     for (const action of [
       ACTION.EDIT_UNIT,
       ACTION.EDIT_PROFESSIONAL,
       ACTION.EDIT_PROFESSIONAL_PARTICIPATION,
     ]) {
-      expect(isAuthorized({ action, resourceUnitId: 'unidade-a', user })).toBe(true);
-      expect(isAuthorized({ action, resourceUnitId: 'unidade-b', user })).toBe(false);
+      expect(isAuthorized({ action, resourceUnitIds: ['unidade-a'], user })).toBe(true);
+      expect(isAuthorized({ action, resourceUnitIds: ['unidade-b'], user })).toBe(false);
     }
   });
 
   it.each(['DIRETOR', 'SECRETARIO'] as const)(
     '%s não altera pontuação nem opera evento',
     (perfil) => {
-      const user = createUser(perfil, 'unidade-a');
+      const user = createUser(perfil, ['unidade-a']);
 
       expect(isAuthorized({ action: ACTION.EDIT_PROFESSIONAL_SCORE, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.MANAGE_EVENT, user })).toBe(false);
@@ -91,7 +111,7 @@ describe('central authorization policy', () => {
 
   it('reserva Correção Administrativa e gerenciamento de usuários ao ADMINISTRADOR', () => {
     for (const perfil of ['OPERADOR', 'DIRETOR', 'SECRETARIO'] as const) {
-      const user = createUser(perfil, perfil === 'OPERADOR' ? null : 'unidade-a');
+      const user = createUser(perfil, perfil === 'OPERADOR' ? [] : ['unidade-a']);
       expect(isAuthorized({ action: ACTION.ACCESS_ADMIN_CORRECTION, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.MANAGE_USERS, user })).toBe(false);
     }
@@ -105,7 +125,7 @@ describe('central authorization policy', () => {
   });
 
   it('nega por padrão e lança 403 no helper reutilizável', () => {
-    const user = createUser('DIRETOR', 'unidade-a');
+    const user = createUser('DIRETOR', ['unidade-a', 'unidade-b']);
 
     try {
       assertAuthorized({ action: ACTION.MANAGE_USERS, user });

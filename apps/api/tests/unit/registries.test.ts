@@ -7,6 +7,7 @@ import type {
   UserRecord,
 } from '@seduc/contracts';
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -83,6 +84,7 @@ const professional: ProfessionalRecord = {
     ehProfessor: true,
     id: CARGO_ID,
     nome: 'Professor',
+    permiteMultiplosExercicios: false,
     usaPontuacao: true,
   },
   cargoFuncaoId: CARGO_ID,
@@ -95,7 +97,7 @@ const professional: ProfessionalRecord = {
   dataNascimento: '1980-01-01',
   email: null,
   endereco: null,
-  exercicioAtual: null,
+  exerciciosAtuais: [],
   id: RECORD_ID,
   matricula: 'M-1',
   nomeCompleto: 'Profissional Teste',
@@ -128,7 +130,7 @@ function createServices(): RegistryServices {
         total: 1,
         totalPages: 1,
       }),
-      administrativeUnitId: vi.fn(async (id: string) => (id === RECORD_ID ? UNIT_A : UNIT_B)),
+      administrativeUnitIds: vi.fn(async (id: string) => [id === RECORD_ID ? UNIT_A : UNIT_B]),
       update: vi.fn().mockResolvedValue(professional),
       updatePhone: vi.fn().mockResolvedValue(professional),
       updateScore: vi.fn().mockResolvedValue({ ...professional, pontuacao: '10' }),
@@ -157,8 +159,8 @@ function createServices(): RegistryServices {
             login: input.login,
             nome: input.nome,
             perfil: input.perfil,
-            unidade: null,
-            unidadeId: input.unidadeId,
+            unidadeIds: input.unidadeIds,
+            unidades: input.unidadeIds.map((id: string) => ({ id, nome: `Unidade ${id}` })),
           }) satisfies UserRecord,
       ),
       list: vi
@@ -175,7 +177,7 @@ function database(): DatabaseConnection {
   return { client: {} as DatabaseConnection['client'], disconnect: vi.fn(), ping: vi.fn() };
 }
 
-async function scenario(profile: UserProfile, unitId: string | null = null) {
+async function scenario(profile: UserProfile, unitIds: string | string[] | null = null) {
   const auth = new AuthMemory();
   const services = createServices();
   const user: AuthenticatedUser = {
@@ -184,7 +186,12 @@ async function scenario(profile: UserProfile, unitId: string | null = null) {
     login: profile.toLowerCase(),
     nome: profile,
     perfil: profile,
-    unidade: unitId ? { id: unitId, nome: 'Unidade vinculada' } : null,
+    unidades: unitIds
+      ? (Array.isArray(unitIds) ? unitIds : [unitIds]).map((id) => ({
+          id,
+          nome: `Unidade ${id}`,
+        }))
+      : [],
   };
   auth.users.set(user.id, { ...user, ativo: true, senhaHash: await hashPassword(PASSWORD) });
   const app = createApp({
@@ -255,6 +262,14 @@ describe('Etapa 3 registry API and RBAC', () => {
     },
   );
 
+  it('permite ao Diretor atuar em qualquer unidade do seu conjunto vinculado', async () => {
+    const { agent } = await scenario('DIRETOR', [UNIT_A, UNIT_B]);
+
+    await agent.patch(`/unidades/${UNIT_A}`).send({ nome: 'Unidade A' }).expect(200);
+    await agent.patch(`/unidades/${UNIT_B}`).send({ nome: 'Unidade B' }).expect(200);
+    await agent.patch(`/unidades/${RECORD_ID}`).send({ nome: 'Fora do escopo' }).expect(403);
+  });
+
   it('permite ao Admin criar/editar profissional e reserva pontuação ao endpoint específico', async () => {
     const { agent, services } = await scenario('ADMINISTRADOR');
     await agent.post('/profissionais').send(professionalPayload).expect(201);
@@ -296,7 +311,7 @@ describe('Etapa 3 registry API and RBAC', () => {
         nome: 'Diretora',
         perfil: 'DIRETOR',
         senha: PASSWORD,
-        unidadeId: UNIT_A,
+        unidadeIds: [UNIT_A],
       })
       .expect(201);
     expect(response.text).not.toContain('senha');
@@ -346,6 +361,38 @@ describe('Etapa 3 validation rules', () => {
     }
   });
 
+  it('aceita qualquer quantidade não duplicada de unidades para Diretor e mantém Secretário singular', () => {
+    const manyUnitIds = Array.from({ length: 101 }, () => randomUUID());
+
+    expect(
+      userCreateSchema.parse({
+        login: 'diretor-multi',
+        nome: 'Diretor multiunidade',
+        perfil: 'DIRETOR',
+        senha: PASSWORD,
+        unidadeIds: manyUnitIds,
+      }).unidadeIds,
+    ).toHaveLength(101);
+    expect(() =>
+      userCreateSchema.parse({
+        login: 'secretario-multi',
+        nome: 'Secretário inválido',
+        perfil: 'SECRETARIO',
+        senha: PASSWORD,
+        unidadeIds: [UNIT_A, UNIT_B],
+      }),
+    ).toThrow();
+    expect(() =>
+      userCreateSchema.parse({
+        login: 'admin-com-unidade',
+        nome: 'Admin inválido',
+        perfil: 'ADMINISTRADOR',
+        senha: PASSWORD,
+        unidadeIds: [UNIT_A],
+      }),
+    ).toThrow();
+  });
+
   it('rejeita CPF com caracteres inválidos e datas civis inexistentes', () => {
     expect(() =>
       professionalCreateSchema.parse({ ...professionalPayload, cpf: 'abc12345678901' }),
@@ -357,6 +404,7 @@ describe('Etapa 3 validation rules', () => {
 
   it('mapeia respostas de usuário por allowlist e nunca expõe senhaHash', async () => {
     const client = {
+      $transaction: vi.fn(async (callback: (transaction: unknown) => unknown) => callback(client)),
       usuario: {
         create: vi.fn().mockResolvedValue({
           ativo: true,
@@ -368,8 +416,7 @@ describe('Etapa 3 validation rules', () => {
           nome: 'Admin seguro',
           perfil: 'ADMINISTRADOR',
           senhaHash: 'hash-que-nao-pode-sair',
-          unidade: null,
-          unidadeId: null,
+          unidades: [],
         }),
         findMany: vi.fn().mockResolvedValue([]),
       },

@@ -11,7 +11,7 @@ function mapUser(user: {
   nome: string;
   perfil: string;
   senhaHash: string;
-  unidade: { id: string; nome: string } | null;
+  unidades: { unidade: { id: string; nome: string } }[];
 }): AuthUserRecord {
   return {
     ativo: user.ativo,
@@ -21,7 +21,7 @@ function mapUser(user: {
     nome: user.nome,
     perfil: user.perfil as UserProfile,
     senhaHash: user.senhaHash,
-    unidade: user.unidade satisfies AuthenticatedUser['unidade'],
+    unidades: user.unidades.map(({ unidade }) => unidade) satisfies AuthenticatedUser['unidades'],
   };
 }
 
@@ -33,10 +33,10 @@ const userSelection = {
   nome: true,
   perfil: true,
   senhaHash: true,
-  unidade: {
+  unidades: {
+    orderBy: { unidade: { nome: 'asc' as const } },
     select: {
-      id: true,
-      nome: true,
+      unidade: { select: { id: true, nome: true } },
     },
   },
 } as const;

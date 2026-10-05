@@ -17,7 +17,7 @@ function toAuthenticatedUser(user: AuthUserRecord): AuthenticatedUser {
     login: user.login,
     nome: user.nome,
     perfil: user.perfil,
-    unidade: user.unidade,
+    unidades: user.unidades,
   };
 }
 

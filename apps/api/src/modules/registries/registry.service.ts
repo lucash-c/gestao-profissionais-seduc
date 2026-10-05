@@ -40,7 +40,7 @@ export interface RegistryServices {
       query: ProfessionalQuery,
       user: AuthenticatedUser,
     ): Promise<PaginatedResponse<ProfessionalRecord>>;
-    administrativeUnitId(id: string): Promise<string | undefined>;
+    administrativeUnitIds(id: string): Promise<string[]>;
     update(
       id: string,
       input: ProfessionalUpdateInput,
@@ -83,11 +83,18 @@ const unitInclude = {
 
 const professionalInclude = {
   cargoFuncao: {
-    select: { ativo: true, ehProfessor: true, id: true, nome: true, usaPontuacao: true },
+    select: {
+      ativo: true,
+      ehProfessor: true,
+      id: true,
+      nome: true,
+      permiteMultiplosExercicios: true,
+      usaPontuacao: true,
+    },
   },
   exercicios: {
     include: { postoTrabalho: { include: { quadroNecessidade: { include: { unidade: true } } } } },
-    take: 1,
+    orderBy: { criadoEm: 'asc' as const },
     where: { dataFim: null },
   },
   lotacoesSede: {
@@ -96,6 +103,13 @@ const professionalInclude = {
     where: { dataFim: null },
   },
   telefones: { orderBy: { tipo: 'asc' as const } },
+} as const;
+
+const userInclude = {
+  unidades: {
+    include: { unidade: { select: { id: true, nome: true } } },
+    orderBy: { unidade: { nome: 'asc' as const } },
+  },
 } as const;
 
 function asDate(value: string): Date {
@@ -130,9 +144,7 @@ function mapProfessional(
   professional: Prisma.ProfissionalGetPayload<{ include: typeof professionalInclude }>,
 ): ProfessionalRecord {
   const activePlacement = professional.lotacoesSede[0];
-  const activeExercise = professional.exercicios[0];
   const placementUnit = activePlacement?.postoTrabalho.quadroNecessidade.unidade;
-  const exerciseUnit = activeExercise?.postoTrabalho.quadroNecessidade.unidade;
 
   return {
     ativo: professional.ativo,
@@ -148,15 +160,15 @@ function mapProfessional(
     dataNascimento: dateOnly(professional.dataNascimento)!,
     email: professional.email,
     endereco: professional.endereco,
-    exercicioAtual:
-      activeExercise && exerciseUnit
-        ? {
-            postoId: activeExercise.postoTrabalhoId,
-            tipo: activeExercise.tipoExercicio,
-            unidadeId: exerciseUnit.id,
-            unidadeNome: exerciseUnit.nome,
-          }
-        : null,
+    exerciciosAtuais: professional.exercicios.map((exercise) => {
+      const unit = exercise.postoTrabalho.quadroNecessidade.unidade;
+      return {
+        postoId: exercise.postoTrabalhoId,
+        tipo: exercise.tipoExercicio,
+        unidadeId: unit.id,
+        unidadeNome: unit.nome,
+      };
+    }),
     id: professional.id,
     matricula: professional.matricula,
     nomeCompleto: professional.nomeCompleto,
@@ -185,8 +197,7 @@ function mapUser(user: {
   login: string;
   nome: string;
   perfil: string;
-  unidade: { id: string; nome: string } | null;
-  unidadeId: string | null;
+  unidades: { unidade: { id: string; nome: string } }[];
 }): UserRecord {
   return {
     ativo: user.ativo,
@@ -195,13 +206,15 @@ function mapUser(user: {
     login: user.login,
     nome: user.nome,
     perfil: user.perfil as UserRecord['perfil'],
-    unidade: user.unidade,
-    unidadeId: user.unidadeId,
+    unidadeIds: user.unidades.map(({ unidade }) => unidade.id),
+    unidades: user.unidades.map(({ unidade }) => unidade),
   };
 }
 
-function scopedUnitId(user: AuthenticatedUser): string | undefined {
-  return user.perfil === 'DIRETOR' || user.perfil === 'SECRETARIO' ? user.unidade?.id : undefined;
+function scopedUnitIds(user: AuthenticatedUser): string[] | undefined {
+  return user.perfil === 'DIRETOR' || user.perfil === 'SECRETARIO'
+    ? user.unidades.map((unit) => unit.id)
+    : undefined;
 }
 
 function pagination<T>(
@@ -222,11 +235,34 @@ function handleDatabaseError(error: unknown): never {
     if (error.code === 'P2002') {
       throw new HttpError(409, 'CONFLICT', 'Já existe um registro com os dados informados.');
     }
+    if (error.code === 'P2004') {
+      throw new HttpError(
+        409,
+        'BUSINESS_RULE_CONFLICT',
+        'A alteração viola uma regra de integridade do cadastro.',
+      );
+    }
     if (error.code === 'P2003' || error.code === 'P2025') {
       throw new HttpError(404, 'NOT_FOUND', 'Registro relacionado não encontrado.');
     }
   }
   throw error;
+}
+
+function assertUserUnitCardinality(profile: UserRecord['perfil'], unitIds: string[]): void {
+  if (profile === 'DIRETOR' && unitIds.length < 1) {
+    throw new HttpError(400, 'UNIT_REQUIRED', 'Diretor exige ao menos uma unidade vinculada.');
+  }
+  if (profile === 'SECRETARIO' && unitIds.length !== 1) {
+    throw new HttpError(
+      400,
+      'UNIT_CARDINALITY',
+      'Secretário exige exatamente uma unidade vinculada.',
+    );
+  }
+  if ((profile === 'ADMINISTRADOR' || profile === 'OPERADOR') && unitIds.length !== 0) {
+    throw new HttpError(400, 'UNIT_NOT_ALLOWED', 'Este perfil não utiliza vínculo de unidade.');
+  }
 }
 
 async function syncProfessionalPhones(
@@ -295,8 +331,8 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
   const { client } = database;
 
   async function getUnit(id: string, user: AuthenticatedUser): Promise<UnitRecord> {
-    const scopeId = scopedUnitId(user);
-    if (scopeId && scopeId !== id) {
+    const scopeIds = scopedUnitIds(user);
+    if (scopeIds && !scopeIds.includes(id)) {
       throw new HttpError(404, 'NOT_FOUND', 'Unidade não encontrada.');
     }
     const unit = await client.unidade.findFirst({
@@ -307,35 +343,39 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
     return mapUnit(unit);
   }
 
-  async function professionalAdministrativeUnitId(id: string): Promise<string | undefined> {
-    const exercise = await client.exercicioProfissional.findFirst({
+  async function professionalAdministrativeUnitIds(id: string): Promise<string[]> {
+    const exercises = await client.exercicioProfissional.findMany({
       select: { postoTrabalho: { select: { unidadeId: true } } },
       where: { dataFim: null, profissionalId: id },
     });
-    if (exercise) return exercise.postoTrabalho.unidadeId;
+    if (exercises.length) {
+      return [...new Set(exercises.map((exercise) => exercise.postoTrabalho.unidadeId))];
+    }
 
     const placement = await client.lotacaoSede.findFirst({
       select: { postoTrabalho: { select: { unidadeId: true } } },
       where: { dataFim: null, profissionalId: id },
     });
-    return placement?.postoTrabalho.unidadeId;
+    return placement ? [placement.postoTrabalho.unidadeId] : [];
   }
 
-  function administrativeUnitScope(unitId: string): Prisma.ProfissionalWhereInput {
+  function administrativeUnitScope(unitIds: string[]): Prisma.ProfissionalWhereInput {
     return {
       OR: [
-        { exercicios: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } } },
+        { exercicios: { some: { dataFim: null, postoTrabalho: { unidadeId: { in: unitIds } } } } },
         {
           exercicios: { none: { dataFim: null } },
-          lotacoesSede: { some: { dataFim: null, postoTrabalho: { unidadeId: unitId } } },
+          lotacoesSede: {
+            some: { dataFim: null, postoTrabalho: { unidadeId: { in: unitIds } } },
+          },
         },
       ],
     };
   }
 
   function professionalScope(user: AuthenticatedUser): Prisma.ProfissionalWhereInput {
-    const unitId = scopedUnitId(user);
-    return unitId ? administrativeUnitScope(unitId) : {};
+    const unitIds = scopedUnitIds(user);
+    return unitIds ? administrativeUnitScope(unitIds) : {};
   }
 
   async function getProfessional(id: string, user: AuthenticatedUser): Promise<ProfessionalRecord> {
@@ -349,7 +389,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
 
   async function getUser(id: string): Promise<UserRecord> {
     const user = await client.usuario.findUnique({
-      include: { unidade: { select: { id: true, nome: true } } },
+      include: userInclude,
       where: { id },
     });
     if (!user) throw new HttpError(404, 'NOT_FOUND', 'Usuário não encontrado.');
@@ -395,11 +435,11 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         });
       },
       async unidades(user) {
-        const unitId = scopedUnitId(user);
+        const unitIds = scopedUnitIds(user);
         return client.unidade.findMany({
           orderBy: { nome: 'asc' },
           select: { ativo: true, id: true, nome: true },
-          where: { ativo: true, ...(unitId ? { id: unitId } : {}) },
+          where: { ativo: true, ...(unitIds ? { id: { in: unitIds } } : {}) },
         });
       },
     },
@@ -436,7 +476,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       get: getProfessional,
       async list(query, user) {
-        const unitId = scopedUnitId(user) ?? query.unidadeId;
+        const unitIds = scopedUnitIds(user) ?? (query.unidadeId ? [query.unidadeId] : undefined);
         const where: Prisma.ProfissionalWhereInput = {
           ...professionalScope(user),
           ...(query.ativo === undefined ? {} : { ativo: query.ativo }),
@@ -452,7 +492,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
             : {
                 cargoFuncao: { ehProfessor: query.usaPontuacao, usaPontuacao: query.usaPontuacao },
               }),
-          ...(unitId ? administrativeUnitScope(unitId) : {}),
+          ...(unitIds ? administrativeUnitScope(unitIds) : {}),
         };
         const [items, total] = await client.$transaction([
           client.profissional.findMany({
@@ -466,7 +506,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         ]);
         return pagination(items.map(mapProfessional), query.page, query.pageSize, total);
       },
-      administrativeUnitId: professionalAdministrativeUnitId,
+      administrativeUnitIds: professionalAdministrativeUnitIds,
       async update(id, input, user) {
         await getProfessional(id, user);
         const {
@@ -556,9 +596,9 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       get: getUnit,
       async list(query, user) {
-        const unitId = scopedUnitId(user);
+        const unitIds = scopedUnitIds(user);
         const where: Prisma.UnidadeWhereInput = {
-          ...(unitId ? { id: unitId } : {}),
+          ...(unitIds ? { id: { in: unitIds } } : {}),
           ...(query.ativo === undefined ? {} : { ativo: query.ativo }),
           ...(query.nome ? { nome: { contains: query.nome, mode: 'insensitive' } } : {}),
           ...(query.tipoUnidadeId ? { tipoUnidadeId: query.tipoUnidadeId } : {}),
@@ -604,18 +644,24 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
     users: {
       async create(input) {
         await assertIdentifiers(input);
+        assertUserUnitCardinality(input.perfil, input.unidadeIds);
         try {
-          const user = await client.usuario.create({
-            data: {
-              ativo: input.ativo,
-              email: input.email,
-              login: input.login,
-              nome: input.nome,
-              perfil: input.perfil,
-              senhaHash: await hashPassword(input.senha),
-              unidadeId: input.unidadeId,
-            },
-            include: { unidade: { select: { id: true, nome: true } } },
+          const senhaHash = await hashPassword(input.senha);
+          const user = await client.$transaction(async (transaction) => {
+            return transaction.usuario.create({
+              data: {
+                ativo: input.ativo,
+                email: input.email,
+                login: input.login,
+                nome: input.nome,
+                perfil: input.perfil,
+                senhaHash,
+                unidades: {
+                  create: input.unidadeIds.map((unidadeId) => ({ unidadeId })),
+                },
+              },
+              include: userInclude,
+            });
           });
           return mapUser(user);
         } catch (error) {
@@ -637,7 +683,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         };
         const [items, total] = await client.$transaction([
           client.usuario.findMany({
-            include: { unidade: { select: { id: true, nome: true } } },
+            include: userInclude,
             orderBy: { nome: 'asc' },
             skip: (query.page - 1) * query.pageSize,
             take: query.pageSize,
@@ -659,24 +705,35 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         ]);
       },
       async update(id, input) {
-        const current = await client.usuario.findUnique({ where: { id } });
+        const current = await client.usuario.findUnique({ include: userInclude, where: { id } });
         if (!current) throw new HttpError(404, 'NOT_FOUND', 'Usuário não encontrado.');
         const perfil = input.perfil ?? current.perfil;
-        const unidadeId = input.unidadeId === undefined ? current.unidadeId : input.unidadeId;
-        if ((perfil === 'DIRETOR' || perfil === 'SECRETARIO') && !unidadeId) {
-          throw new HttpError(
-            400,
-            'UNIT_REQUIRED',
-            'Diretor e Secretário exigem unidade vinculada.',
-          );
+        const currentUnitIds = current.unidades.map(({ unidade }) => unidade.id);
+        const requestedUnitIds = input.unidadeIds ?? currentUnitIds;
+        const unidadeIds =
+          perfil === 'ADMINISTRADOR' || perfil === 'OPERADOR' ? [] : requestedUnitIds;
+        if (input.unidadeIds && requestedUnitIds.length !== new Set(requestedUnitIds).size) {
+          throw new HttpError(400, 'DUPLICATE_UNIT', 'Não repita unidades.');
         }
+        assertUserUnitCardinality(perfil, unidadeIds);
         const login = input.login ?? current.login;
         const email = input.email === undefined ? current.email : input.email;
         await assertIdentifiers({ email, login }, id);
+        const fields = Object.fromEntries(
+          Object.entries(input).filter(([key]) => key !== 'unidadeIds'),
+        );
         try {
-          await client.usuario.update({
-            data: compact(input) as Prisma.UsuarioUncheckedUpdateInput,
-            where: { id },
+          await client.$transaction(async (transaction) => {
+            await transaction.usuario.update({
+              data: compact(fields) as Prisma.UsuarioUncheckedUpdateInput,
+              where: { id },
+            });
+            await transaction.usuarioUnidade.deleteMany({ where: { usuarioId: id } });
+            if (unidadeIds.length) {
+              await transaction.usuarioUnidade.createMany({
+                data: unidadeIds.map((unidadeId) => ({ unidadeId, usuarioId: id })),
+              });
+            }
           });
           return getUser(id);
         } catch (error) {

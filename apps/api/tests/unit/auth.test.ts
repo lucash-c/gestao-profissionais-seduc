@@ -81,7 +81,7 @@ function createScenario(
     nome: 'Administradora de Teste',
     perfil: options.profile ?? 'ADMINISTRADOR',
     senhaHash: passwordHash,
-    unidade: null,
+    unidades: [],
   });
 
   const app = createApp({
@@ -244,16 +244,22 @@ describe('authentication endpoints', () => {
   it('respeita alteração de unidade realizada depois do login', async () => {
     const { app, repository } = createScenario({ profile: 'DIRETOR' });
     const agent = request.agent(app);
-    repository.users.get(userId)!.unidade = { id: 'unidade-a', nome: 'Unidade A' };
+    repository.users.get(userId)!.unidades = [{ id: 'unidade-a', nome: 'Unidade A' }];
     await agent
       .post('/auth/login')
       .send({ identifier: 'admin.seduc', password: validPassword })
       .expect(200);
 
-    repository.users.get(userId)!.unidade = { id: 'unidade-b', nome: 'Unidade B' };
+    repository.users.get(userId)!.unidades = [
+      { id: 'unidade-b', nome: 'Unidade B' },
+      { id: 'unidade-c', nome: 'Unidade C' },
+    ];
 
     const response = await agent.get('/auth/me').expect(200);
-    expect(response.body.user.unidade).toEqual({ id: 'unidade-b', nome: 'Unidade B' });
+    expect(response.body.user.unidades).toEqual([
+      { id: 'unidade-b', nome: 'Unidade B' },
+      { id: 'unidade-c', nome: 'Unidade C' },
+    ]);
   });
 
   it('configura cookie HttpOnly, SameSite e Secure em produção', async () => {

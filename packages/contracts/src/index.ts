@@ -39,7 +39,7 @@ export interface AuthenticatedUser {
   login: string;
   nome: string;
   perfil: UserProfile;
-  unidade: AuthenticatedUnit | null;
+  unidades: readonly AuthenticatedUnit[];
 }
 
 export interface LoginRequest {
@@ -102,7 +102,11 @@ export interface ProfessionalExercise extends ProfessionalPlacement {
 export interface ProfessionalRecord {
   ativo: boolean;
   bairro: string | null;
-  cargoFuncao: LookupRecord & { ehProfessor: boolean; usaPontuacao: boolean };
+  cargoFuncao: LookupRecord & {
+    ehProfessor: boolean;
+    permiteMultiplosExercicios: boolean;
+    usaPontuacao: boolean;
+  };
   cargoFuncaoId: string;
   cep: string | null;
   cidade: string | null;
@@ -113,7 +117,7 @@ export interface ProfessionalRecord {
   dataNascimento: string;
   email: string | null;
   endereco: string | null;
-  exercicioAtual: ProfessionalExercise | null;
+  exerciciosAtuais: ProfessionalExercise[];
   id: string;
   matricula: string;
   nomeCompleto: string;
@@ -134,6 +138,6 @@ export interface UserRecord {
   login: string;
   nome: string;
   perfil: UserProfile;
-  unidade: AuthenticatedUnit | null;
-  unidadeId: string | null;
+  unidadeIds: string[];
+  unidades: AuthenticatedUnit[];
 }

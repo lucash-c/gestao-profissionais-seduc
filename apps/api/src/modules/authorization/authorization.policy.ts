@@ -54,7 +54,7 @@ const grants: Record<UserProfile, Partial<Record<AuthorizationAction, Authorizat
 
 export function isAuthorized(input: {
   action: AuthorizationAction;
-  resourceUnitId?: string | undefined;
+  resourceUnitIds?: string[] | undefined;
   user: AuthenticatedUser;
 }): boolean {
   const scope = grants[input.user.perfil][input.action];
@@ -63,11 +63,8 @@ export function isAuthorized(input: {
   }
 
   if (scope === 'OWN_UNIT') {
-    return Boolean(
-      input.resourceUnitId &&
-      input.user.unidade?.id &&
-      input.resourceUnitId === input.user.unidade.id,
-    );
+    const authorizedUnitIds = new Set(input.user.unidades.map((unit) => unit.id));
+    return Boolean(input.resourceUnitIds?.some((unitId) => authorizedUnitIds.has(unitId)));
   }
 
   return false;
@@ -75,7 +72,7 @@ export function isAuthorized(input: {
 
 export function assertAuthorized(input: {
   action: AuthorizationAction;
-  resourceUnitId?: string | undefined;
+  resourceUnitIds?: string[] | undefined;
   user: AuthenticatedUser;
 }): void {
   if (!isAuthorized(input)) {

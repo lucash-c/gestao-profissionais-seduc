@@ -137,8 +137,6 @@ export const scoreUpdateSchema = z
   })
   .strict();
 
-const unitRequiredProfiles = new Set(['DIRETOR', 'SECRETARIO']);
-
 const userBaseSchema = z
   .object({
     ativo: z.boolean().default(true),
@@ -147,17 +145,35 @@ const userBaseSchema = z
     nome: z.string().trim().min(1).max(200),
     perfil: z.enum(USER_PROFILES),
     senha: z.string().min(12).max(72),
-    unidadeId: z.union([z.string().uuid(), z.null()]).default(null),
+    unidadeIds: z
+      .array(z.string().uuid())
+      .default([])
+      .refine((value) => new Set(value).size === value.length, 'Não repita unidades.'),
   })
   .strict();
 
-export const userCreateSchema = userBaseSchema.refine(
-  (value) => !unitRequiredProfiles.has(value.perfil) || value.unidadeId !== null,
-  {
-    message: 'Diretor e Secretário exigem unidade vinculada.',
-    path: ['unidadeId'],
-  },
-);
+export const userCreateSchema = userBaseSchema.superRefine((value, context) => {
+  const count = value.unidadeIds.length;
+  if (value.perfil === 'DIRETOR' && count < 1) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Diretor exige ao menos uma unidade.',
+      path: ['unidadeIds'],
+    });
+  } else if (value.perfil === 'SECRETARIO' && count !== 1) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Secretário exige exatamente uma unidade.',
+      path: ['unidadeIds'],
+    });
+  } else if ((value.perfil === 'ADMINISTRADOR' || value.perfil === 'OPERADOR') && count !== 0) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Este perfil não utiliza vínculo de unidade.',
+      path: ['unidadeIds'],
+    });
+  }
+});
 
 export const userUpdateSchema = userBaseSchema
   .omit({ senha: true })

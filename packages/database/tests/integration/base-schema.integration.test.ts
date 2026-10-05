@@ -16,8 +16,10 @@ const domainTables = [
   'evento',
   'sessao_usuario',
   'usuario_identificador',
+  'usuario_unidade',
   'usuario',
   'afastamento_profissional',
+  'exercicio_profissional_limite_ativo',
   'exercicio_profissional',
   'lotacao_sede',
   'posto_trabalho',
@@ -264,6 +266,7 @@ describeDatabase('Etapa 1 database schema', () => {
         '20261001000000_banco_base',
         '20261001120000_autenticacao_sessoes',
         '20261001160000_usuario_identificador_unico',
+        '20261002120000_diretor_multiplas_unidades',
       ]),
     );
   });
@@ -373,7 +376,6 @@ describeDatabase('Etapa 1 database schema', () => {
     const expectedIndexes = new Map([
       ['lotacao_sede_profissional_ativa_key', 'WHERE (data_fim IS NULL)'],
       ['lotacao_sede_posto_ativo_key', 'WHERE (data_fim IS NULL)'],
-      ['exercicio_profissional_profissional_ativo_key', 'WHERE (data_fim IS NULL)'],
       ['exercicio_profissional_posto_ativo_key', 'WHERE (data_fim IS NULL)'],
       ['quadro_necessidade_escopo_com_segmento_key', 'WHERE (segmento_ensino_id IS NOT NULL)'],
       ['quadro_necessidade_escopo_sem_segmento_key', 'WHERE (segmento_ensino_id IS NULL)'],
@@ -390,6 +392,14 @@ describeDatabase('Etapa 1 database schema', () => {
       expect(index.indexdef).toContain('UNIQUE INDEX');
       expect(index.indexdef).toContain(expectedIndexes.get(index.indexname));
     }
+
+    const removedIndex = await pool.query(
+      `SELECT 1
+       FROM pg_indexes
+       WHERE schemaname = 'public'
+         AND indexname = 'exercicio_profissional_profissional_ativo_key'`,
+    );
+    expect(removedIndex.rowCount).toBe(0);
   });
 
   it('uses DATE for civil dates and TIMESTAMPTZ for administrative timestamps', async () => {
@@ -434,7 +444,7 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(vacancyTable.rowCount).toBe(0);
   });
 
-  it('defaults score to zero and remocao/permuta to false', async () => {
+  it('defaults score to zero, flags to false and cargo multiple-exercise capacity to false', async () => {
     const { cargoId } = await createBaseGraph();
     const profissionalId = await createProfessional(cargoId, 'MAT-DEFAULTS');
     const result = await pool.query<{
@@ -448,6 +458,12 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(Number(result.rows[0]?.pontuacao)).toBe(0);
     expect(result.rows[0]?.remocao).toBe(false);
     expect(result.rows[0]?.permuta).toBe(false);
+
+    const cargo = await pool.query<{ permite_multiplos_exercicios: boolean }>(
+      'SELECT "permite_multiplos_exercicios" FROM "cargo_funcao" WHERE "id" = $1',
+      [cargoId],
+    );
+    expect(cargo.rows[0]?.permite_multiplos_exercicios).toBe(false);
   });
 
   it('enforces staffing-scope uniqueness with and without a segment', async () => {
@@ -632,7 +648,7 @@ describeDatabase('Etapa 1 database schema', () => {
          VALUES ($1, 'Diretor sem unidade', $2, '$2b$12$hash-de-teste', 'DIRETOR')`,
         [randomUUID(), `diretor-${randomUUID()}`],
       ),
-      'usuario_unidade_perfil_check',
+      'usuario_unidade_cardinalidade_check',
       '23514',
     );
     await expectConstraint(
@@ -641,9 +657,101 @@ describeDatabase('Etapa 1 database schema', () => {
          VALUES ($1, 'Secretario sem unidade', $2, '$2b$12$hash-de-teste', 'SECRETARIO')`,
         [randomUUID(), `secretario-${randomUUID()}`],
       ),
-      'usuario_unidade_perfil_check',
+      'usuario_unidade_cardinalidade_check',
       '23514',
     );
+  });
+
+  it('allows multiple units for directors and exactly one for school secretaries', async () => {
+    const graph = await createBaseGraph();
+    const secondUnitId = randomUUID();
+    const directorId = randomUUID();
+    const secretaryId = randomUUID();
+    const client = await pool.connect();
+
+    await pool.query(
+      'INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3)',
+      [secondUnitId, graph.tipoUnidadeId, `Unidade ${secondUnitId}`],
+    );
+
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+         VALUES ($1, 'Diretor multiunidade', $2, '$2b$12$hash-de-teste', 'DIRETOR')`,
+        [directorId, `diretor-${directorId}`],
+      );
+      await client.query(
+        `INSERT INTO "usuario_unidade" ("usuario_id", "unidade_id")
+         VALUES ($1, $2), ($1, $3)`,
+        [directorId, graph.unidadeId, secondUnitId],
+      );
+      await client.query('COMMIT');
+
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+         VALUES ($1, 'Secretário unidade única', $2, '$2b$12$hash-de-teste', 'SECRETARIO')`,
+        [secretaryId, `secretario-${secretaryId}`],
+      );
+      await client.query(
+        `INSERT INTO "usuario_unidade" ("usuario_id", "unidade_id")
+         VALUES ($1, $2)`,
+        [secretaryId, graph.unidadeId],
+      );
+      await client.query('COMMIT');
+    } finally {
+      client.release();
+    }
+
+    const result = await pool.query<{ perfil: string; total: string }>(
+      `SELECT usuario."perfil"::text AS perfil, COUNT(vinculo."unidade_id") AS total
+       FROM "usuario" usuario
+       LEFT JOIN "usuario_unidade" vinculo ON vinculo."usuario_id" = usuario."id"
+       WHERE usuario."id" = ANY($1::uuid[])
+       GROUP BY usuario."id", usuario."perfil"
+       ORDER BY usuario."perfil"`,
+      [[directorId, secretaryId]],
+    );
+
+    expect(result.rows).toEqual([
+      { perfil: 'DIRETOR', total: '2' },
+      { perfil: 'SECRETARIO', total: '1' },
+    ]);
+  });
+
+  it('rejects zero or multiple units for a school secretary', async () => {
+    const graph = await createBaseGraph();
+    const secondUnitId = randomUUID();
+    const secretaryId = randomUUID();
+    const client = await pool.connect();
+
+    await pool.query(
+      'INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3)',
+      [secondUnitId, graph.tipoUnidadeId, `Unidade ${secondUnitId}`],
+    );
+
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO "usuario" ("id", "nome", "login", "senha_hash", "perfil")
+         VALUES ($1, 'Secretário inválido', $2, '$2b$12$hash-de-teste', 'SECRETARIO')`,
+        [secretaryId, `secretario-${secretaryId}`],
+      );
+      await client.query(
+        `INSERT INTO "usuario_unidade" ("usuario_id", "unidade_id")
+         VALUES ($1, $2), ($1, $3)`,
+        [secretaryId, graph.unidadeId, secondUnitId],
+      );
+      await expectConstraint(
+        client.query('COMMIT'),
+        'usuario_unidade_cardinalidade_check',
+        '23514',
+      );
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 
   it('enforces one active official placement per professional and per work position', async () => {
@@ -671,7 +779,7 @@ describeDatabase('Etapa 1 database schema', () => {
     );
   });
 
-  it('enforces one active exercise per professional and one active occupant per work position', async () => {
+  it('enforces one active exercise for a common cargo and one active occupant per work position', async () => {
     const { cargoId, postoIds } = await createBaseGraph();
     const firstProfessional = await createProfessional(cargoId, 'MAT-EXERCICIO-1', '66666666666');
     const secondProfessional = await createProfessional(cargoId, 'MAT-EXERCICIO-2', '77777777777');
@@ -689,7 +797,8 @@ describeDatabase('Etapa 1 database schema', () => {
          VALUES ($1, $2, $3, 'SEDE')`,
         [randomUUID(), firstProfessional, postoIds[1]],
       ),
-      'exercicio_profissional_profissional_ativo_key',
+      'exercicio_profissional_multiplos_ativos_check',
+      '23514',
     );
     await expectConstraint(
       pool.query(
@@ -700,6 +809,316 @@ describeDatabase('Etapa 1 database schema', () => {
       ),
       'exercicio_profissional_posto_ativo_key',
     );
+  });
+
+  it('allows multiple active exercises only when the cargo capability is enabled', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const directorId = await createProfessional(cargoId, 'MAT-DIRETOR-MULTI', '77888888888');
+
+    await pool.query(
+      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
+      [cargoId],
+    );
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE'), ($4, $2, $5, 'SEDE')`,
+      [randomUUID(), directorId, postoIds[0], randomUUID(), postoIds[1]],
+    );
+
+    const result = await pool.query<{ quantidade_ativa: number; total: string }>(
+      `SELECT COUNT(exercicio."id") AS total, controle."quantidade_ativa"
+       FROM "exercicio_profissional" exercicio
+       JOIN "exercicio_profissional_limite_ativo" controle
+         ON controle."profissional_id" = exercicio."profissional_id"
+       WHERE exercicio."profissional_id" = $1
+         AND exercicio."data_fim" IS NULL
+       GROUP BY controle."quantidade_ativa"`,
+      [directorId],
+    );
+
+    expect(Number(result.rows[0]?.total)).toBe(2);
+    expect(result.rows[0]?.quantidade_ativa).toBe(2);
+  });
+
+  it('serializes concurrent active exercises for a common cargo', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const professionalId = await createProfessional(
+      cargoId,
+      'MAT-EXERCICIO-CONCORRENTE',
+      '77999999999',
+    );
+    const firstClient = await pool.connect();
+    const secondClient = await pool.connect();
+
+    try {
+      await firstClient.query('BEGIN');
+      await secondClient.query('BEGIN');
+      await firstClient.query(
+        `INSERT INTO "exercicio_profissional"
+          ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+         VALUES ($1, $2, $3, 'SEDE')`,
+        [randomUUID(), professionalId, postoIds[0]],
+      );
+
+      const secondInsert = secondClient.query(
+        `INSERT INTO "exercicio_profissional"
+          ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+         VALUES ($1, $2, $3, 'SEDE')`,
+        [randomUUID(), professionalId, postoIds[1]],
+      );
+
+      await firstClient.query('COMMIT');
+      await expectConstraint(
+        secondInsert,
+        'exercicio_profissional_multiplos_ativos_check',
+        '23514',
+      );
+      await secondClient.query('ROLLBACK');
+    } finally {
+      firstClient.release();
+      secondClient.release();
+    }
+
+    const result = await pool.query<{ total: string }>(
+      `SELECT COUNT(*) AS total
+       FROM "exercicio_profissional"
+       WHERE "profissional_id" = $1 AND "data_fim" IS NULL`,
+      [professionalId],
+    );
+    expect(Number(result.rows[0]?.total)).toBe(1);
+  });
+
+  it('rejects a cargo change that is incompatible with multiple active exercises', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const commonCargoId = randomUUID();
+    const professionalId = await createProfessional(
+      cargoId,
+      'MAT-TROCA-CARGO-MULTI',
+      '78010101010',
+    );
+
+    await pool.query(
+      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
+      [cargoId],
+    );
+    await pool.query(
+      `INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao")
+       VALUES ($1, $2, false, false)`,
+      [commonCargoId, `Cargo comum ${commonCargoId}`],
+    );
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE'), ($4, $2, $5, 'SEDE')`,
+      [randomUUID(), professionalId, postoIds[0], randomUUID(), postoIds[1]],
+    );
+
+    await expectConstraint(
+      pool.query('UPDATE "profissional" SET "cargo_funcao_id" = $1 WHERE "id" = $2', [
+        commonCargoId,
+        professionalId,
+      ]),
+      'profissional_cargo_multiplos_exercicios_check',
+      '23514',
+    );
+  });
+
+  it('rejects disabling a cargo capability while it has multiple active exercises', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const professionalId = await createProfessional(
+      cargoId,
+      'MAT-DESATIVA-CAPACIDADE',
+      '78111111111',
+    );
+
+    await pool.query(
+      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
+      [cargoId],
+    );
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE'), ($4, $2, $5, 'SEDE')`,
+      [randomUUID(), professionalId, postoIds[0], randomUUID(), postoIds[1]],
+    );
+
+    await expectConstraint(
+      pool.query(
+        'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = false WHERE "id" = $1',
+        [cargoId],
+      ),
+      'cargo_funcao_multiplos_exercicios_check',
+      '23514',
+    );
+  });
+
+  it('serializes capability changes against concurrent exercise activation', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const professionalId = await createProfessional(
+      cargoId,
+      'MAT-CONCORRE-CAPACIDADE',
+      '78333333333',
+    );
+    const capabilityClient = await pool.connect();
+    const exerciseClient = await pool.connect();
+
+    await pool.query(
+      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
+      [cargoId],
+    );
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE')`,
+      [randomUUID(), professionalId, postoIds[0]],
+    );
+
+    try {
+      await capabilityClient.query('BEGIN');
+      await exerciseClient.query('BEGIN');
+      await capabilityClient.query(
+        'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = false WHERE "id" = $1',
+        [cargoId],
+      );
+      const concurrentExercise = exerciseClient.query(
+        `INSERT INTO "exercicio_profissional"
+          ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+         VALUES ($1, $2, $3, 'SEDE')`,
+        [randomUUID(), professionalId, postoIds[1]],
+      );
+
+      await capabilityClient.query('COMMIT');
+      await expectConstraint(
+        concurrentExercise,
+        'exercicio_profissional_multiplos_ativos_check',
+        '23514',
+      );
+      await exerciseClient.query('ROLLBACK');
+    } finally {
+      capabilityClient.release();
+      exerciseClient.release();
+    }
+
+    const result = await pool.query<{
+      permite_multiplos_exercicios: boolean;
+      quantidade_ativa: number;
+    }>(
+      `SELECT cargo."permite_multiplos_exercicios", controle."quantidade_ativa"
+       FROM "profissional" profissional
+       JOIN "cargo_funcao" cargo ON cargo."id" = profissional."cargo_funcao_id"
+       JOIN "exercicio_profissional_limite_ativo" controle
+         ON controle."profissional_id" = profissional."id"
+       WHERE profissional."id" = $1`,
+      [professionalId],
+    );
+    expect(result.rows[0]).toEqual({
+      permite_multiplos_exercicios: false,
+      quantidade_ativa: 1,
+    });
+  });
+
+  it('serializes professional cargo changes against concurrent exercise activation', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const commonCargoId = randomUUID();
+    const professionalId = await createProfessional(
+      cargoId,
+      'MAT-CONCORRE-TROCA-CARGO',
+      '78444444444',
+    );
+    const cargoClient = await pool.connect();
+    const exerciseClient = await pool.connect();
+
+    await pool.query(
+      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
+      [cargoId],
+    );
+    await pool.query(
+      `INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao")
+       VALUES ($1, $2, false, false)`,
+      [commonCargoId, `Cargo comum ${commonCargoId}`],
+    );
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE')`,
+      [randomUUID(), professionalId, postoIds[0]],
+    );
+
+    try {
+      await cargoClient.query('BEGIN');
+      await exerciseClient.query('BEGIN');
+      await cargoClient.query('UPDATE "profissional" SET "cargo_funcao_id" = $1 WHERE "id" = $2', [
+        commonCargoId,
+        professionalId,
+      ]);
+      const concurrentExercise = exerciseClient.query(
+        `INSERT INTO "exercicio_profissional"
+          ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+         VALUES ($1, $2, $3, 'SEDE')`,
+        [randomUUID(), professionalId, postoIds[1]],
+      );
+
+      await cargoClient.query('COMMIT');
+      await expectConstraint(
+        concurrentExercise,
+        'exercicio_profissional_multiplos_ativos_check',
+        '23514',
+      );
+      await exerciseClient.query('ROLLBACK');
+    } finally {
+      cargoClient.release();
+      exerciseClient.release();
+    }
+
+    const result = await pool.query<{ cargo_funcao_id: string; quantidade_ativa: number }>(
+      `SELECT profissional."cargo_funcao_id", controle."quantidade_ativa"
+       FROM "profissional" profissional
+       JOIN "exercicio_profissional_limite_ativo" controle
+         ON controle."profissional_id" = profissional."id"
+       WHERE profissional."id" = $1`,
+      [professionalId],
+    );
+    expect(result.rows[0]).toEqual({
+      cargo_funcao_id: commonCargoId,
+      quantidade_ativa: 1,
+    });
+  });
+
+  it('cleans the active-exercise counter after closing or deleting the active record', async () => {
+    const { cargoId, postoIds } = await createBaseGraph();
+    const professionalId = await createProfessional(cargoId, 'MAT-CICLO-LIMITE', '78222222222');
+    const firstExerciseId = randomUUID();
+    const secondExerciseId = randomUUID();
+
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE')`,
+      [firstExerciseId, professionalId, postoIds[0]],
+    );
+    await pool.query('DELETE FROM "exercicio_profissional" WHERE "id" = $1', [firstExerciseId]);
+    await pool.query(
+      `INSERT INTO "exercicio_profissional"
+        ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
+       VALUES ($1, $2, $3, 'SEDE')`,
+      [secondExerciseId, professionalId, postoIds[1]],
+    );
+    await pool.query(
+      `UPDATE "exercicio_profissional"
+       SET "data_fim" = "data_inicio" + INTERVAL '1 day'
+       WHERE "id" = $1`,
+      [secondExerciseId],
+    );
+
+    const result = await pool.query<{ quantidade_ativa: number }>(
+      `SELECT "quantidade_ativa"
+       FROM "exercicio_profissional_limite_ativo"
+       WHERE "profissional_id" = $1`,
+      [professionalId],
+    );
+    expect(result.rowCount).toBe(1);
+    expect(result.rows[0]?.quantidade_ativa).toBe(0);
   });
 
   it('accepts valid exercise substitution combinations', async () => {

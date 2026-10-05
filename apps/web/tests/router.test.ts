@@ -16,7 +16,7 @@ function createSession(status: SessionStore['state']['status']): SessionStore {
               login: 'operador',
               nome: 'Operador',
               perfil: 'OPERADOR',
-              unidade: null,
+              unidades: [],
             }
           : null,
     },

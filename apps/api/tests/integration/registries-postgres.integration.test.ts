@@ -21,6 +21,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
   const suffix = randomUUID();
   const ids = {
     cargo: randomUUID(),
+    directorCargo: randomUUID(),
     period: randomUUID(),
     quadroA: randomUUID(),
     quadroB: randomUUID(),
@@ -52,48 +53,76 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     await database.client.cargoFuncao.create({
       data: { ehProfessor: true, id: ids.cargo, nome: `Professor ${suffix}`, usaPontuacao: true },
     });
+    await database.client.cargoFuncao.create({
+      data: {
+        ehProfessor: false,
+        id: ids.directorCargo,
+        nome: `Diretor ${suffix}`,
+        permiteMultiplosExercicios: true,
+        usaPontuacao: false,
+      },
+    });
     await database.client.periodo.create({ data: { id: ids.period, nome: `Período ${suffix}` } });
     const senhaHash = await hashPassword(password);
-    await database.client.usuario.createMany({
-      data: [
-        { login: credentials.admin, nome: 'Admin Integração', perfil: 'ADMINISTRADOR', senhaHash },
-        { login: credentials.operator, nome: 'Operador Integração', perfil: 'OPERADOR', senhaHash },
+    await database.client.$transaction(async (transaction) => {
+      await transaction.usuario.createMany({
+        data: [
+          {
+            login: credentials.admin,
+            nome: 'Admin Integração',
+            perfil: 'ADMINISTRADOR',
+            senhaHash,
+          },
+          {
+            login: credentials.operator,
+            nome: 'Operador Integração',
+            perfil: 'OPERADOR',
+            senhaHash,
+          },
+        ],
+      });
+      for (const account of [
         {
           login: credentials.director,
           nome: 'Diretor Integração',
-          perfil: 'DIRETOR',
-          senhaHash,
+          perfil: 'DIRETOR' as const,
           unidadeId: ids.unitA,
         },
         {
           login: credentials.secretary,
           nome: 'Secretário Integração',
-          perfil: 'SECRETARIO',
-          senhaHash,
+          perfil: 'SECRETARIO' as const,
           unidadeId: ids.unitA,
         },
         {
           login: credentials.directorB,
           nome: 'Diretor B Integração',
-          perfil: 'DIRETOR',
-          senhaHash,
+          perfil: 'DIRETOR' as const,
           unidadeId: ids.unitB,
         },
         {
           login: credentials.secretaryB,
           nome: 'Secretário B Integração',
-          perfil: 'SECRETARIO',
-          senhaHash,
+          perfil: 'SECRETARIO' as const,
           unidadeId: ids.unitB,
         },
         {
           login: credentials.directorC,
           nome: 'Diretor C Integração',
-          perfil: 'DIRETOR',
-          senhaHash,
+          perfil: 'DIRETOR' as const,
           unidadeId: ids.unitC,
         },
-      ],
+      ]) {
+        await transaction.usuario.create({
+          data: {
+            login: account.login,
+            nome: account.nome,
+            perfil: account.perfil,
+            senhaHash,
+            unidades: { create: [{ unidadeId: account.unidadeId }] },
+          },
+        });
+      }
     });
   }, 30_000);
 
@@ -123,7 +152,9 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     });
     await database.client.unidade.deleteMany({ where: { nome: { contains: suffix } } });
     await database.client.periodo.deleteMany({ where: { id: ids.period } });
-    await database.client.cargoFuncao.deleteMany({ where: { id: ids.cargo } });
+    await database.client.cargoFuncao.deleteMany({
+      where: { id: { in: [ids.cargo, ids.directorCargo] } },
+    });
     await database.client.tipoUnidade.deleteMany({ where: { id: ids.type } });
     await database.disconnect();
   });
@@ -138,12 +169,13 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     agent: ReturnType<typeof request.agent>,
     matricula: string,
     cpf: string,
+    cargoFuncaoId = ids.cargo,
   ) {
     return agent
       .post('/profissionais')
       .set('Origin', 'http://localhost:9000')
       .send({
-        cargoFuncaoId: ids.cargo,
+        cargoFuncaoId,
         cpf,
         dataEntradaPrefeitura: '2020-02-03',
         dataNascimento: '1980-04-05',
@@ -156,11 +188,16 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       });
   }
 
-  async function createPost(unitId: string, quadroId: string, year: number) {
+  async function createPost(
+    unitId: string,
+    quadroId: string,
+    year: number,
+    cargoFuncaoId = ids.cargo,
+  ) {
     await database.client.quadroNecessidade.create({
       data: {
         anoLetivo: year,
-        cargoFuncaoId: ids.cargo,
+        cargoFuncaoId,
         id: quadroId,
         periodoId: ids.period,
         quantidade: 1,
@@ -170,7 +207,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     const post = await database.client.postoTrabalho.create({
       data: {
         anoLetivo: year,
-        cargoFuncaoId: ids.cargo,
+        cargoFuncaoId,
         periodoId: ids.period,
         quadroNecessidadeId: quadroId,
         unidadeId: unitId,
@@ -184,8 +221,9 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     unitId: string,
     quadroId: string,
     year: number,
+    cargoFuncaoId = ids.cargo,
   ) {
-    const post = await createPost(unitId, quadroId, year);
+    const post = await createPost(unitId, quadroId, year, cargoFuncaoId);
     await database.client.lotacaoSede.create({
       data: { postoTrabalhoId: post.id, profissionalId: professionalId },
     });
@@ -197,8 +235,9 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     unitId: string,
     quadroId: string,
     year: number,
+    cargoFuncaoId = ids.cargo,
   ) {
-    const post = await createPost(unitId, quadroId, year);
+    const post = await createPost(unitId, quadroId, year, cargoFuncaoId);
     await database.client.exercicioProfissional.create({
       data: { postoTrabalhoId: post.id, profissionalId: professionalId, tipoExercicio: 'SEDE' },
     });
@@ -319,14 +358,54 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       `M-UNASSIGNED-${suffix}`,
       '44444444444',
     ).expect(201);
-    const priority = await createProfessional(admin, `M-PRIORITY-${suffix}`, '55555555555').expect(
-      201,
-    );
+    const priority = await createProfessional(
+      admin,
+      `M-PRIORITY-${suffix}`,
+      '55555555555',
+      ids.directorCargo,
+    ).expect(201);
     await placeProfessional(local.body.id, ids.unitA, ids.quadroA, 2027);
     await placeProfessional(other.body.id, ids.unitB, ids.quadroB, 2027);
     await exerciseProfessional(exerciseOnly.body.id, ids.unitA, randomUUID(), 2028);
-    await placeProfessional(priority.body.id, ids.unitA, randomUUID(), 2029);
-    await exerciseProfessional(priority.body.id, ids.unitB, randomUUID(), 2030);
+    await placeProfessional(priority.body.id, ids.unitA, randomUUID(), 2029, ids.directorCargo);
+    const priorityExerciseB = await exerciseProfessional(
+      priority.body.id,
+      ids.unitB,
+      randomUUID(),
+      2030,
+      ids.directorCargo,
+    );
+    const priorityExerciseC = await exerciseProfessional(
+      priority.body.id,
+      ids.unitC,
+      randomUUID(),
+      2031,
+      ids.directorCargo,
+    );
+
+    const priorityRecord = await admin.get(`/profissionais/${priority.body.id}`).expect(200);
+    expect(priorityRecord.body.exerciciosAtuais).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ unidadeId: ids.unitB }),
+        expect.objectContaining({ unidadeId: ids.unitC }),
+      ]),
+    );
+    expect(priorityRecord.body.exerciciosAtuais).toHaveLength(2);
+    const incompatibleCargoChange = await admin
+      .patch(`/profissionais/${priority.body.id}`)
+      .send({ cargoFuncaoId: ids.cargo })
+      .expect(409);
+    expect(incompatibleCargoChange.body).toMatchObject({ code: 'BUSINESS_RULE_CONFLICT' });
+
+    const globalList = await admin.get('/profissionais').expect(200);
+    expect(globalList.body.items.map((item: { id: string }) => item.id)).toContain(
+      unassigned.body.id,
+    );
+    await admin.get(`/profissionais/${unassigned.body.id}`).expect(200);
+    const globalUnits = await admin.get('/unidades').expect(200);
+    expect(globalUnits.body.items.map((item: { id: string }) => item.id)).toEqual(
+      expect.arrayContaining([ids.unitA, ids.unitB, ids.unitC]),
+    );
 
     for (const login of [credentials.director, credentials.secretary]) {
       const scoped = await authenticated(login);
@@ -369,6 +448,12 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       await scoped.patch(`/profissionais/${priority.body.id}`).send({ permuta: true }).expect(200);
     }
 
+    const directorCBeforeClose = await authenticated(credentials.directorC);
+    const listCBeforeClose = await directorCBeforeClose.get('/profissionais').expect(200);
+    expect(listCBeforeClose.body.items.map((item: { id: string }) => item.id)).toContain(
+      priority.body.id,
+    );
+
     await admin
       .patch(`/profissionais/${unassigned.body.id}`)
       .send({ observacoes: 'Sem vínculo, administrado globalmente' })
@@ -376,7 +461,26 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
 
     await database.client.exercicioProfissional.updateMany({
       data: { dataFim: new Date() },
-      where: { dataFim: null, profissionalId: priority.body.id },
+      where: { dataFim: null, postoTrabalhoId: priorityExerciseB.id },
+    });
+    const directorBAfterFirstClose = await authenticated(credentials.directorB);
+    const listBAfterFirstClose = await directorBAfterFirstClose.get('/profissionais').expect(200);
+    expect(listBAfterFirstClose.body.items.map((item: { id: string }) => item.id)).not.toContain(
+      priority.body.id,
+    );
+    const listCAfterFirstClose = await directorCBeforeClose.get('/profissionais').expect(200);
+    expect(listCAfterFirstClose.body.items.map((item: { id: string }) => item.id)).toContain(
+      priority.body.id,
+    );
+    const directorAWhileCActive = await authenticated(credentials.director);
+    const listAWhileCActive = await directorAWhileCActive.get('/profissionais').expect(200);
+    expect(listAWhileCActive.body.items.map((item: { id: string }) => item.id)).not.toContain(
+      priority.body.id,
+    );
+
+    await database.client.exercicioProfissional.updateMany({
+      data: { dataFim: new Date() },
+      where: { dataFim: null, postoTrabalhoId: priorityExerciseC.id },
     });
     for (const login of [credentials.director, credentials.secretary]) {
       const scoped = await authenticated(login);
@@ -392,7 +496,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       priority.body.id,
     );
 
-    await exerciseProfessional(priority.body.id, ids.unitC, randomUUID(), 2031);
+    await exerciseProfessional(priority.body.id, ids.unitC, randomUUID(), 2032, ids.directorCargo);
     const directorC = await authenticated(credentials.directorC);
     const listC = await directorC.get('/profissionais').expect(200);
     expect(listC.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
@@ -411,8 +515,14 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       .expect(403);
 
     const operator = await authenticated(credentials.operator);
-    await operator.get('/profissionais').expect(200);
-    await operator.get('/unidades').expect(200);
+    const operatorProfessionals = await operator.get('/profissionais').expect(200);
+    expect(operatorProfessionals.body.items.map((item: { id: string }) => item.id)).toEqual(
+      expect.arrayContaining([local.body.id, other.body.id, unassigned.body.id]),
+    );
+    const operatorUnits = await operator.get('/unidades').expect(200);
+    expect(operatorUnits.body.items.map((item: { id: string }) => item.id)).toEqual(
+      expect.arrayContaining([ids.unitA, ids.unitB, ids.unitC]),
+    );
     await operator.patch(`/profissionais/${local.body.id}`).send({ permuta: true }).expect(403);
     await operator
       .patch(`/profissionais/${exerciseOnly.body.id}`)
@@ -434,12 +544,55 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
           nome: `Conta ${perfil}`,
           perfil,
           senha: password,
-          unidadeId: perfil === 'DIRETOR' || perfil === 'SECRETARIO' ? ids.unitA : null,
+          unidadeIds: perfil === 'DIRETOR' || perfil === 'SECRETARIO' ? [ids.unitA] : [],
         })
         .expect(201);
       expect(response.text).not.toContain('senhaHash');
       created[perfil] = { id: response.body.id, login };
     }
+
+    const managedDirector = created.DIRETOR!;
+    const linkedDirector = await admin
+      .patch(`/usuarios/${managedDirector.id}`)
+      .send({ unidadeIds: [ids.unitA, ids.unitB] })
+      .expect(200);
+    expect(linkedDirector.body.unidadeIds).toEqual(expect.arrayContaining([ids.unitA, ids.unitB]));
+    expect(linkedDirector.body.unidades).toHaveLength(2);
+
+    const directorSession = await authenticated(managedDirector.login);
+    const initialMe = await directorSession.get('/auth/me').expect(200);
+    expect(initialMe.body.user.unidades.map((item: { id: string }) => item.id)).toEqual(
+      expect.arrayContaining([ids.unitA, ids.unitB]),
+    );
+    await directorSession.patch(`/unidades/${ids.unitA}`).send({ poloRegiao: 'A' }).expect(200);
+    await directorSession.patch(`/unidades/${ids.unitB}`).send({ poloRegiao: 'B' }).expect(200);
+    await directorSession.patch(`/unidades/${ids.unitC}`).send({ poloRegiao: 'C' }).expect(403);
+
+    await admin
+      .patch(`/usuarios/${managedDirector.id}`)
+      .send({ unidadeIds: [ids.unitB, ids.unitC] })
+      .expect(200);
+    const refreshedMe = await directorSession.get('/auth/me').expect(200);
+    expect(refreshedMe.body.user.unidades.map((item: { id: string }) => item.id)).toEqual(
+      expect.arrayContaining([ids.unitB, ids.unitC]),
+    );
+    expect(refreshedMe.body.user.unidades.map((item: { id: string }) => item.id)).not.toContain(
+      ids.unitA,
+    );
+    await directorSession.patch(`/unidades/${ids.unitA}`).send({ poloRegiao: 'A2' }).expect(403);
+    await directorSession.patch(`/unidades/${ids.unitB}`).send({ poloRegiao: 'B2' }).expect(200);
+    await directorSession.patch(`/unidades/${ids.unitC}`).send({ poloRegiao: 'C2' }).expect(200);
+
+    const managedSecretary = created.SECRETARIO!;
+    await admin.patch(`/usuarios/${managedSecretary.id}`).send({ unidadeIds: [] }).expect(400);
+    await admin
+      .patch(`/usuarios/${managedSecretary.id}`)
+      .send({ unidadeIds: [ids.unitA, ids.unitB] })
+      .expect(400);
+    await admin
+      .patch(`/usuarios/${managedSecretary.id}`)
+      .send({ unidadeIds: [ids.unitB] })
+      .expect(200);
 
     await admin
       .post('/usuarios')
@@ -448,6 +601,16 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
         nome: 'Diretor sem unidade',
         perfil: 'DIRETOR',
         senha: password,
+      })
+      .expect(400);
+    await admin
+      .post('/usuarios')
+      .send({
+        login: `secretario-duplo.${suffix}`,
+        nome: 'Secretário com duas unidades',
+        perfil: 'SECRETARIO',
+        senha: password,
+        unidadeIds: [ids.unitA, ids.unitB],
       })
       .expect(400);
     await admin

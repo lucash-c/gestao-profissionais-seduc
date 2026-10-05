@@ -19,7 +19,7 @@ import {
   QSpinner,
   QTable,
 } from 'quasar';
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 
 import { registryApi } from '@/services/registry.service';
 
@@ -43,7 +43,7 @@ const form = reactive({
   nome: '',
   perfil: 'OPERADOR' as UserProfile,
   senha: '',
-  unidadeId: null as string | null,
+  unidadeIds: [] as string[],
 });
 const profileOptions = USER_PROFILES.map((value) => ({ label: value, value }));
 const columns = [
@@ -53,9 +53,9 @@ const columns = [
   { align: 'left' as const, field: 'perfil', label: 'Perfil', name: 'perfil' },
   {
     align: 'left' as const,
-    field: (row: UserRecord) => row.unidade?.nome ?? '—',
-    label: 'Unidade',
-    name: 'unidade',
+    field: (row: UserRecord) => row.unidades.map((unit) => unit.nome).join(', ') || '—',
+    label: 'Unidades',
+    name: 'unidades',
   },
   { align: 'center' as const, field: 'ativo', label: 'Status', name: 'ativo' },
   { align: 'right' as const, field: 'id', label: 'Ações', name: 'actions' },
@@ -92,7 +92,7 @@ function openCreate(): void {
     nome: '',
     perfil: 'OPERADOR',
     senha: '',
-    unidadeId: null,
+    unidadeIds: [],
   });
   dialogOpen.value = true;
 }
@@ -105,7 +105,7 @@ function openEdit(row: UserRecord): void {
     nome: row.nome,
     perfil: row.perfil,
     senha: '',
-    unidadeId: row.unidadeId,
+    unidadeIds: [...row.unidadeIds],
   });
   dialogOpen.value = true;
 }
@@ -139,6 +139,16 @@ async function confirmReset(): Promise<void> {
   }
 }
 onMounted(load);
+
+watch(
+  () => form.perfil,
+  (profile) => {
+    if (profile === 'ADMINISTRADOR' || profile === 'OPERADOR') form.unidadeIds = [];
+    else if (profile === 'SECRETARIO' && form.unidadeIds.length > 1) {
+      form.unidadeIds = form.unidadeIds.slice(0, 1);
+    }
+  },
+);
 </script>
 
 <template>
@@ -230,15 +240,30 @@ onMounted(load);
             :options="profileOptions"
             label="Perfil *"
           /><QSelect
-            v-model="form.unidadeId"
+            v-if="form.perfil === 'DIRETOR'"
+            data-testid="user-units-multiple"
+            v-model="form.unidadeIds"
             outlined
-            clearable
+            multiple
+            use-chips
             emit-value
             map-options
             option-label="nome"
             option-value="id"
             :options="units"
-            label="Unidade"
+            label="Unidades administradas *"
+          /><QSelect
+            v-else-if="form.perfil === 'SECRETARIO'"
+            data-testid="user-unit-single"
+            :model-value="form.unidadeIds[0] ?? null"
+            outlined
+            emit-value
+            map-options
+            option-label="nome"
+            option-value="id"
+            :options="units"
+            label="Unidade administrada *"
+            @update:model-value="(value) => (form.unidadeIds = value ? [value] : [])"
           />
           <QInput
             v-if="!editing"

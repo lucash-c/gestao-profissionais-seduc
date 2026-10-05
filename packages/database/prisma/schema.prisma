@@ -105,7 +105,7 @@ model Unidade {
   tipoUnidade   TipoUnidade         @relation(fields: [tipoUnidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   telefones     UnidadeTelefone[]
   quadros       QuadroNecessidade[]
-  usuarios      Usuario[]
+  usuarios      UsuarioUnidade[]
 
   @@index([tipoUnidadeId], map: "unidade_tipo_unidade_idx")
   @@index([nome], map: "unidade_nome_idx")
@@ -129,6 +129,7 @@ model CargoFuncao {
   nome          String              @unique(map: "cargo_funcao_nome_key") @db.VarChar(160)
   ehProfessor   Boolean             @default(false) @map("eh_professor")
   usaPontuacao  Boolean             @default(false) @map("usa_pontuacao")
+  permiteMultiplosExercicios Boolean @default(false) @map("permite_multiplos_exercicios")
   ativo         Boolean             @default(true)
   criadoEm      DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm  DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
@@ -202,6 +203,7 @@ model Profissional {
   telefones                    ProfissionalTelefone[]
   lotacoesSede                 LotacaoSede[]
   exercicios                   ExercicioProfissional[]   @relation("ExercicioOcupante")
+  limiteExercicioAtivo         ExercicioProfissionalLimiteAtivo?
   exerciciosComoSubstituido    ExercicioProfissional[]   @relation("ExercicioSubstituido")
   afastamentos                 AfastamentoProfissional[]
   eventosParticipante          EventoParticipante[]
@@ -309,6 +311,14 @@ model ExercicioProfissional {
   @@map("exercicio_profissional")
 }
 
+model ExercicioProfissionalLimiteAtivo {
+  profissionalId String       @id @map("profissional_id") @db.Uuid
+  quantidadeAtiva Int         @default(0) @map("quantidade_ativa")
+  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("exercicio_profissional_limite_ativo")
+}
+
 model AfastamentoProfissional {
   id             String       @id @default(uuid()) @db.Uuid
   profissionalId String       @map("profissional_id") @db.Uuid
@@ -330,20 +340,29 @@ model Usuario {
   email            String?        @unique(map: "usuario_email_key") @db.VarChar(254)
   senhaHash        String         @map("senha_hash") @db.VarChar(255)
   perfil           PerfilUsuario
-  unidadeId        String?        @map("unidade_id") @db.Uuid
   ativo            Boolean        @default(true)
   criadoEm         DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime       @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  unidade          Unidade?       @relation(fields: [unidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  unidades         UsuarioUnidade[]
   eventosIniciados Evento[]
   movimentacoes    Movimentacao[]
   auditorias       Auditoria[]
   sessoes          SessaoUsuario[]
   identificadores  UsuarioIdentificador[]
 
-  @@index([unidadeId], map: "usuario_unidade_idx")
   @@index([perfil, ativo], map: "usuario_perfil_ativo_idx")
   @@map("usuario")
+}
+
+model UsuarioUnidade {
+  usuarioId String  @map("usuario_id") @db.Uuid
+  unidadeId String  @map("unidade_id") @db.Uuid
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  unidade   Unidade @relation(fields: [unidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([usuarioId, unidadeId], map: "usuario_unidade_pkey")
+  @@index([unidadeId], map: "usuario_unidade_unidade_idx")
+  @@map("usuario_unidade")
 }
 
 model UsuarioIdentificador {

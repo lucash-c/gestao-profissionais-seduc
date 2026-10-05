@@ -10,7 +10,7 @@ const user: AuthenticatedUser = {
   login: 'operador',
   nome: 'Operador',
   perfil: 'OPERADOR',
-  unidade: null,
+  unidades: [],
 };
 
 function createApi(overrides: Partial<AuthApi> = {}): AuthApi {
