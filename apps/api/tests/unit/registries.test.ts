@@ -115,6 +115,8 @@ function createServices(): RegistryServices {
   const services: RegistryServices = {
     lookups: {
       cargos: vi.fn().mockResolvedValue([professional.cargoFuncao]),
+      periodos: vi.fn().mockResolvedValue([]),
+      segmentos: vi.fn().mockResolvedValue([]),
       tiposUnidade: vi.fn().mockResolvedValue([unit.tipoUnidade]),
       unidades: vi.fn().mockResolvedValue([{ ativo: true, id: UNIT_A, nome: 'Unidade A' }]),
     },

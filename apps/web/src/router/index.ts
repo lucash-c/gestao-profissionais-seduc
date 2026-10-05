@@ -4,8 +4,10 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import ProfessionalsPage from '@/pages/ProfessionalsPage.vue';
 import ScoresPage from '@/pages/ScoresPage.vue';
+import StaffingPlansPage from '@/pages/StaffingPlansPage.vue';
 import UnitsPage from '@/pages/UnitsPage.vue';
 import UsersPage from '@/pages/UsersPage.vue';
+import WorkPositionsPage from '@/pages/WorkPositionsPage.vue';
 import { sessionStore, type SessionStore } from '@/stores/session.store';
 
 export function createAppRouter(
@@ -26,6 +28,18 @@ export function createAppRouter(
           { path: '', redirect: { name: 'units' } },
           { component: UnitsPage, name: 'units', path: 'unidades' },
           { component: ProfessionalsPage, name: 'professionals', path: 'profissionais' },
+          {
+            component: StaffingPlansPage,
+            meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },
+            name: 'staffing-plans',
+            path: 'quadros',
+          },
+          {
+            component: WorkPositionsPage,
+            meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },
+            name: 'work-positions',
+            path: 'postos',
+          },
           {
             component: ScoresPage,
             meta: { profiles: ['ADMINISTRADOR'] },

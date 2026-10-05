@@ -1,8 +1,10 @@
 import type {
   AuthenticatedUser,
   ProfessionalRecord,
+  StaffingPlanRecord,
   UnitRecord,
   UserRecord,
+  WorkPositionRecord,
 } from '@seduc/contracts';
 import { QLayout, QPageContainer, QPagination, Quasar } from 'quasar';
 import { flushPromises, mount } from '@vue/test-utils';
@@ -12,30 +14,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import ProfessionalsPage from '@/pages/ProfessionalsPage.vue';
 import ScoresPage from '@/pages/ScoresPage.vue';
+import StaffingPlansPage from '@/pages/StaffingPlansPage.vue';
 import UnitsPage from '@/pages/UnitsPage.vue';
 import UsersPage from '@/pages/UsersPage.vue';
+import WorkPositionsPage from '@/pages/WorkPositionsPage.vue';
 
 const mocks = vi.hoisted(() => ({
   addProfessionalPhone: vi.fn(),
   addUnitPhone: vi.fn(),
   createProfessional: vi.fn(),
+  createStaffingPlan: vi.fn(),
   createUnit: vi.fn(),
   createUser: vi.fn(),
   deleteProfessionalPhone: vi.fn(),
   deleteUnitPhone: vi.fn(),
   listCargos: vi.fn(),
   listProfessionals: vi.fn(),
+  listPeriods: vi.fn(),
+  listSegments: vi.fn(),
+  listStaffingPlans: vi.fn(),
   listTiposUnidade: vi.fn(),
   listUnitOptions: vi.fn(),
   listUnits: vi.fn(),
   listUsers: vi.fn(),
+  listWorkPositions: vi.fn(),
   resetPassword: vi.fn(),
   updateProfessional: vi.fn(),
   updateProfessionalPhone: vi.fn(),
   updateScore: vi.fn(),
+  updateStaffingPlan: vi.fn(),
   updateUnit: vi.fn(),
   updateUnitPhone: vi.fn(),
   updateUser: vi.fn(),
+  updateWorkPositionStatus: vi.fn(),
 }));
 const sessionMock = vi.hoisted(() => ({
   logout: vi.fn(),
@@ -128,6 +139,37 @@ const user: UserRecord = {
     { id: UNIT_B_ID, nome: 'EMEF Segunda' },
   ],
 };
+const staffingPlan: StaffingPlanRecord = {
+  anoLetivo: 2026,
+  cargoFuncao: professional.cargoFuncao,
+  cargoFuncaoId: CARGO_ID,
+  id: RECORD_ID,
+  observacoes: 'Planejamento anual',
+  periodo: { ativo: true, id: TYPE_ID, nome: 'Integral' },
+  periodoId: TYPE_ID,
+  quantidade: 5,
+  quantidadePostosAtivos: 5,
+  segmentoEnsino: null,
+  segmentoEnsinoId: null,
+  unidade: { ativo: true, id: UNIT_ID, nome: unit.nome },
+  unidadeId: UNIT_ID,
+};
+const workPosition: WorkPositionRecord = {
+  anoLetivo: 2026,
+  ativo: true,
+  cargoFuncao: professional.cargoFuncao,
+  cargoFuncaoId: CARGO_ID,
+  codigo: null,
+  estadoEstrutural: 'DISPONIVEL_COM_SEDE',
+  id: RECORD_ID,
+  ocupanteAtual: null,
+  periodo: staffingPlan.periodo,
+  periodoId: TYPE_ID,
+  quadroNecessidadeId: RECORD_ID,
+  titularAtual: null,
+  unidade: staffingPlan.unidade,
+  unidadeId: UNIT_ID,
+};
 
 function setProfile(perfil: AuthenticatedUser['perfil']): void {
   sessionMock.state.user = {
@@ -163,6 +205,8 @@ beforeEach(() => {
   setProfile('ADMINISTRADOR');
   mocks.listTiposUnidade.mockResolvedValue([unit.tipoUnidade]);
   mocks.listCargos.mockResolvedValue([professional.cargoFuncao]);
+  mocks.listPeriods.mockResolvedValue([staffingPlan.periodo]);
+  mocks.listSegments.mockResolvedValue([]);
   mocks.listUnitOptions.mockResolvedValue([
     { id: UNIT_ID, nome: unit.nome },
     { id: UNIT_B_ID, nome: 'EMEF Segunda' },
@@ -188,14 +232,31 @@ beforeEach(() => {
     total: 1,
     totalPages: 1,
   });
+  mocks.listStaffingPlans.mockResolvedValue({
+    items: [staffingPlan],
+    page: 1,
+    pageSize: 20,
+    total: 1,
+    totalPages: 1,
+  });
+  mocks.listWorkPositions.mockResolvedValue({
+    items: [workPosition],
+    page: 1,
+    pageSize: 20,
+    total: 1,
+    totalPages: 1,
+  });
   mocks.createUnit.mockResolvedValue(unit);
   mocks.updateUnit.mockResolvedValue(unit);
   mocks.createProfessional.mockResolvedValue(professional);
+  mocks.createStaffingPlan.mockResolvedValue(staffingPlan);
   mocks.updateProfessional.mockResolvedValue(professional);
   mocks.updateScore.mockResolvedValue(professional);
+  mocks.updateStaffingPlan.mockResolvedValue(staffingPlan);
   mocks.createUser.mockResolvedValue(user);
   mocks.updateUser.mockResolvedValue(user);
   mocks.resetPassword.mockResolvedValue(undefined);
+  mocks.updateWorkPositionStatus.mockResolvedValue({ ...workPosition, ativo: false });
 });
 
 afterEach(() => {
@@ -357,11 +418,133 @@ describe('Etapa 3 Quasar pages', () => {
     const admin = mountPage(AdminLayout);
     expect(admin.find('[data-testid="users-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="scores-menu"]').exists()).toBe(true);
+    expect(admin.find('[data-testid="staffing-plans-menu"]').exists()).toBe(true);
+    expect(admin.find('[data-testid="work-positions-menu"]').exists()).toBe(true);
     admin.unmount();
 
     setProfile('OPERADOR');
     const operator = mountPage(AdminLayout);
     expect(operator.find('[data-testid="users-menu"]').exists()).toBe(false);
     expect(operator.find('[data-testid="scores-menu"]').exists()).toBe(false);
+    expect(operator.find('[data-testid="staffing-plans-menu"]').exists()).toBe(true);
+    expect(operator.find('[data-testid="work-positions-menu"]').exists()).toBe(true);
+  });
+});
+
+describe('Etapa 4 Quasar pages', () => {
+  it('exibe loading, vazio, erro, filtros e paginação do quadro', async () => {
+    let resolveList!: (value: unknown) => void;
+    mocks.listStaffingPlans.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+    const loadingWrapper = mountPage(StaffingPlansPage);
+    expect(loadingWrapper.find('[data-testid="staffing-plans-loading"]').exists()).toBe(true);
+    resolveList({ items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 });
+    await flushPromises();
+    expect(loadingWrapper.find('[data-testid="staffing-plans-empty"]').exists()).toBe(true);
+    loadingWrapper.unmount();
+
+    mocks.listStaffingPlans.mockRejectedValueOnce(new Error('Falha controlada do quadro'));
+    const errorWrapper = mountPage(StaffingPlansPage);
+    await flushPromises();
+    expect(errorWrapper.get('[data-testid="staffing-plans-error"]').text()).toContain(
+      'Falha controlada do quadro',
+    );
+    errorWrapper.unmount();
+
+    mocks.listStaffingPlans.mockResolvedValue({
+      items: [staffingPlan],
+      page: 1,
+      pageSize: 20,
+      total: 21,
+      totalPages: 2,
+    });
+    const wrapper = mountPage(StaffingPlansPage);
+    await flushPromises();
+    await wrapper.get('[data-testid="staffing-filter"]').trigger('click');
+    const pagination = wrapper.findComponent(QPagination);
+    pagination.vm.$emit('update:modelValue', 2);
+    await flushPromises();
+    expect(mocks.listStaffingPlans).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2, pageSize: 20 }),
+    );
+  });
+
+  it('mostra impacto da quantidade e bloqueia dupla submissão do quadro', async () => {
+    let finish!: (value: StaffingPlanRecord) => void;
+    mocks.updateStaffingPlan.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const wrapper = mountPage(StaffingPlansPage);
+    await flushPromises();
+    const adjust = wrapper.findAll('button').find((button) => button.text().includes('Ajustar'));
+    await adjust!.trigger('click');
+    await flushPromises();
+    const quantityField = document.body.querySelector('[data-testid="staffing-quantity"]')!;
+    const quantity = (
+      quantityField instanceof HTMLInputElement
+        ? quantityField
+        : quantityField.querySelector('input')
+    ) as HTMLInputElement;
+    quantity.value = '8';
+    quantity.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushPromises();
+    expect(document.body.textContent).toContain('Serão criados 3 postos.');
+    const save = document.body.querySelector('[data-testid="save-staffing-plan"]') as HTMLElement;
+    save.click();
+    save.click();
+    await flushPromises();
+    expect(mocks.updateStaffingPlan).toHaveBeenCalledOnce();
+    expect(mocks.updateStaffingPlan).toHaveBeenCalledWith(
+      RECORD_ID,
+      expect.objectContaining({ quantidade: 8 }),
+    );
+    finish({ ...staffingPlan, quantidade: 8, quantidadePostosAtivos: 8 });
+    await flushPromises();
+  });
+
+  it('exibe postos, estado textual, diálogo e respeita RBAC visual', async () => {
+    const admin = mountPage(WorkPositionsPage);
+    await flushPromises();
+    expect(admin.text()).toContain('Com sede: disponível');
+    expect(admin.text()).toContain('Sem titular');
+    await admin.get('[data-testid="position-status-action"]').trigger('click');
+    await flushPromises();
+    expect(document.body.querySelector('[data-testid="position-status-dialog"]')).not.toBeNull();
+    (document.body.querySelector('[data-testid="confirm-position-status"]') as HTMLElement).click();
+    await flushPromises();
+    expect(mocks.updateWorkPositionStatus).toHaveBeenCalledWith(RECORD_ID, false);
+    admin.unmount();
+
+    setProfile('OPERADOR');
+    const operator = mountPage(WorkPositionsPage);
+    await flushPromises();
+    expect(operator.text()).toContain('Com sede: disponível');
+    expect(operator.find('[data-testid="position-status-action"]').exists()).toBe(false);
+  });
+
+  it('exibe estados vazio e erro dos postos', async () => {
+    mocks.listWorkPositions.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      pageSize: 20,
+      total: 0,
+      totalPages: 0,
+    });
+    const empty = mountPage(WorkPositionsPage);
+    await flushPromises();
+    expect(empty.find('[data-testid="work-positions-empty"]').exists()).toBe(true);
+    empty.unmount();
+
+    mocks.listWorkPositions.mockRejectedValueOnce(new Error('Falha controlada dos postos'));
+    const error = mountPage(WorkPositionsPage);
+    await flushPromises();
+    expect(error.get('[data-testid="work-positions-error"]').text()).toContain(
+      'Falha controlada dos postos',
+    );
   });
 });

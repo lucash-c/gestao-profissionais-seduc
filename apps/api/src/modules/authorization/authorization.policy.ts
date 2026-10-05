@@ -11,9 +11,11 @@ export const AUTHORIZATION_ACTIONS = {
   EDIT_PROFESSIONAL_SCORE: 'profissional:pontuacao:editar',
   EDIT_UNIT: 'unidade:editar',
   MANAGE_EVENT: 'evento:gerenciar',
+  MANAGE_STAFFING: 'quadro-posto:gerenciar',
   MANAGE_USERS: 'usuario:gerenciar',
   OPERATE_EVENT: 'evento:operar',
   READ_REGISTRIES: 'cadastro:consultar',
+  READ_STAFFING: 'quadro-posto:consultar',
 } as const;
 
 export type AuthorizationAction =
@@ -30,8 +32,10 @@ const grants: Record<UserProfile, Partial<Record<AuthorizationAction, Authorizat
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL_PARTICIPATION]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL_SCORE]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.EDIT_UNIT]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.MANAGE_STAFFING]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.MANAGE_USERS]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.READ_REGISTRIES]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.READ_STAFFING]: 'GLOBAL',
   },
   DIRETOR: {
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL]: 'OWN_UNIT',
@@ -43,6 +47,7 @@ const grants: Record<UserProfile, Partial<Record<AuthorizationAction, Authorizat
     [AUTHORIZATION_ACTIONS.MANAGE_EVENT]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.OPERATE_EVENT]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.READ_REGISTRIES]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.READ_STAFFING]: 'GLOBAL',
   },
   SECRETARIO: {
     [AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL]: 'OWN_UNIT',

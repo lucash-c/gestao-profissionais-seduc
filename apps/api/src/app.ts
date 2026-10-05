@@ -25,6 +25,14 @@ import {
   createPrismaRegistryServices,
   type RegistryServices,
 } from './modules/registries/registry.service.js';
+import {
+  createStaffingPlanRouter,
+  createWorkPositionRouter,
+} from './modules/staffing/staffing.routers.js';
+import {
+  createPrismaStaffingServices,
+  type StaffingServices,
+} from './modules/staffing/staffing.service.js';
 
 export interface AppDependencies {
   authRepository?: AuthRepository;
@@ -32,6 +40,7 @@ export interface AppDependencies {
   database: DatabaseConnection;
   environment: Environment;
   registryServices?: RegistryServices;
+  staffingServices?: StaffingServices;
 }
 
 export function createApp({
@@ -40,6 +49,7 @@ export function createApp({
   database,
   environment,
   registryServices,
+  staffingServices,
 }: AppDependencies): Express {
   const app = express();
   const logger = pino({
@@ -78,13 +88,14 @@ export function createApp({
     sessionTtlHours: environment.SESSION_TTL_HOURS,
   });
   const services = registryServices ?? createPrismaRegistryServices(database);
+  const staffing = staffingServices ?? createPrismaStaffingServices(database);
   const requireAuthentication = createRequireAuthentication(authService);
   const requireAllowedOrigin = createRequireAllowedOrigin(environment);
 
   app.get('/', (_request, response) => {
     response.json({
       service: 'seduc-api',
-      stage: 3,
+      stage: 4,
       status: 'ok',
     });
   });
@@ -113,6 +124,18 @@ export function createApp({
     requireAuthentication,
     requireAllowedOrigin,
     createUserRouter(services.users),
+  );
+  app.use(
+    '/quadros',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createStaffingPlanRouter(staffing.staffingPlans),
+  );
+  app.use(
+    '/postos',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createWorkPositionRouter(staffing.workPositions),
   );
 
   app.use(notFoundHandler);

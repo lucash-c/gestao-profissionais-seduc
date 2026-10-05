@@ -2,8 +2,10 @@ import type {
   LookupRecord,
   PaginatedResponse,
   ProfessionalRecord,
+  StaffingPlanRecord,
   UnitRecord,
   UserRecord,
+  WorkPositionRecord,
 } from '@seduc/contracts';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
@@ -76,6 +78,26 @@ export interface UserFilters {
   perfil?: string;
 }
 
+export interface StaffingPlanFilters {
+  anoLetivo?: number;
+  cargoFuncaoId?: string;
+  page: number;
+  pageSize: number;
+  periodoId?: string;
+  segmentoEnsinoId?: string;
+  unidadeId?: string;
+}
+
+export interface WorkPositionFilters {
+  anoLetivo?: number;
+  ativo?: boolean;
+  cargoFuncaoId?: string;
+  page: number;
+  pageSize: number;
+  periodoId?: string;
+  unidadeId?: string;
+}
+
 export const registryApi = {
   addProfessionalPhone(id: string, body: unknown) {
     return request<ProfessionalRecord>(`/profissionais/${id}/telefones`, {
@@ -110,8 +132,17 @@ export const registryApi = {
   listCargos() {
     return request<LookupRecord[]>('/dominios/cargos');
   },
+  listPeriods() {
+    return request<LookupRecord[]>('/dominios/periodos');
+  },
   listProfessionals(filters: ProfessionalFilters) {
     return request<PaginatedResponse<ProfessionalRecord>>(`/profissionais${queryString(filters)}`);
+  },
+  listSegments() {
+    return request<LookupRecord[]>('/dominios/segmentos');
+  },
+  listStaffingPlans(filters: StaffingPlanFilters) {
+    return request<PaginatedResponse<StaffingPlanRecord>>(`/quadros${queryString(filters)}`);
   },
   listTiposUnidade() {
     return request<LookupRecord[]>('/dominios/tipos-unidade');
@@ -125,6 +156,9 @@ export const registryApi = {
   listUsers(filters: UserFilters) {
     return request<PaginatedResponse<UserRecord>>(`/usuarios${queryString(filters)}`);
   },
+  listWorkPositions(filters: WorkPositionFilters) {
+    return request<PaginatedResponse<WorkPositionRecord>>(`/postos${queryString(filters)}`);
+  },
   resetPassword(id: string, senha: string) {
     return request<void>(`/usuarios/${id}/senha`, {
       body: JSON.stringify({ senha }),
@@ -133,6 +167,18 @@ export const registryApi = {
   },
   updateProfessional(id: string, body: unknown) {
     return request<ProfessionalRecord>(`/profissionais/${id}`, {
+      body: JSON.stringify(body),
+      method: 'PATCH',
+    });
+  },
+  createStaffingPlan(body: unknown) {
+    return request<StaffingPlanRecord>('/quadros', {
+      body: JSON.stringify(body),
+      method: 'POST',
+    });
+  },
+  updateStaffingPlan(id: string, body: unknown) {
+    return request<StaffingPlanRecord>(`/quadros/${id}`, {
       body: JSON.stringify(body),
       method: 'PATCH',
     });
@@ -155,6 +201,12 @@ export const registryApi = {
   updateUnitPhone(id: string, phoneId: string, body: unknown) {
     return request<UnitRecord>(`/unidades/${id}/telefones/${phoneId}`, {
       body: JSON.stringify(body),
+      method: 'PATCH',
+    });
+  },
+  updateWorkPositionStatus(id: string, ativo: boolean) {
+    return request<WorkPositionRecord>(`/postos/${id}/status`, {
+      body: JSON.stringify({ ativo }),
       method: 'PATCH',
     });
   },

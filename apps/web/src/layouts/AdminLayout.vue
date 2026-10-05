@@ -21,6 +21,9 @@ const drawerOpen = ref(true);
 const router = useRouter();
 const user = computed(() => sessionStore.state.user);
 const isAdmin = computed(() => user.value?.perfil === 'ADMINISTRADOR');
+const canReadStaffing = computed(
+  () => user.value?.perfil === 'ADMINISTRADOR' || user.value?.perfil === 'OPERADOR',
+);
 
 const profileLabels = {
   ADMINISTRADOR: 'Administrador',
@@ -64,7 +67,7 @@ async function logout(): Promise<void> {
             ></small
           >
         </div>
-        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 3" />
+        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 4" />
         <QBtn
           aria-label="Sair do sistema"
           data-testid="logout-button"
@@ -85,6 +88,26 @@ async function logout(): Promise<void> {
         <QItem clickable :to="{ name: 'professionals' }" active-class="nav-active">
           <QItemSection avatar><span class="material-icons">groups</span></QItemSection>
           <QItemSection>Profissionais</QItemSection>
+        </QItem>
+        <QItem
+          v-if="canReadStaffing"
+          data-testid="staffing-plans-menu"
+          clickable
+          :to="{ name: 'staffing-plans' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">table_view</span></QItemSection>
+          <QItemSection>Quadro de Necessidades</QItemSection>
+        </QItem>
+        <QItem
+          v-if="canReadStaffing"
+          data-testid="work-positions-menu"
+          clickable
+          :to="{ name: 'work-positions' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">work</span></QItemSection>
+          <QItemSection>Postos de Trabalho</QItemSection>
         </QItem>
         <QItem
           v-if="isAdmin"

@@ -141,3 +141,44 @@ export interface UserRecord {
   unidadeIds: string[];
   unidades: AuthenticatedUnit[];
 }
+
+export interface StaffingPlanRecord {
+  anoLetivo: number;
+  cargoFuncao: LookupRecord;
+  cargoFuncaoId: string;
+  id: string;
+  observacoes: string | null;
+  periodo: LookupRecord;
+  periodoId: string;
+  quantidade: number;
+  quantidadePostosAtivos: number;
+  segmentoEnsino: LookupRecord | null;
+  segmentoEnsinoId: string | null;
+  unidade: LookupRecord;
+  unidadeId: string;
+}
+
+export interface WorkPositionProfessional {
+  id: string;
+  matricula: string;
+  nomeCompleto: string;
+}
+
+export type WorkPositionStructuralState = 'DISPONIVEL_COM_SEDE' | 'INATIVO' | 'OCUPADO_COM_SEDE';
+
+export interface WorkPositionRecord {
+  anoLetivo: number;
+  ativo: boolean;
+  cargoFuncao: LookupRecord;
+  cargoFuncaoId: string;
+  codigo: string | null;
+  estadoEstrutural: WorkPositionStructuralState;
+  id: string;
+  ocupanteAtual: WorkPositionProfessional | null;
+  periodo: LookupRecord;
+  periodoId: string;
+  quadroNecessidadeId: string;
+  titularAtual: WorkPositionProfessional | null;
+  unidade: LookupRecord;
+  unidadeId: string;
+}

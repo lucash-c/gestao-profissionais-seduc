@@ -1,10 +1,14 @@
 import { createMemoryHistory } from 'vue-router';
 import { describe, expect, it, vi } from 'vitest';
+import type { UserProfile } from '@seduc/contracts';
 
 import { createAppRouter } from '@/router';
 import type { SessionStore } from '@/stores/session.store';
 
-function createSession(status: SessionStore['state']['status']): SessionStore {
+function createSession(
+  status: SessionStore['state']['status'],
+  profile: UserProfile = 'OPERADOR',
+): SessionStore {
   return {
     state: {
       status,
@@ -13,10 +17,13 @@ function createSession(status: SessionStore['state']['status']): SessionStore {
           ? {
               email: null,
               id: 'usuario-1',
-              login: 'operador',
-              nome: 'Operador',
-              perfil: 'OPERADOR',
-              unidades: [],
+              login: profile.toLowerCase(),
+              nome: profile,
+              perfil: profile,
+              unidades:
+                profile === 'DIRETOR' || profile === 'SECRETARIO'
+                  ? [{ id: 'unidade-a', nome: 'Unidade A' }]
+                  : [],
             }
           : null,
     },
@@ -60,5 +67,22 @@ describe('proteção de rotas', () => {
 
     await router.push('/pontuacoes');
     expect(router.currentRoute.value.name).toBe('units');
+  });
+
+  it('permite Quadro/Postos ao Operador e bloqueia os perfis escolares', async () => {
+    const operatorRouter = createAppRouter(createSession('authenticated'), createMemoryHistory());
+    await operatorRouter.push('/quadros');
+    expect(operatorRouter.currentRoute.value.name).toBe('staffing-plans');
+    await operatorRouter.push('/postos');
+    expect(operatorRouter.currentRoute.value.name).toBe('work-positions');
+
+    for (const profile of ['DIRETOR', 'SECRETARIO'] as const) {
+      const schoolRouter = createAppRouter(
+        createSession('authenticated', profile),
+        createMemoryHistory(),
+      );
+      await schoolRouter.push('/quadros');
+      expect(schoolRouter.currentRoute.value.name).toBe('units');
+    }
   });
 });

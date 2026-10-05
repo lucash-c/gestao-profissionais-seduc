@@ -8,9 +8,11 @@ O projeto contém as etapas aprovadas até o momento:
 
 - **Etapa 0 — Fundação técnica:** monorepo pnpm, Express, Vue 3, Quasar, Prisma, Docker Compose e verificações de qualidade;
 - **Etapa 1 — Banco base:** estrutura relacional, históricos, constraints e migrations PostgreSQL;
-- **Etapa 2 — Autenticação e RBAC:** login administrativo, sessões HttpOnly, autorização por perfil e escopo de unidade.
+- **Etapa 2 — Autenticação e RBAC:** login administrativo, sessões HttpOnly, autorização por perfil e escopo de unidade;
+- **Etapa 3 — Cadastros:** unidades, profissionais, usuários, telefones e pontuação oficial;
+- **Etapa 4 — Quadro e postos:** necessidades configuráveis, materialização de postos e manutenção histórica transacional.
 
-Ainda não existem CRUDs funcionais de domínio, eventos operacionais, fila, cálculo de vagas ou movimentações.
+Ainda não existem os fluxos funcionais de lotação, exercício, afastamento, eventos, fila ou movimentações. A disponibilidade `SEM_SEDE` permanece reservada para a Etapa 5.
 
 ## Requisitos
 
@@ -168,4 +170,4 @@ docker                   Dockerfiles e configuração Nginx
 compose.yaml             Ambiente integrado local
 ```
 
-Os módulos de domínio serão criados somente nas etapas seguintes e após autorização explícita.
+As regras posteriores de movimentação e disponibilidade serão criadas somente após autorização explícita.

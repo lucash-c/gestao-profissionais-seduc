@@ -29,6 +29,8 @@ describe('central authorization policy', () => {
       ACTION.EDIT_PROFESSIONAL_SCORE,
       ACTION.ACCESS_ADMIN_CORRECTION,
       ACTION.MANAGE_USERS,
+      ACTION.MANAGE_STAFFING,
+      ACTION.READ_STAFFING,
     ]) {
       expect(isAuthorized({ action, resourceUnitIds: ['qualquer-unidade'], user })).toBe(true);
       expect(isAuthorized({ action, resourceUnitIds: [], user })).toBe(true);
@@ -66,6 +68,8 @@ describe('central authorization policy', () => {
 
     expect(isAuthorized({ action: ACTION.MANAGE_EVENT, user })).toBe(true);
     expect(isAuthorized({ action: ACTION.OPERATE_EVENT, user })).toBe(true);
+    expect(isAuthorized({ action: ACTION.READ_STAFFING, user })).toBe(true);
+    expect(isAuthorized({ action: ACTION.MANAGE_STAFFING, user })).toBe(false);
   });
 
   it('nega ao OPERADOR cadastro comum, pontuação e manifestação prévia', () => {
@@ -106,6 +110,8 @@ describe('central authorization policy', () => {
       expect(isAuthorized({ action: ACTION.EDIT_PROFESSIONAL_SCORE, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.MANAGE_EVENT, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.OPERATE_EVENT, user })).toBe(false);
+      expect(isAuthorized({ action: ACTION.READ_STAFFING, user })).toBe(false);
+      expect(isAuthorized({ action: ACTION.MANAGE_STAFFING, user })).toBe(false);
     },
   );
 

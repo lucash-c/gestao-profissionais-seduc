@@ -237,6 +237,8 @@ export function createLookupRouter(service: RegistryServices['lookups']): Router
     response.json(await service.tiposUnidade()),
   );
   router.get('/cargos', async (_request, response) => response.json(await service.cargos()));
+  router.get('/periodos', async (_request, response) => response.json(await service.periodos()));
+  router.get('/segmentos', async (_request, response) => response.json(await service.segmentos()));
   router.get('/unidades', async (request, response) =>
     response.json(await service.unidades(currentUser(request))),
   );

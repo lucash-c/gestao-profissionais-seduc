@@ -28,6 +28,8 @@ import type {
 export interface RegistryServices {
   lookups: {
     cargos(): Promise<LookupRecord[]>;
+    periodos(): Promise<LookupRecord[]>;
+    segmentos(): Promise<LookupRecord[]>;
     tiposUnidade(): Promise<LookupRecord[]>;
     unidades(user: AuthenticatedUser): Promise<LookupRecord[]>;
   };
@@ -442,6 +444,20 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
     lookups: {
       async cargos() {
         return client.cargoFuncao.findMany({
+          orderBy: { nome: 'asc' },
+          select: { ativo: true, id: true, nome: true },
+          where: { ativo: true },
+        });
+      },
+      async periodos() {
+        return client.periodo.findMany({
+          orderBy: { nome: 'asc' },
+          select: { ativo: true, id: true, nome: true },
+          where: { ativo: true },
+        });
+      },
+      async segmentos() {
+        return client.segmentoEnsino.findMany({
           orderBy: { nome: 'asc' },
           select: { ativo: true, id: true, nome: true },
           where: { ativo: true },
