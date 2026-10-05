@@ -395,7 +395,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       .patch(`/profissionais/${priority.body.id}`)
       .send({ cargoFuncaoId: ids.cargo })
       .expect(409);
-    expect(incompatibleCargoChange.body).toMatchObject({ code: 'BUSINESS_RULE_CONFLICT' });
+    expect(incompatibleCargoChange.body).toMatchObject({ error: 'BUSINESS_RULE_CONFLICT' });
 
     const globalList = await admin.get('/profissionais').expect(200);
     expect(globalList.body.items.map((item: { id: string }) => item.id)).toContain(
