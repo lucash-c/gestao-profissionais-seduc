@@ -230,6 +230,16 @@ function compact(input: object): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
 }
 
+const expectedDatabaseRuleMessages = [
+  'O cargo do profissional não permite múltiplos exercícios ativos.',
+  'O novo cargo não permite os múltiplos exercícios ativos do profissional.',
+  'Existem profissionais com múltiplos exercícios ativos neste cargo.',
+  'Contador de exercícios ativos inconsistente.',
+  'Diretor exige ao menos uma unidade vinculada.',
+  'Secretário exige exatamente uma unidade vinculada.',
+  'Este perfil não utiliza vínculo administrativo de unidade.',
+] as const;
+
 function handleDatabaseError(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
@@ -245,6 +255,16 @@ function handleDatabaseError(error: unknown): never {
     if (error.code === 'P2003' || error.code === 'P2025') {
       throw new HttpError(404, 'NOT_FOUND', 'Registro relacionado não encontrado.');
     }
+  }
+  if (
+    error instanceof Error &&
+    expectedDatabaseRuleMessages.some((message) => error.message.includes(message))
+  ) {
+    throw new HttpError(
+      409,
+      'BUSINESS_RULE_CONFLICT',
+      'A alteração viola uma regra de integridade do cadastro.',
+    );
   }
   throw error;
 }

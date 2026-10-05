@@ -440,6 +440,69 @@ describe('Etapa 3 validation rules', () => {
     expect(JSON.stringify(output)).not.toContain('hash-que-nao-pode-sair');
   });
 
+  it('mapeia violações esperadas dos triggers de exercício para conflito HTTP', async () => {
+    const rawProfessional = {
+      ativo: true,
+      atualizadoEm: new Date(),
+      bairro: null,
+      cargoFuncao: professional.cargoFuncao,
+      cargoFuncaoId: CARGO_ID,
+      cep: null,
+      cidade: null,
+      complemento: null,
+      cpf: professional.cpf,
+      criadoEm: new Date(),
+      dataDesligamento: null,
+      dataEntradaPrefeitura: new Date('2020-01-01T00:00:00.000Z'),
+      dataNascimento: new Date('1980-01-01T00:00:00.000Z'),
+      email: null,
+      endereco: null,
+      exercicios: [],
+      id: RECORD_ID,
+      lotacoesSede: [],
+      matricula: professional.matricula,
+      nomeCompleto: professional.nomeCompleto,
+      numero: null,
+      numeroFilhos: 0,
+      observacoes: null,
+      permuta: false,
+      pontuacao: { toString: () => '0' },
+      remocao: false,
+      telefones: [],
+    };
+    const client = {
+      $transaction: vi.fn(async (callback: (transaction: unknown) => unknown) => callback(client)),
+      profissional: {
+        findFirst: vi.fn().mockResolvedValue(rawProfessional),
+        update: vi
+          .fn()
+          .mockRejectedValue(
+            new Error('O novo cargo não permite os múltiplos exercícios ativos do profissional.'),
+          ),
+      },
+    };
+    const service = createPrismaRegistryServices({
+      client: client as unknown as DatabaseConnection['client'],
+      disconnect: vi.fn(),
+      ping: vi.fn(),
+    });
+
+    await expect(
+      service.professionals.update(
+        RECORD_ID,
+        { cargoFuncaoId: CARGO_ID },
+        {
+          email: null,
+          id: RECORD_ID,
+          login: 'admin',
+          nome: 'Admin',
+          perfil: 'ADMINISTRADOR',
+          unidades: [],
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'BUSINESS_RULE_CONFLICT', status: 409 });
+  });
+
   it('exige Origin em produção e permite ausência apenas fora dela', async () => {
     const production = express();
     production.post(
