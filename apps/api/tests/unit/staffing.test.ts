@@ -140,7 +140,27 @@ describe('Etapa 4 staffing API and RBAC', () => {
         unidadeId: ID,
       }),
     ).toMatchObject({ quantidade: 5, observacoes: null });
-    expect(() => staffingPlanCreateSchema.parse({ quantidade: 0 })).toThrow();
+    expect(
+      staffingPlanCreateSchema.parse({
+        anoLetivo: 2026,
+        cargoFuncaoId: ID,
+        periodoId: ID,
+        quantidade: 0,
+        segmentoEnsinoId: null,
+        unidadeId: ID,
+      }),
+    ).toMatchObject({ quantidade: 0 });
+    expect(() =>
+      staffingPlanCreateSchema.parse({
+        anoLetivo: 2026,
+        cargoFuncaoId: ID,
+        periodoId: ID,
+        quantidade: -1,
+        segmentoEnsinoId: null,
+        unidadeId: ID,
+      }),
+    ).toThrow();
+    expect(() => staffingPlanUpdateSchema.parse({ quantidade: -1 })).toThrow();
     expect(() => staffingPlanUpdateSchema.parse({})).toThrow();
     expect(() => staffingPlanUpdateSchema.parse({ unidadeId: OTHER_ID, vaga: true })).toThrow();
   });

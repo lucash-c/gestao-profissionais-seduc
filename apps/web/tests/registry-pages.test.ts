@@ -490,10 +490,11 @@ describe('Etapa 4 Quasar pages', () => {
         ? quantityField
         : quantityField.querySelector('input')
     ) as HTMLInputElement;
-    quantity.value = '8';
+    expect(quantity.min).toBe('0');
+    quantity.value = '0';
     quantity.dispatchEvent(new Event('input', { bubbles: true }));
     await flushPromises();
-    expect(document.body.textContent).toContain('Serão criados 3 postos.');
+    expect(document.body.textContent).toContain('Serão inativados 5 postos livres.');
     const save = document.body.querySelector('[data-testid="save-staffing-plan"]') as HTMLElement;
     save.click();
     save.click();
@@ -501,9 +502,9 @@ describe('Etapa 4 Quasar pages', () => {
     expect(mocks.updateStaffingPlan).toHaveBeenCalledOnce();
     expect(mocks.updateStaffingPlan).toHaveBeenCalledWith(
       RECORD_ID,
-      expect.objectContaining({ quantidade: 8 }),
+      expect.objectContaining({ quantidade: 0 }),
     );
-    finish({ ...staffingPlan, quantidade: 8, quantidadePostosAtivos: 8 });
+    finish({ ...staffingPlan, quantidade: 0, quantidadePostosAtivos: 0 });
     await flushPromises();
   });
 

@@ -349,7 +349,7 @@ onMounted(async () => {
             data-testid="staffing-quantity"
             outlined
             type="number"
-            min="1"
+            min="0"
             label="Quantidade *"
           />
           <QInput

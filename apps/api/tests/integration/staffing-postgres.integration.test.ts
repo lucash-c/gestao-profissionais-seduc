@@ -176,6 +176,111 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
     });
   });
 
+  it('cria quadro com quantidade zero sem materializar postos e rejeita valor negativo', async () => {
+    const admin = await authenticated(credentials.admin);
+    const response = await admin.post('/quadros').send(payload(2038, 0)).expect(201);
+
+    expect(response.body).toMatchObject({ quantidade: 0, quantidadePostosAtivos: 0 });
+    expect(
+      await database.client.postoTrabalho.count({
+        where: { quadroNecessidadeId: response.body.id },
+      }),
+    ).toBe(0);
+
+    await admin.post('/quadros').send(payload(2039, -1)).expect(400);
+    expect(
+      await database.client.quadroNecessidade.count({
+        where: { anoLetivo: 2039, unidadeId: ids.unidadeA },
+      }),
+    ).toBe(0);
+  });
+
+  it('reduz um quadro livre de um para zero sem apagar o posto', async () => {
+    const admin = await authenticated(credentials.admin);
+    const created = await admin.post('/quadros').send(payload(2040, 1)).expect(201);
+    const quadroId = created.body.id as string;
+    const position = await database.client.postoTrabalho.findFirstOrThrow({
+      where: { quadroNecessidadeId: quadroId },
+    });
+
+    await admin.patch(`/quadros/${quadroId}`).send({ quantidade: -1 }).expect(400);
+    expect(
+      await database.client.quadroNecessidade.findUnique({ where: { id: quadroId } }),
+    ).toMatchObject({ quantidade: 1 });
+
+    const reduced = await admin.patch(`/quadros/${quadroId}`).send({ quantidade: 0 }).expect(200);
+    expect(reduced.body).toMatchObject({ quantidade: 0, quantidadePostosAtivos: 0 });
+    expect(
+      await database.client.postoTrabalho.findUnique({ where: { id: position.id } }),
+    ).toMatchObject({ ativo: false });
+    expect(
+      await database.client.postoTrabalho.count({
+        where: { ativo: true, quadroNecessidadeId: quadroId },
+      }),
+    ).toBe(0);
+  });
+
+  it('permite inativar manualmente o último posto livre', async () => {
+    const admin = await authenticated(credentials.admin);
+    const created = await admin.post('/quadros').send(payload(2041, 1)).expect(201);
+    const quadroId = created.body.id as string;
+    const position = await database.client.postoTrabalho.findFirstOrThrow({
+      where: { quadroNecessidadeId: quadroId },
+    });
+
+    const response = await admin
+      .patch(`/postos/${position.id}/status`)
+      .send({ ativo: false })
+      .expect(200);
+    expect(response.body).toMatchObject({ ativo: false, estadoEstrutural: 'INATIVO' });
+    expect(
+      await database.client.quadroNecessidade.findUnique({ where: { id: quadroId } }),
+    ).toMatchObject({ quantidade: 0 });
+    expect(
+      await database.client.postoTrabalho.count({
+        where: { ativo: true, quadroNecessidadeId: quadroId },
+      }),
+    ).toBe(0);
+  });
+
+  it('reverte redução para zero quando o último posto possui sede ou exercício ativo', async () => {
+    const admin = await authenticated(credentials.admin);
+    const placementPlan = await admin.post('/quadros').send(payload(2042, 1)).expect(201);
+    const exercisePlan = await admin.post('/quadros').send(payload(2043, 1)).expect(201);
+    const placementPosition = await database.client.postoTrabalho.findFirstOrThrow({
+      where: { quadroNecessidadeId: placementPlan.body.id },
+    });
+    const exercisePosition = await database.client.postoTrabalho.findFirstOrThrow({
+      where: { quadroNecessidadeId: exercisePlan.body.id },
+    });
+    const holder = await createProfessional();
+    const occupant = await createProfessional();
+    await database.client.lotacaoSede.create({
+      data: { postoTrabalhoId: placementPosition.id, profissionalId: holder.id },
+    });
+    await database.client.exercicioProfissional.create({
+      data: {
+        postoTrabalhoId: exercisePosition.id,
+        profissionalId: occupant.id,
+        tipoExercicio: 'SEDE',
+      },
+    });
+
+    await admin.patch(`/quadros/${placementPlan.body.id}`).send({ quantidade: 0 }).expect(409);
+    await admin.patch(`/quadros/${exercisePlan.body.id}`).send({ quantidade: 0 }).expect(409);
+
+    for (const quadroId of [placementPlan.body.id as string, exercisePlan.body.id as string]) {
+      expect(
+        await database.client.quadroNecessidade.findUnique({ where: { id: quadroId } }),
+      ).toMatchObject({ quantidade: 1 });
+      expect(
+        await database.client.postoTrabalho.count({
+          where: { ativo: true, quadroNecessidadeId: quadroId },
+        }),
+      ).toBe(1);
+    }
+  });
+
   it('aumenta, reduz deterministicamente e preserva postos e histórico', async () => {
     const admin = await authenticated(credentials.admin);
     const created = await admin.post('/quadros').send(payload(2031, 5)).expect(201);

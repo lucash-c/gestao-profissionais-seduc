@@ -206,15 +206,17 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
             const plan = await transaction.quadroNecessidade.create({
               data: input,
             });
-            await transaction.postoTrabalho.createMany({
-              data: Array.from({ length: input.quantidade }, () => ({
-                anoLetivo: input.anoLetivo,
-                cargoFuncaoId: input.cargoFuncaoId,
-                periodoId: input.periodoId,
-                quadroNecessidadeId: plan.id,
-                unidadeId: input.unidadeId,
-              })),
-            });
+            if (input.quantidade > 0) {
+              await transaction.postoTrabalho.createMany({
+                data: Array.from({ length: input.quantidade }, () => ({
+                  anoLetivo: input.anoLetivo,
+                  cargoFuncaoId: input.cargoFuncaoId,
+                  periodoId: input.periodoId,
+                  quadroNecessidadeId: plan.id,
+                  unidadeId: input.unidadeId,
+                })),
+              });
+            }
             return loadPlan(transaction, plan.id);
           });
         } catch (error) {
@@ -443,13 +445,6 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
                   409,
                   'POSITION_OCCUPIED',
                   'O posto não pode ser inativado enquanto possuir sede ou exercício ativo.',
-                );
-              }
-              if (activeCount <= 1) {
-                throw new HttpError(
-                  409,
-                  'MINIMUM_STAFFING_QUANTITY',
-                  'O quadro deve manter ao menos um posto ativo.',
                 );
               }
             } else {

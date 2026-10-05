@@ -38,11 +38,22 @@ cp .env.example .env
 
 As credenciais e segredos do exemplo são apenas placeholders locais e não devem ser usados em produção. Configure `SESSION_SECRET` com um valor aleatório de pelo menos 32 caracteres e ajuste `SESSION_TTL_HOURS` conforme a política do ambiente.
 
+## Primeiro acesso em instalação nova
+
+Quando a API inicia com a tabela `usuario` completamente vazia, ela cria automaticamente a conta administrativa inicial:
+
+- **Usuário:** `seduc`
+- **Senha:** `12345678`
+
+> Esta é a conta administrativa inicial do sistema. Após criar um administrador definitivo, desative ou remova o usuário SEDUC.
+
+A senha é armazenada exclusivamente como hash bcrypt. Se já existir qualquer usuário, ativo ou inativo, nenhuma conta automática será criada. Duas instâncias iniciando simultaneamente são serializadas no PostgreSQL para que exista somente um administrador inicial.
+
 ## Autenticação administrativa
 
 O login aceita exclusivamente `usuario.login` ou `usuario.email`. A sessão fica em cookie HttpOnly; profissionais não são usuários da aplicação e não autenticam por CPF ou matrícula.
 
-Para criar o primeiro administrador, informe explicitamente `DATABASE_URL`, `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_LOGIN`, `BOOTSTRAP_ADMIN_PASSWORD` e, opcionalmente, `BOOTSTRAP_ADMIN_EMAIL`. Depois execute:
+O bootstrap manual parametrizado continua disponível para operações administrativas controladas. Informe explicitamente `DATABASE_URL`, `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_LOGIN`, `BOOTSTRAP_ADMIN_PASSWORD` e, opcionalmente, `BOOTSTRAP_ADMIN_EMAIL`. Depois execute:
 
 ```bash
 pnpm --filter @seduc/api auth:bootstrap-admin

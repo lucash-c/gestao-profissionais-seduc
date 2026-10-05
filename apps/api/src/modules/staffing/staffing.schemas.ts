@@ -34,7 +34,7 @@ export const staffingPlanCreateSchema = z
   .object({
     ...scopeFields,
     observacoes: nullableText.default(null),
-    quantidade: z.number().int().positive(),
+    quantidade: z.number().int().min(0),
   })
   .strict();
 
@@ -44,7 +44,7 @@ export const staffingPlanUpdateSchema = z
     cargoFuncaoId: scopeFields.cargoFuncaoId.optional(),
     observacoes: nullableText.optional(),
     periodoId: scopeFields.periodoId.optional(),
-    quantidade: z.number().int().positive().optional(),
+    quantidade: z.number().int().min(0).optional(),
     segmentoEnsinoId: scopeFields.segmentoEnsinoId.optional(),
     unidadeId: scopeFields.unidadeId.optional(),
   })

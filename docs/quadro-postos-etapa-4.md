@@ -22,7 +22,7 @@ Ao aumentar a quantidade, são criados somente os postos adicionais. Ao reduzir,
 
 Postos com sede ativa ou exercício ativo não podem ser inativados. Se não houver postos livres suficientes, toda a alteração é rejeitada com conflito HTTP 409.
 
-A inativação ou reativação manual de um posto livre também ajusta a quantidade do quadro na mesma transação. O quadro mantém ao menos um posto ativo, em conformidade com a constraint existente de quantidade positiva.
+A inativação ou reativação manual de um posto livre também ajusta a quantidade do quadro na mesma transação. A quantidade pode chegar a zero, mantendo o quadro sem postos ativos e preservando os postos inativos para histórico.
 
 ## Integridade e concorrência
 

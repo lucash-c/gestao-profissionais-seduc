@@ -30,6 +30,46 @@ export interface BootstrapAdminRepository extends UserIdentifierLookup<Bootstrap
 
 export type BootstrapAdminResult = 'created' | 'unchanged';
 
+export const INITIAL_SEDUC_ADMINISTRATOR = {
+  email: null,
+  login: 'seduc',
+  nome: 'SEDUC',
+  password: '12345678',
+} as const;
+
+export interface LockedInitialAdminRepository {
+  countUsers(): Promise<number>;
+  createAdmin(input: {
+    email: null;
+    login: string;
+    nome: string;
+    senhaHash: string;
+  }): Promise<void>;
+}
+
+export interface InitialAdminRepository {
+  runExclusive<T>(operation: (repository: LockedInitialAdminRepository) => Promise<T>): Promise<T>;
+}
+
+export function bootstrapInitialSeducAdministrator(
+  repository: InitialAdminRepository,
+  passwordHasher: (password: string) => Promise<string>,
+): Promise<BootstrapAdminResult> {
+  return repository.runExclusive(async (lockedRepository) => {
+    if ((await lockedRepository.countUsers()) > 0) {
+      return 'unchanged';
+    }
+
+    await lockedRepository.createAdmin({
+      email: INITIAL_SEDUC_ADMINISTRATOR.email,
+      login: INITIAL_SEDUC_ADMINISTRATOR.login,
+      nome: INITIAL_SEDUC_ADMINISTRATOR.nome,
+      senhaHash: await passwordHasher(INITIAL_SEDUC_ADMINISTRATOR.password),
+    });
+    return 'created';
+  });
+}
+
 export async function bootstrapFirstAdministrator(
   repository: BootstrapAdminRepository,
   input: BootstrapAdminInput,

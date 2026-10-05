@@ -267,7 +267,29 @@ describeDatabase('Etapa 1 database schema', () => {
         '20261001120000_autenticacao_sessoes',
         '20261001160000_usuario_identificador_unico',
         '20261002120000_diretor_multiplas_unidades',
+        '20261005110000_quadro_quantidade_zero',
       ]),
+    );
+  });
+
+  it('allows zero staffing quantity and rejects negative values', async () => {
+    const graph = await createBaseGraph();
+    await pool.query(
+      `INSERT INTO "quadro_necessidade"
+        ("id", "unidade_id", "ano_letivo", "cargo_funcao_id", "periodo_id", "quantidade")
+       VALUES ($1, $2, 2098, $3, $4, 0)`,
+      [randomUUID(), graph.unidadeId, graph.cargoId, graph.periodoId],
+    );
+
+    await expectConstraint(
+      pool.query(
+        `INSERT INTO "quadro_necessidade"
+          ("id", "unidade_id", "ano_letivo", "cargo_funcao_id", "periodo_id", "quantidade")
+         VALUES ($1, $2, 2099, $3, $4, -1)`,
+        [randomUUID(), graph.unidadeId, graph.cargoId, graph.periodoId],
+      ),
+      'quadro_necessidade_quantidade_check',
+      '23514',
     );
   });
 

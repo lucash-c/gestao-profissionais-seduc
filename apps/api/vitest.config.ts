@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['tests/**/*.test.ts'],
+    maxWorkers: 1,
+    pool: 'forks',
     testTimeout: 10_000,
   },
 });
