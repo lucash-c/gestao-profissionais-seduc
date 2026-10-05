@@ -9,7 +9,7 @@ export function createPrismaInitialAdminRepository(
     runExclusive(operation) {
       return database.client.$transaction(async (transaction) => {
         await transaction.$queryRaw`
-          SELECT pg_advisory_xact_lock(2026100504::bigint)
+          SELECT pg_advisory_xact_lock(2026100504::bigint)::text
         `;
         return operation({
           countUsers() {
