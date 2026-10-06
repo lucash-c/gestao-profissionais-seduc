@@ -32,6 +32,12 @@ const confirmStart = ref(false);
 const error = ref('');
 const eventId = computed(() => String(route.params.id));
 const readOnly = computed(() => preparation.value?.evento.status !== 'RASCUNHO');
+const hasUnsavedChanges = computed(() => {
+  if (!preparation.value) return false;
+  const persisted = new Set(preparation.value.selecionados);
+  const current = new Set(selected.value);
+  return persisted.size !== current.size || [...persisted].some((id) => !current.has(id));
+});
 const columns = [
   { align: 'left' as const, field: 'selecionado', label: '', name: 'select' },
   { align: 'left' as const, field: 'matricula', label: 'Matrícula', name: 'matricula' },
@@ -95,7 +101,7 @@ async function save(): Promise<void> {
 }
 
 async function start(): Promise<void> {
-  if (starting.value || readOnly.value) return;
+  if (starting.value || readOnly.value || hasUnsavedChanges.value) return;
   starting.value = true;
   error.value = '';
   try {
@@ -215,6 +221,7 @@ onMounted(load);
                   v-model="selected"
                   :val="props.row.profissionalId"
                   :disable="readOnly || !props.row.elegivel"
+                  :data-testid="`professional-select-${props.row.profissionalId}`"
               /></QTd>
               <QTd key="matricula" :props="props">{{ props.row.matricula }}</QTd>
               <QTd key="nome" :props="props">{{ props.row.nome }}</QTd>
@@ -241,6 +248,14 @@ onMounted(load);
             </QTr>
           </template>
         </QTable>
+        <QBanner
+          v-if="hasUnsavedChanges"
+          class="bg-orange-1 text-dark"
+          data-testid="unsaved-selection-warning"
+        >
+          Existem alterações na seleção ainda não salvas. Salve a preparação antes de iniciar o
+          evento.
+        </QBanner>
         <QCardActions v-if="!readOnly" align="right">
           <QBtn
             data-testid="save-preparation"
@@ -256,13 +271,15 @@ onMounted(load);
             color="primary"
             label="Iniciar evento"
             :loading="starting"
-            :disable="saving || starting"
+            :disable="saving || starting || hasUnsavedChanges"
             @click="confirmStart = true"
           />
         </QCardActions>
       </QCard>
 
-      <h2>Prévia da fila</h2>
+      <h2 data-testid="event-preview-heading">
+        {{ hasUnsavedChanges ? 'Prévia da última preparação salva' : 'Prévia da fila' }}
+      </h2>
       <QTable
         flat
         bordered

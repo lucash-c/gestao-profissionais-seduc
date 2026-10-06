@@ -196,6 +196,20 @@ function button(wrapper: Awaited<ReturnType<typeof mountPage>>['wrapper'], label
   return wrapper.findAll('button').find((candidate) => candidate.text().includes(label));
 }
 
+function expectButtonEnabled(
+  wrapper: Awaited<ReturnType<typeof mountPage>>['wrapper'],
+  testId: string,
+): void {
+  expect(wrapper.get(`[data-testid="${testId}"]`).attributes('disabled')).toBeUndefined();
+}
+
+function expectButtonDisabled(
+  wrapper: Awaited<ReturnType<typeof mountPage>>['wrapper'],
+  testId: string,
+): void {
+  expect(wrapper.get(`[data-testid="${testId}"]`).attributes('disabled')).toBeDefined();
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   setProfile('OPERADOR');
@@ -260,6 +274,84 @@ describe('Etapa 6 frontend de eventos', () => {
     await wrapper.get('[data-testid="save-preparation"]').trigger('click');
     await flushPromises();
     expect(mocks.savePreparation).toHaveBeenCalledWith(EVENT_ID, [PROFESSIONAL_A]);
+  });
+
+  it('permite iniciar quando a preparação carregada não tem alterações locais', async () => {
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+
+    expectButtonEnabled(wrapper, 'start-event');
+    expect(wrapper.find('[data-testid="unsaved-selection-warning"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="event-preview-heading"]').text()).toBe('Prévia da fila');
+  });
+
+  it('compara a seleção como conjunto sem considerar a ordem dos IDs', async () => {
+    mocks.getPreparation.mockResolvedValue({
+      ...structuredClone(preparation),
+      selecionados: [PROFESSIONAL_A, PROFESSIONAL_B],
+      totais: { ...preparation.totais, selecionados: 2 },
+    });
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+
+    await wrapper.get(`[data-testid="professional-select-${PROFESSIONAL_A}"]`).trigger('click');
+    await wrapper.get(`[data-testid="professional-select-${PROFESSIONAL_A}"]`).trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="unsaved-selection-warning"]').exists()).toBe(false);
+    expectButtonEnabled(wrapper, 'start-event');
+  });
+
+  it('bloqueia o início e identifica a prévia salva ao marcar ou desmarcar um profissional', async () => {
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+    const warning = '[data-testid="unsaved-selection-warning"]';
+
+    await wrapper.get(`[data-testid="professional-select-${PROFESSIONAL_B}"]`).trigger('click');
+    await flushPromises();
+    expectButtonDisabled(wrapper, 'start-event');
+    expectButtonEnabled(wrapper, 'save-preparation');
+    expect(wrapper.get(warning).text()).toContain(
+      'Existem alterações na seleção ainda não salvas. Salve a preparação antes de iniciar o evento.',
+    );
+    expect(wrapper.get('[data-testid="event-preview-heading"]').text()).toBe(
+      'Prévia da última preparação salva',
+    );
+    expect(mocks.start).not.toHaveBeenCalled();
+
+    await wrapper.get(`[data-testid="professional-select-${PROFESSIONAL_B}"]`).trigger('click');
+    await wrapper.get(`[data-testid="professional-select-${PROFESSIONAL_A}"]`).trigger('click');
+    await flushPromises();
+    expectButtonDisabled(wrapper, 'start-event');
+    expect(wrapper.find(warning).exists()).toBe(true);
+  });
+
+  it('bloqueia o início quando um seletor em massa altera a seleção', async () => {
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+
+    await button(wrapper, 'TODOS')!.trigger('click');
+    await flushPromises();
+
+    expectButtonDisabled(wrapper, 'start-event');
+    expect(wrapper.find('[data-testid="unsaved-selection-warning"]').exists()).toBe(true);
+  });
+
+  it('sincroniza a seleção após salvar e libera novamente o início', async () => {
+    mocks.savePreparation.mockResolvedValue({
+      ...structuredClone(preparation),
+      selecionados: [PROFESSIONAL_A, PROFESSIONAL_B],
+      totais: { ...preparation.totais, selecionados: 2 },
+    });
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+
+    await wrapper.get(`[data-testid="professional-select-${PROFESSIONAL_B}"]`).trigger('click');
+    await flushPromises();
+    expectButtonDisabled(wrapper, 'start-event');
+
+    await wrapper.get('[data-testid="save-preparation"]').trigger('click');
+    await flushPromises();
+
+    expect(mocks.savePreparation).toHaveBeenCalledWith(EVENT_ID, [PROFESSIONAL_A, PROFESSIONAL_B]);
+    expect(wrapper.find('[data-testid="unsaved-selection-warning"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="event-preview-heading"]').text()).toBe('Prévia da fila');
+    expectButtonEnabled(wrapper, 'start-event');
   });
 
   it('exibe a prévia do backend, empate, totais e confirmação sem dupla submissão', async () => {
