@@ -20,6 +20,8 @@ import { createAuthRouter } from './modules/auth/auth.router.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { AuthRepository } from './modules/auth/auth.types.js';
 import { createHealthRouter } from './modules/health/health.router.js';
+import { createEventRouter } from './modules/events/event.router.js';
+import { createPrismaEventServices, type EventServices } from './modules/events/event.service.js';
 import {
   createLookupRouter,
   createProfessionalRouter,
@@ -45,6 +47,7 @@ export interface AppDependencies {
   clock?: () => Date;
   database: DatabaseConnection;
   environment: Environment;
+  eventServices?: EventServices;
   registryServices?: RegistryServices;
   staffingServices?: StaffingServices;
 }
@@ -55,6 +58,7 @@ export function createApp({
   clock,
   database,
   environment,
+  eventServices,
   registryServices,
   staffingServices,
 }: AppDependencies): Express {
@@ -97,13 +101,14 @@ export function createApp({
   const services = registryServices ?? createPrismaRegistryServices(database);
   const staffing = staffingServices ?? createPrismaStaffingServices(database);
   const assignments = assignmentServices ?? createPrismaAssignmentServices(database, clock);
+  const events = eventServices ?? createPrismaEventServices(database, clock);
   const requireAuthentication = createRequireAuthentication(authService);
   const requireAllowedOrigin = createRequireAllowedOrigin(environment);
 
   app.get('/', (_request, response) => {
     response.json({
       service: 'seduc-api',
-      stage: 5,
+      stage: 6,
       status: 'ok',
     });
   });
@@ -139,6 +144,7 @@ export function createApp({
     requireAllowedOrigin,
     createUserRouter(services.users),
   );
+  app.use('/eventos', requireAuthentication, requireAllowedOrigin, createEventRouter(events));
   app.use(
     '/quadros',
     requireAuthentication,

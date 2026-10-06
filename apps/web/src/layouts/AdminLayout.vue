@@ -21,6 +21,7 @@ const drawerOpen = ref(true);
 const router = useRouter();
 const user = computed(() => sessionStore.state.user);
 const isAdmin = computed(() => user.value?.perfil === 'ADMINISTRADOR');
+const isOperator = computed(() => user.value?.perfil === 'OPERADOR');
 const canReadStaffing = computed(
   () => user.value?.perfil === 'ADMINISTRADOR' || user.value?.perfil === 'OPERADOR',
 );
@@ -67,7 +68,7 @@ async function logout(): Promise<void> {
             ></small
           >
         </div>
-        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 4" />
+        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 6" />
         <QBtn
           aria-label="Sair do sistema"
           data-testid="logout-button"
@@ -88,6 +89,16 @@ async function logout(): Promise<void> {
         <QItem clickable :to="{ name: 'professionals' }" active-class="nav-active">
           <QItemSection avatar><span class="material-icons">groups</span></QItemSection>
           <QItemSection>Profissionais</QItemSection>
+        </QItem>
+        <QItem
+          v-if="isOperator"
+          data-testid="events-menu"
+          clickable
+          :to="{ name: 'events' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">event</span></QItemSection>
+          <QItemSection>Eventos</QItemSection>
         </QItem>
         <QItem
           v-if="canReadStaffing"

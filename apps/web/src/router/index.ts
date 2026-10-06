@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory, type Router, type RouterHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import EventPreparationPage from '@/pages/EventPreparationPage.vue';
+import EventsPage from '@/pages/EventsPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import ProfessionalsPage from '@/pages/ProfessionalsPage.vue';
 import ScoresPage from '@/pages/ScoresPage.vue';
@@ -28,6 +30,18 @@ export function createAppRouter(
           { path: '', redirect: { name: 'units' } },
           { component: UnitsPage, name: 'units', path: 'unidades' },
           { component: ProfessionalsPage, name: 'professionals', path: 'profissionais' },
+          {
+            component: EventsPage,
+            meta: { profiles: ['OPERADOR'] },
+            name: 'events',
+            path: 'eventos',
+          },
+          {
+            component: EventPreparationPage,
+            meta: { profiles: ['OPERADOR'] },
+            name: 'event-preparation',
+            path: 'eventos/:id/preparacao',
+          },
           {
             component: StaffingPlansPage,
             meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },

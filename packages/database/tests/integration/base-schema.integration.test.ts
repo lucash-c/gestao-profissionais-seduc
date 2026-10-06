@@ -631,10 +631,10 @@ describeDatabase('Etapa 1 database schema', () => {
     await expectConstraint(
       pool.query(
         `INSERT INTO "evento"
-          ("id", "tipo", "nome", "ano", "data_inicio", "data_fim")
-         VALUES ($1, 'REMOCAO', 'Evento com datas invalidas', 2027,
+          ("id", "tipo", "nome", "ano", "cargo_funcao_id", "data_inicio", "data_fim")
+         VALUES ($1, 'REMOCAO', 'Evento com datas invalidas', 2027, $2,
                  TIMESTAMPTZ '2027-02-02 12:00:00Z', TIMESTAMPTZ '2027-02-01 12:00:00Z')`,
-        [randomUUID()],
+        [randomUUID(), cargoId],
       ),
       'evento_periodo_check',
       '23514',
@@ -1269,9 +1269,9 @@ describeDatabase('Etapa 1 database schema', () => {
       [usuarioId, `operador-${usuarioId}`],
     );
     await pool.query(
-      `INSERT INTO "evento" ("id", "tipo", "nome", "ano")
-       VALUES ($1, 'REMOCAO', 'Evento de teste', 2027)`,
-      [eventoId],
+      `INSERT INTO "evento" ("id", "tipo", "nome", "ano", "cargo_funcao_id")
+       VALUES ($1, 'REMOCAO', 'Evento de teste', 2027, $2)`,
+      [eventoId, cargoId],
     );
     await pool.query(
       `INSERT INTO "movimentacao" ("id", "evento_id", "usuario_id", "tipo")

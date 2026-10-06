@@ -232,3 +232,67 @@ export interface WorkPositionRecord {
   unidade: LookupRecord;
   unidadeId: string;
 }
+
+export type EventType = 'REMOCAO' | 'PERMUTA' | 'LISTAO';
+export type EventStatus = 'RASCUNHO' | 'ATIVO' | 'ENCERRADO' | 'CANCELADO';
+
+export interface EventRecord {
+  ano: number;
+  cargoFuncao: LookupRecord & { usaPontuacao: boolean };
+  cargoFuncaoId: string;
+  dataFim: string | null;
+  dataInicio: string | null;
+  id: string;
+  iniciadoPorUsuarioId: string | null;
+  nome: string;
+  status: EventStatus;
+  tipo: EventType;
+}
+
+export interface EventPreparationProfessional {
+  cargo: string;
+  dataEntradaPrefeitura: string;
+  dataNascimento: string;
+  elegivel: boolean;
+  empatePendente: boolean;
+  matricula: string;
+  motivoInelegibilidade: string | null;
+  nome: string;
+  numeroFilhos: number;
+  ordemPrevia: number | null;
+  permuta: boolean;
+  pontuacao: string | null;
+  possuiSedeAtual: boolean;
+  profissionalId: string;
+  remocao: boolean;
+  selecionado: boolean;
+}
+
+export interface EventQueuePreviewItem {
+  dataEntrada: string;
+  dataNascimento: string;
+  empatePendente: boolean;
+  nome: string;
+  numeroFilhos: number;
+  posicao: number | null;
+  profissionalId: string;
+  pontuacao: string | null;
+}
+
+export interface EventTieGroup {
+  profissionalIds: string[];
+}
+
+export interface EventPreparationRecord {
+  evento: EventRecord;
+  gruposEmpate: EventTieGroup[];
+  preview: EventQueuePreviewItem[];
+  profissionais: EventPreparationProfessional[];
+  selecionados: string[];
+  totais: {
+    cargo: number;
+    elegiveis: number;
+    empatesPendentes: number;
+    selecionados: number;
+  };
+}

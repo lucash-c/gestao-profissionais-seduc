@@ -125,17 +125,18 @@ model UnidadeTelefone {
 }
 
 model CargoFuncao {
-  id            String              @id @default(uuid()) @db.Uuid
-  nome          String              @unique(map: "cargo_funcao_nome_key") @db.VarChar(160)
-  ehProfessor   Boolean             @default(false) @map("eh_professor")
-  usaPontuacao  Boolean             @default(false) @map("usa_pontuacao")
-  permiteMultiplosExercicios Boolean @default(false) @map("permite_multiplos_exercicios")
-  ativo         Boolean             @default(true)
-  criadoEm      DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm  DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  tiposUnidade  CargoTipoUnidade[]
-  profissionais Profissional[]
-  quadros       QuadroNecessidade[]
+  id                         String              @id @default(uuid()) @db.Uuid
+  nome                       String              @unique(map: "cargo_funcao_nome_key") @db.VarChar(160)
+  ehProfessor                Boolean             @default(false) @map("eh_professor")
+  usaPontuacao               Boolean             @default(false) @map("usa_pontuacao")
+  permiteMultiplosExercicios Boolean             @default(false) @map("permite_multiplos_exercicios")
+  ativo                      Boolean             @default(true)
+  criadoEm                   DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm               DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  tiposUnidade               CargoTipoUnidade[]
+  profissionais              Profissional[]
+  quadros                    QuadroNecessidade[]
+  eventos                    Evento[]
 
   @@index([ativo], map: "cargo_funcao_ativo_idx")
   @@map("cargo_funcao")
@@ -176,39 +177,39 @@ model SegmentoEnsino {
 }
 
 model Profissional {
-  id                           String                    @id @default(uuid()) @db.Uuid
-  matricula                    String                    @unique(map: "profissional_matricula_key") @db.VarChar(50)
-  nomeCompleto                 String                    @map("nome_completo") @db.VarChar(200)
-  cpf                          String                    @db.VarChar(11)
-  cargoFuncaoId                String                    @map("cargo_funcao_id") @db.Uuid
-  pontuacao                    Decimal                   @default(0) @db.Decimal(12, 2)
-  remocao                      Boolean                   @default(false)
-  permuta                      Boolean                   @default(false)
-  dataEntradaPrefeitura        DateTime                  @map("data_entrada_prefeitura") @db.Date
-  dataNascimento               DateTime                  @map("data_nascimento") @db.Date
-  email                        String?                   @db.VarChar(254)
-  dataDesligamento             DateTime?                 @map("data_desligamento") @db.Date
-  endereco                     String?                   @db.VarChar(200)
-  numero                       String?                   @db.VarChar(20)
-  complemento                  String?                   @db.VarChar(120)
-  bairro                       String?                   @db.VarChar(120)
-  cidade                       String?                   @db.VarChar(120)
-  cep                          String?                   @db.VarChar(8)
-  numeroFilhos                 Int                       @default(0) @map("numero_filhos")
+  id                           String                            @id @default(uuid()) @db.Uuid
+  matricula                    String                            @unique(map: "profissional_matricula_key") @db.VarChar(50)
+  nomeCompleto                 String                            @map("nome_completo") @db.VarChar(200)
+  cpf                          String                            @db.VarChar(11)
+  cargoFuncaoId                String                            @map("cargo_funcao_id") @db.Uuid
+  pontuacao                    Decimal                           @default(0) @db.Decimal(12, 2)
+  remocao                      Boolean                           @default(false)
+  permuta                      Boolean                           @default(false)
+  dataEntradaPrefeitura        DateTime                          @map("data_entrada_prefeitura") @db.Date
+  dataNascimento               DateTime                          @map("data_nascimento") @db.Date
+  email                        String?                           @db.VarChar(254)
+  dataDesligamento             DateTime?                         @map("data_desligamento") @db.Date
+  endereco                     String?                           @db.VarChar(200)
+  numero                       String?                           @db.VarChar(20)
+  complemento                  String?                           @db.VarChar(120)
+  bairro                       String?                           @db.VarChar(120)
+  cidade                       String?                           @db.VarChar(120)
+  cep                          String?                           @db.VarChar(8)
+  numeroFilhos                 Int                               @default(0) @map("numero_filhos")
   observacoes                  String?
-  ativo                        Boolean                   @default(true)
-  criadoEm                     DateTime                  @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm                 DateTime                  @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  cargoFuncao                  CargoFuncao               @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  ativo                        Boolean                           @default(true)
+  criadoEm                     DateTime                          @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm                 DateTime                          @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  cargoFuncao                  CargoFuncao                       @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   telefones                    ProfissionalTelefone[]
   lotacoesSede                 LotacaoSede[]
-  exercicios                   ExercicioProfissional[]   @relation("ExercicioOcupante")
+  exercicios                   ExercicioProfissional[]           @relation("ExercicioOcupante")
   limiteExercicioAtivo         ExercicioProfissionalLimiteAtivo?
-  exerciciosComoSubstituido    ExercicioProfissional[]   @relation("ExercicioSubstituido")
+  exerciciosComoSubstituido    ExercicioProfissional[]           @relation("ExercicioSubstituido")
   afastamentos                 AfastamentoProfissional[]
   eventosParticipante          EventoParticipante[]
-  itensMovimentacao            MovimentacaoItem[]        @relation("MovimentacaoProfissional")
-  itensMovimentacaoSubstituido MovimentacaoItem[]        @relation("MovimentacaoSubstituido")
+  itensMovimentacao            MovimentacaoItem[]                @relation("MovimentacaoProfissional")
+  itensMovimentacaoSubstituido MovimentacaoItem[]                @relation("MovimentacaoSubstituido")
 
   @@index([nomeCompleto], map: "profissional_nome_completo_idx")
   @@index([cpf], map: "profissional_cpf_idx")
@@ -312,9 +313,9 @@ model ExercicioProfissional {
 }
 
 model ExercicioProfissionalLimiteAtivo {
-  profissionalId String       @id @map("profissional_id") @db.Uuid
-  quantidadeAtiva Int         @default(0) @map("quantidade_ativa")
-  profissional   Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  profissionalId  String       @id @map("profissional_id") @db.Uuid
+  quantidadeAtiva Int          @default(0) @map("quantidade_ativa")
+  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@map("exercicio_profissional_limite_ativo")
 }
@@ -334,15 +335,15 @@ model AfastamentoProfissional {
 }
 
 model Usuario {
-  id               String         @id @default(uuid()) @db.Uuid
-  nome             String         @db.VarChar(200)
-  login            String         @unique(map: "usuario_login_key") @db.VarChar(100)
-  email            String?        @unique(map: "usuario_email_key") @db.VarChar(254)
-  senhaHash        String         @map("senha_hash") @db.VarChar(255)
+  id               String                 @id @default(uuid()) @db.Uuid
+  nome             String                 @db.VarChar(200)
+  login            String                 @unique(map: "usuario_login_key") @db.VarChar(100)
+  email            String?                @unique(map: "usuario_email_key") @db.VarChar(254)
+  senhaHash        String                 @map("senha_hash") @db.VarChar(255)
   perfil           PerfilUsuario
-  ativo            Boolean        @default(true)
-  criadoEm         DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm     DateTime       @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  ativo            Boolean                @default(true)
+  criadoEm         DateTime               @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm     DateTime               @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   unidades         UsuarioUnidade[]
   eventosIniciados Evento[]
   movimentacoes    Movimentacao[]
@@ -392,17 +393,20 @@ model Evento {
   tipo                 TipoEvento
   nome                 String               @db.VarChar(200)
   ano                  Int
+  cargoFuncaoId        String               @map("cargo_funcao_id") @db.Uuid
   status               StatusEvento         @default(RASCUNHO)
   iniciadoPorUsuarioId String?              @map("iniciado_por_usuario_id") @db.Uuid
   dataInicio           DateTime?            @map("data_inicio") @db.Timestamptz(3)
   dataFim              DateTime?            @map("data_fim") @db.Timestamptz(3)
   criadoEm             DateTime             @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm         DateTime             @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  cargoFuncao          CargoFuncao          @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   iniciadoPorUsuario   Usuario?             @relation(fields: [iniciadoPorUsuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   participantes        EventoParticipante[]
   movimentacoes        Movimentacao[]
 
   @@index([status, ano], map: "evento_status_ano_idx")
+  @@index([cargoFuncaoId], map: "evento_cargo_funcao_idx")
   @@index([iniciadoPorUsuarioId], map: "evento_iniciado_por_idx")
   @@map("evento")
 }
@@ -414,6 +418,7 @@ model EventoParticipante {
   pontuacaoSnapshot      Decimal?                 @map("pontuacao_snapshot") @db.Decimal(12, 2)
   dataEntradaSnapshot    DateTime?                @map("data_entrada_snapshot") @db.Date
   dataNascimentoSnapshot DateTime?                @map("data_nascimento_snapshot") @db.Date
+  numeroFilhosSnapshot   Int?                     @map("numero_filhos_snapshot")
   posicao                Int?
   status                 StatusEventoParticipante @default(SELECIONADO)
   criadoEm               DateTime                 @default(now()) @map("criado_em") @db.Timestamptz(3)

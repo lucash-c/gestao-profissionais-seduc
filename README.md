@@ -12,8 +12,9 @@ O projeto contém as etapas aprovadas até o momento:
 - **Etapa 3 — Cadastros:** unidades, profissionais, usuários, telefones e pontuação oficial;
 - **Etapa 4 — Quadro e postos:** necessidades configuráveis, materialização de postos e manutenção histórica transacional.
 - **Etapa 5 — Lotação, exercício e afastamentos:** lotação de sede, exercício temporário, afastamentos, disponibilidade calculada COM SEDE e SEM SEDE, substituições em cadeia, históricos e regras transacionais e de concorrência.
+- **Etapa 6 — Eventos e preparação da fila:** eventos em RASCUNHO, cargo da sessão, elegibilidade, seleção, prévia oficial, snapshots, tratamento de empates, congelamento da fila e transição para ATIVO.
 
-Ainda não estão implementados os fluxos de eventos, preparação de fila, Remoção/Listão operacional, Permuta operacional, movimentações de eventos, telão público e auditoria/correção administrativa previstos para etapas futuras.
+Ainda não estão implementados os fluxos de escolha de vaga, Remoção/Listão operacional, Permuta operacional, movimentações de eventos, Central Operacional, telão público e auditoria/correção administrativa previstos para etapas futuras.
 
 ## Requisitos
 
