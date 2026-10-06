@@ -11,8 +11,9 @@ O projeto contém as etapas aprovadas até o momento:
 - **Etapa 2 — Autenticação e RBAC:** login administrativo, sessões HttpOnly, autorização por perfil e escopo de unidade;
 - **Etapa 3 — Cadastros:** unidades, profissionais, usuários, telefones e pontuação oficial;
 - **Etapa 4 — Quadro e postos:** necessidades configuráveis, materialização de postos e manutenção histórica transacional.
+- **Etapa 5 — Lotação, exercício e afastamentos:** lotação de sede, exercício temporário, afastamentos, disponibilidade calculada COM SEDE e SEM SEDE, substituições em cadeia, históricos e regras transacionais e de concorrência.
 
-Ainda não existem os fluxos funcionais de lotação, exercício, afastamento, eventos, fila ou movimentações. A disponibilidade `SEM_SEDE` permanece reservada para a Etapa 5.
+Ainda não estão implementados os fluxos de eventos, preparação de fila, Remoção/Listão operacional, Permuta operacional, movimentações de eventos, telão público e auditoria/correção administrativa previstos para etapas futuras.
 
 ## Requisitos
 
