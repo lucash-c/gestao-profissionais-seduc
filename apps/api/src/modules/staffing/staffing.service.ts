@@ -1,12 +1,8 @@
-import type {
-  PaginatedResponse,
-  StaffingPlanRecord,
-  WorkPositionProfessional,
-  WorkPositionRecord,
-} from '@seduc/contracts';
+import type { PaginatedResponse, StaffingPlanRecord, WorkPositionRecord } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
+import { mapWorkPosition, positionAvailabilityInclude } from '../assignments/assignment.service.js';
 import type {
   StaffingPlanCreateInput,
   StaffingPlanQuery,
@@ -36,28 +32,7 @@ const planInclude = {
   unidade: { select: { ativo: true, id: true, nome: true, tipoUnidadeId: true } },
 } as const;
 
-const positionInclude = {
-  exercicios: {
-    include: { profissional: { select: { id: true, matricula: true, nomeCompleto: true } } },
-    take: 1,
-    where: { dataFim: null },
-  },
-  lotacoesSede: {
-    include: { profissional: { select: { id: true, matricula: true, nomeCompleto: true } } },
-    take: 1,
-    where: { dataFim: null },
-  },
-  quadroNecessidade: {
-    include: {
-      cargoFuncao: { select: { ativo: true, id: true, nome: true } },
-      periodo: { select: { ativo: true, id: true, nome: true } },
-      unidade: { select: { ativo: true, id: true, nome: true, tipoUnidadeId: true } },
-    },
-  },
-} as const;
-
 type PlanPayload = Prisma.QuadroNecessidadeGetPayload<{ include: typeof planInclude }>;
-type PositionPayload = Prisma.PostoTrabalhoGetPayload<{ include: typeof positionInclude }>;
 
 function mapPlan(plan: PlanPayload): StaffingPlanRecord {
   return {
@@ -74,37 +49,6 @@ function mapPlan(plan: PlanPayload): StaffingPlanRecord {
     segmentoEnsinoId: plan.segmentoEnsinoId,
     unidade: plan.unidade,
     unidadeId: plan.unidadeId,
-  };
-}
-
-function mapProfessional(
-  value: { id: string; matricula: string; nomeCompleto: string } | undefined,
-): WorkPositionProfessional | null {
-  return value ?? null;
-}
-
-function mapPosition(position: PositionPayload): WorkPositionRecord {
-  const holder = position.lotacoesSede[0]?.profissional;
-  const occupant = position.exercicios[0]?.profissional;
-  return {
-    anoLetivo: position.anoLetivo,
-    ativo: position.ativo,
-    cargoFuncao: position.quadroNecessidade.cargoFuncao,
-    cargoFuncaoId: position.cargoFuncaoId,
-    codigo: position.codigo,
-    estadoEstrutural: !position.ativo
-      ? 'INATIVO'
-      : holder
-        ? 'OCUPADO_COM_SEDE'
-        : 'DISPONIVEL_COM_SEDE',
-    id: position.id,
-    ocupanteAtual: mapProfessional(occupant),
-    periodo: position.quadroNecessidade.periodo,
-    periodoId: position.periodoId,
-    quadroNecessidadeId: position.quadroNecessidadeId,
-    titularAtual: mapProfessional(holder),
-    unidade: position.quadroNecessidade.unidade,
-    unidadeId: position.unidadeId,
   };
 }
 
@@ -187,11 +131,11 @@ async function loadPosition(
   id: string,
 ): Promise<WorkPositionRecord> {
   const position = await transaction.postoTrabalho.findUnique({
-    include: positionInclude,
+    include: positionAvailabilityInclude,
     where: { id },
   });
   if (!position) throw new HttpError(404, 'NOT_FOUND', 'Posto não encontrado.');
-  return mapPosition(position);
+  return mapWorkPosition(position);
 }
 
 export function createPrismaStaffingServices(database: DatabaseConnection): StaffingServices {
@@ -375,11 +319,11 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
     workPositions: {
       async get(id) {
         const position = await client.postoTrabalho.findUnique({
-          include: positionInclude,
+          include: positionAvailabilityInclude,
           where: { id },
         });
         if (!position) throw new HttpError(404, 'NOT_FOUND', 'Posto não encontrado.');
-        return mapPosition(position);
+        return mapWorkPosition(position);
       },
       async list(query) {
         const where: Prisma.PostoTrabalhoWhereInput = {
@@ -391,7 +335,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
         };
         const [items, total] = await client.$transaction([
           client.postoTrabalho.findMany({
-            include: positionInclude,
+            include: positionAvailabilityInclude,
             orderBy: [
               { anoLetivo: 'desc' },
               { quadroNecessidade: { unidade: { nome: 'asc' } } },
@@ -403,7 +347,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
           }),
           client.postoTrabalho.count({ where }),
         ]);
-        return pagination(items.map(mapPosition), query.page, query.pageSize, total);
+        return pagination(items.map(mapWorkPosition), query.page, query.pageSize, total);
       },
       async updateStatus(id, ativo) {
         try {

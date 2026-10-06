@@ -95,7 +95,10 @@ const professionalInclude = {
     },
   },
   exercicios: {
-    include: { postoTrabalho: { include: { quadroNecessidade: { include: { unidade: true } } } } },
+    include: {
+      postoTrabalho: { include: { quadroNecessidade: { include: { unidade: true } } } },
+      substituiProfissional: { select: { id: true, matricula: true, nomeCompleto: true } },
+    },
     orderBy: { criadoEm: 'asc' as const },
     where: { dataFim: null },
   },
@@ -165,7 +168,9 @@ function mapProfessional(
     exerciciosAtuais: professional.exercicios.map((exercise) => {
       const unit = exercise.postoTrabalho.quadroNecessidade.unidade;
       return {
+        id: exercise.id,
         postoId: exercise.postoTrabalhoId,
+        substituiProfissional: exercise.substituiProfissional,
         tipo: exercise.tipoExercicio,
         unidadeId: unit.id,
         unidadeNome: unit.nome,

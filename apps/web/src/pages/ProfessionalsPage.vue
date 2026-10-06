@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { LookupRecord, PhoneRecord, ProfessionalRecord } from '@seduc/contracts';
+import type {
+  LookupRecord,
+  PhoneRecord,
+  ProfessionalRecord,
+  ProfessionalRelationshipsRecord,
+} from '@seduc/contracts';
 import {
   QBanner,
   QBtn,
@@ -34,6 +39,7 @@ const saving = ref(false);
 const error = ref('');
 const dialogOpen = ref(false);
 const editing = ref<ProfessionalRecord | null>(null);
+const relationships = ref<ProfessionalRelationshipsRecord | null>(null);
 const page = ref(1);
 const totalPages = ref(1);
 const nameFilter = ref('');
@@ -147,11 +153,13 @@ function resetForm(): void {
 
 function openCreate(): void {
   editing.value = null;
+  relationships.value = null;
   resetForm();
   dialogOpen.value = true;
 }
-function openEdit(row: ProfessionalRecord): void {
+async function openEdit(row: ProfessionalRecord): Promise<void> {
   editing.value = row;
+  relationships.value = null;
   Object.assign(form, {
     ativo: row.ativo,
     bairro: row.bairro ?? '',
@@ -175,6 +183,11 @@ function openEdit(row: ProfessionalRecord): void {
     telefones: row.telefones.map((phone) => ({ ...phone })),
   });
   dialogOpen.value = true;
+  try {
+    relationships.value = await registryApi.getProfessionalRelationships(row.id);
+  } catch (loadError) {
+    error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar vínculos.';
+  }
 }
 function addPhone(): void {
   form.telefones.push({ numero: '', tipo: 'CELULAR' });
@@ -312,11 +325,10 @@ onMounted(load);
             <QTd key="permuta" :props="props">{{ props.row.permuta ? 'Sim' : 'Não' }}</QTd
             ><QTd key="actions" :props="props">
               <QBtn
-                v-if="canEdit"
                 flat
                 dense
                 color="primary"
-                label="Editar"
+                :label="canEdit ? 'Editar' : 'Detalhes'"
                 @click="openEdit(props.row)"
               />
             </QTd>
@@ -331,7 +343,15 @@ onMounted(load);
     <QDialog v-model="dialogOpen" persistent>
       <QCard class="registry-dialog wide" data-testid="professional-dialog">
         <QCardSection>
-          <h2>{{ editing ? 'Editar profissional' : 'Novo profissional' }}</h2>
+          <h2>
+            {{
+              editing
+                ? canEdit
+                  ? 'Editar profissional'
+                  : 'Detalhes do profissional'
+                : 'Novo profissional'
+            }}
+          </h2>
           <div v-if="editing" class="readonly-history" data-testid="readonly-placement">
             <span
               ><strong>Sede atual:</strong> {{ editing.sedeAtual?.unidadeNome ?? 'Sem sede' }}</span
@@ -345,13 +365,51 @@ onMounted(load);
                 </li>
               </ul>
             </div>
+            <div>
+              <strong>Afastamentos ativos:</strong>
+              <span v-if="!relationships?.afastamentosAtivos.length"> Nenhum</span>
+              <ul v-else class="q-my-xs">
+                <li v-for="absence in relationships.afastamentosAtivos" :key="absence.id">
+                  {{ absence.tipo }} — desde {{ new Date(absence.dataInicio).toLocaleDateString() }}
+                </li>
+              </ul>
+            </div>
+            <details v-if="relationships" data-testid="professional-history">
+              <summary>Consultar históricos</summary>
+              <p><strong>Histórico de sede</strong></p>
+              <ul>
+                <li v-for="placement in relationships.historicoSedes" :key="placement.id">
+                  {{ placement.unidadeNome }} —
+                  {{ new Date(placement.dataInicio).toLocaleDateString() }}
+                  até
+                  {{
+                    placement.dataFim ? new Date(placement.dataFim).toLocaleDateString() : 'atual'
+                  }}
+                </li>
+              </ul>
+              <p><strong>Histórico de exercícios</strong></p>
+              <ul>
+                <li v-for="exercise in relationships.historicoExercicios" :key="exercise.id">
+                  {{ exercise.unidadeNome }} ({{ exercise.tipo }}) —
+                  {{ new Date(exercise.dataInicio).toLocaleDateString() }} até
+                  {{ exercise.dataFim ? new Date(exercise.dataFim).toLocaleDateString() : 'atual' }}
+                </li>
+              </ul>
+              <p><strong>Histórico de afastamentos</strong></p>
+              <ul>
+                <li v-for="absence in relationships.afastamentos" :key="absence.id">
+                  {{ absence.tipo }} — {{ new Date(absence.dataInicio).toLocaleDateString() }} até
+                  {{ absence.dataFim ? new Date(absence.dataFim).toLocaleDateString() : 'atual' }}
+                </li>
+              </ul>
+            </details>
             <small
               >Sede e exercício são históricos oficiais e não podem ser alterados neste
               cadastro.</small
             >
           </div>
         </QCardSection>
-        <QCardSection class="form-grid">
+        <QCardSection v-if="canEdit" class="form-grid">
           <QInput v-model="form.matricula" outlined label="Matrícula *" /><QInput
             v-model="form.nomeCompleto"
             outlined
@@ -455,7 +513,8 @@ onMounted(load);
           </div>
         </QCardSection>
         <QCardActions align="right">
-          <QBtn v-close-popup flat label="Cancelar" /><QBtn
+          <QBtn v-close-popup flat :label="canEdit ? 'Cancelar' : 'Fechar'" /><QBtn
+            v-if="canEdit"
             data-testid="save-professional"
             color="primary"
             label="Salvar"

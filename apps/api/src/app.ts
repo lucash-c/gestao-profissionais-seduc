@@ -9,6 +9,11 @@ import type { Environment } from './config/env.js';
 import { errorHandler, notFoundHandler } from './http/error-handler.js';
 import { HttpError } from './http/http-error.js';
 import { createRequireAllowedOrigin } from './http/origin-protection.js';
+import { createAssignmentRouter } from './modules/assignments/assignment.router.js';
+import {
+  createPrismaAssignmentServices,
+  type AssignmentServices,
+} from './modules/assignments/assignment.service.js';
 import { createRequireAuthentication } from './modules/auth/auth.middleware.js';
 import { createPrismaAuthRepository } from './modules/auth/auth.repository.js';
 import { createAuthRouter } from './modules/auth/auth.router.js';
@@ -35,6 +40,7 @@ import {
 } from './modules/staffing/staffing.service.js';
 
 export interface AppDependencies {
+  assignmentServices?: AssignmentServices;
   authRepository?: AuthRepository;
   clock?: () => Date;
   database: DatabaseConnection;
@@ -44,6 +50,7 @@ export interface AppDependencies {
 }
 
 export function createApp({
+  assignmentServices,
   authRepository,
   clock,
   database,
@@ -89,13 +96,14 @@ export function createApp({
   });
   const services = registryServices ?? createPrismaRegistryServices(database);
   const staffing = staffingServices ?? createPrismaStaffingServices(database);
+  const assignments = assignmentServices ?? createPrismaAssignmentServices(database, clock);
   const requireAuthentication = createRequireAuthentication(authService);
   const requireAllowedOrigin = createRequireAllowedOrigin(environment);
 
   app.get('/', (_request, response) => {
     response.json({
       service: 'seduc-api',
-      stage: 4,
+      stage: 5,
       status: 'ok',
     });
   });
@@ -112,6 +120,12 @@ export function createApp({
     requireAuthentication,
     requireAllowedOrigin,
     createUnitRouter(services.units),
+  );
+  app.use(
+    '/profissionais',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createAssignmentRouter(assignments),
   );
   app.use(
     '/profissionais',

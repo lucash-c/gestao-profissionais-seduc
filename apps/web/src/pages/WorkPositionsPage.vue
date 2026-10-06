@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   LookupRecord,
+  WorkPositionReleaseReason,
   WorkPositionRecord,
   WorkPositionStructuralState,
 } from '@seduc/contracts';
@@ -50,15 +51,20 @@ const columns = [
   { align: 'left' as const, field: 'anoLetivo', label: 'Ano', name: 'ano' },
   { align: 'left' as const, field: 'titularAtual', label: 'Titular atual', name: 'titular' },
   { align: 'left' as const, field: 'ocupanteAtual', label: 'Ocupante atual', name: 'ocupante' },
-  { align: 'left' as const, field: 'estadoEstrutural', label: 'Estado estrutural', name: 'estado' },
+  { align: 'left' as const, field: 'disponibilidade', label: 'Disponibilidade', name: 'estado' },
   { align: 'left' as const, field: 'ativo', label: 'Status', name: 'ativo' },
   { align: 'right' as const, field: 'id', label: 'Ações', name: 'actions' },
 ];
 const stateLabels = {
   DISPONIVEL_COM_SEDE: 'Com sede: disponível',
+  DISPONIVEL_SEM_SEDE: 'Sem sede: disponível',
+  INDISPONIVEL: 'Indisponível',
   INATIVO: 'Inativo',
-  OCUPADO_COM_SEDE: 'Com sede: ocupado',
 } as const;
+const releaseReasonLabels: Record<WorkPositionReleaseReason, string> = {
+  AFASTAMENTO: 'titular afastado',
+  EXERCICIO_OUTRO_POSTO: 'titular em exercício em outro posto',
+};
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -98,6 +104,10 @@ function stateLabel(state: WorkPositionStructuralState): string {
   return stateLabels[state];
 }
 
+function releaseReasons(row: WorkPositionRecord): string {
+  return row.motivosLiberacao.map((reason) => releaseReasonLabels[reason]).join(' e ');
+}
+
 async function confirmStatus(): Promise<void> {
   if (!selected.value || saving.value) return;
   saving.value = true;
@@ -123,7 +133,7 @@ onMounted(async () => {
     <div class="registry-heading">
       <div>
         <p class="eyebrow">Estrutura</p>
-        <h1>Postos de Trabalho / Vagas</h1>
+        <h1>Postos de Trabalho / Disponibilidade</h1>
         <p class="heading-note">
           Consulta estrutural dos postos. Fluxos de movimentação não fazem parte desta etapa.
         </p>
@@ -214,11 +224,17 @@ onMounted(async () => {
             <QTd key="titular" :props="props">{{
               props.row.titularAtual?.nomeCompleto || 'Sem titular'
             }}</QTd>
-            <QTd key="ocupante" :props="props">{{
-              props.row.ocupanteAtual?.nomeCompleto || 'Sem ocupante'
-            }}</QTd>
+            <QTd key="ocupante" :props="props">
+              <div>{{ props.row.ocupanteAtual?.nomeCompleto || 'Sem ocupante' }}</div>
+              <small v-if="props.row.exercicioAtual?.substituiProfissional">
+                substitui {{ props.row.exercicioAtual.substituiProfissional.nomeCompleto }}
+              </small>
+            </QTd>
             <QTd key="estado" :props="props"
-              ><QChip dense>{{ stateLabel(props.row.estadoEstrutural) }}</QChip></QTd
+              ><QChip dense>{{ stateLabel(props.row.disponibilidade) }}</QChip>
+              <small v-if="props.row.motivosLiberacao.length" class="block">
+                {{ releaseReasons(props.row) }}
+              </small></QTd
             >
             <QTd key="ativo" :props="props">{{ props.row.ativo ? 'Ativo' : 'Inativo' }}</QTd>
             <QTd key="actions" :props="props"

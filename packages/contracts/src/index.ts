@@ -96,7 +96,42 @@ export interface ProfessionalPlacement {
 }
 
 export interface ProfessionalExercise extends ProfessionalPlacement {
+  id: string;
+  substituiProfissional: WorkPositionProfessional | null;
   tipo: 'SEDE' | 'SUBSTITUICAO' | 'SEM_SEDE';
+}
+
+export interface ProfessionalPlacementHistory extends ProfessionalPlacement {
+  dataFim: string | null;
+  dataInicio: string;
+  id: string;
+  motivoFim: string | null;
+}
+
+export interface ProfessionalExerciseHistory extends ProfessionalExercise {
+  dataFim: string | null;
+  dataInicio: string;
+  observacoes: string | null;
+}
+
+export interface ProfessionalAbsenceRecord {
+  ativo: boolean;
+  dataFim: string | null;
+  dataInicio: string;
+  id: string;
+  observacoes: string | null;
+  profissionalId: string;
+  tipo: string;
+}
+
+export interface ProfessionalRelationshipsRecord {
+  afastamentos: ProfessionalAbsenceRecord[];
+  afastamentosAtivos: ProfessionalAbsenceRecord[];
+  exerciciosAtuais: ProfessionalExerciseHistory[];
+  historicoExercicios: ProfessionalExerciseHistory[];
+  historicoSedes: ProfessionalPlacementHistory[];
+  profissionalId: string;
+  sedeAtual: ProfessionalPlacementHistory | null;
 }
 
 export interface ProfessionalRecord {
@@ -164,7 +199,19 @@ export interface WorkPositionProfessional {
   nomeCompleto: string;
 }
 
-export type WorkPositionStructuralState = 'DISPONIVEL_COM_SEDE' | 'INATIVO' | 'OCUPADO_COM_SEDE';
+export type WorkPositionAvailability =
+  'DISPONIVEL_COM_SEDE' | 'DISPONIVEL_SEM_SEDE' | 'INDISPONIVEL' | 'INATIVO';
+
+export type WorkPositionReleaseReason = 'AFASTAMENTO' | 'EXERCICIO_OUTRO_POSTO';
+
+export type WorkPositionStructuralState = WorkPositionAvailability;
+
+export interface WorkPositionExercise {
+  id: string;
+  profissional: WorkPositionProfessional;
+  substituiProfissional: WorkPositionProfessional | null;
+  tipo: 'SEDE' | 'SUBSTITUICAO' | 'SEM_SEDE';
+}
 
 export interface WorkPositionRecord {
   anoLetivo: number;
@@ -172,8 +219,11 @@ export interface WorkPositionRecord {
   cargoFuncao: LookupRecord;
   cargoFuncaoId: string;
   codigo: string | null;
+  disponibilidade: WorkPositionAvailability;
   estadoEstrutural: WorkPositionStructuralState;
+  exercicioAtual: WorkPositionExercise | null;
   id: string;
+  motivosLiberacao: WorkPositionReleaseReason[];
   ocupanteAtual: WorkPositionProfessional | null;
   periodo: LookupRecord;
   periodoId: string;

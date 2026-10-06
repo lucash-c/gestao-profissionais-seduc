@@ -1,6 +1,7 @@
 import type {
   AuthenticatedUser,
   ProfessionalRecord,
+  ProfessionalRelationshipsRecord,
   StaffingPlanRecord,
   UnitRecord,
   UserRecord,
@@ -28,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   createUser: vi.fn(),
   deleteProfessionalPhone: vi.fn(),
   deleteUnitPhone: vi.fn(),
+  getProfessionalRelationships: vi.fn(),
   listCargos: vi.fn(),
   listProfessionals: vi.fn(),
   listPeriods: vi.fn(),
@@ -102,13 +104,17 @@ const professional: ProfessionalRecord = {
   endereco: null,
   exerciciosAtuais: [
     {
+      id: RECORD_ID,
       postoId: RECORD_ID,
+      substituiProfissional: null,
       tipo: 'SEDE',
       unidadeId: UNIT_ID,
       unidadeNome: 'EMEF Teste',
     },
     {
+      id: UNIT_B_ID,
       postoId: UNIT_B_ID,
+      substituiProfissional: null,
       tipo: 'SEDE',
       unidadeId: UNIT_B_ID,
       unidadeNome: 'EMEF Segunda',
@@ -160,8 +166,11 @@ const workPosition: WorkPositionRecord = {
   cargoFuncao: professional.cargoFuncao,
   cargoFuncaoId: CARGO_ID,
   codigo: null,
+  disponibilidade: 'DISPONIVEL_COM_SEDE',
   estadoEstrutural: 'DISPONIVEL_COM_SEDE',
+  exercicioAtual: null,
   id: RECORD_ID,
+  motivosLiberacao: [],
   ocupanteAtual: null,
   periodo: staffingPlan.periodo,
   periodoId: TYPE_ID,
@@ -169,6 +178,45 @@ const workPosition: WorkPositionRecord = {
   titularAtual: null,
   unidade: staffingPlan.unidade,
   unidadeId: UNIT_ID,
+};
+const relationships: ProfessionalRelationshipsRecord = {
+  afastamentos: [
+    {
+      ativo: true,
+      dataFim: null,
+      dataInicio: '2026-01-01T12:00:00.000Z',
+      id: RECORD_ID,
+      observacoes: null,
+      profissionalId: RECORD_ID,
+      tipo: 'Licença médica',
+    },
+  ],
+  afastamentosAtivos: [
+    {
+      ativo: true,
+      dataFim: null,
+      dataInicio: '2026-01-01T12:00:00.000Z',
+      id: RECORD_ID,
+      observacoes: null,
+      profissionalId: RECORD_ID,
+      tipo: 'Licença médica',
+    },
+  ],
+  exerciciosAtuais: [],
+  historicoExercicios: [],
+  historicoSedes: [
+    {
+      dataFim: null,
+      dataInicio: '2025-01-01T12:00:00.000Z',
+      id: RECORD_ID,
+      motivoFim: null,
+      postoId: RECORD_ID,
+      unidadeId: UNIT_ID,
+      unidadeNome: 'EMEF Teste',
+    },
+  ],
+  profissionalId: RECORD_ID,
+  sedeAtual: null,
 };
 
 function setProfile(perfil: AuthenticatedUser['perfil']): void {
@@ -246,6 +294,7 @@ beforeEach(() => {
     total: 1,
     totalPages: 1,
   });
+  mocks.getProfessionalRelationships.mockResolvedValue(relationships);
   mocks.createUnit.mockResolvedValue(unit);
   mocks.updateUnit.mockResolvedValue(unit);
   mocks.createProfessional.mockResolvedValue(professional);
@@ -318,6 +367,11 @@ describe('Etapa 3 Quasar pages', () => {
     expect(readonly.text()).toContain('Professora Teste');
     expect(readonly.find('[data-testid="new-professional"]').exists()).toBe(false);
     expect(readonly.text()).not.toContain('Editar');
+    const details = readonly.findAll('button').find((button) => button.text().includes('Detalhes'));
+    await details!.trigger('click');
+    await flushPromises();
+    expect(document.body.textContent).toContain('Consultar históricos');
+    expect(document.body.querySelector('[data-testid="save-professional"]')).toBeNull();
     readonly.unmount();
 
     setProfile('ADMINISTRADOR');
@@ -330,6 +384,8 @@ describe('Etapa 3 Quasar pages', () => {
     expect(history?.textContent).toContain('não podem ser alterados');
     expect(history?.textContent).toContain('EMEF Teste (SEDE)');
     expect(history?.textContent).toContain('EMEF Segunda (SEDE)');
+    expect(history?.textContent).toContain('Licença médica');
+    expect(history?.textContent).toContain('Consultar históricos');
     expect(history?.querySelector('input')).toBeNull();
   });
 
@@ -509,10 +565,25 @@ describe('Etapa 4 Quasar pages', () => {
   });
 
   it('exibe postos, estado textual, diálogo e respeita RBAC visual', async () => {
+    mocks.listWorkPositions.mockResolvedValueOnce({
+      items: [
+        {
+          ...workPosition,
+          disponibilidade: 'DISPONIVEL_SEM_SEDE',
+          estadoEstrutural: 'DISPONIVEL_SEM_SEDE',
+          motivosLiberacao: ['AFASTAMENTO'],
+          titularAtual: { id: RECORD_ID, matricula: 'M-1', nomeCompleto: 'Maria' },
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      totalPages: 1,
+    });
     const admin = mountPage(WorkPositionsPage);
     await flushPromises();
-    expect(admin.text()).toContain('Com sede: disponível');
-    expect(admin.text()).toContain('Sem titular');
+    expect(admin.text()).toContain('Sem sede: disponível');
+    expect(admin.text()).toContain('titular afastado');
     await admin.get('[data-testid="position-status-action"]').trigger('click');
     await flushPromises();
     expect(document.body.querySelector('[data-testid="position-status-dialog"]')).not.toBeNull();

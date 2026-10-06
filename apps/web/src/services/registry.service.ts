@@ -2,6 +2,7 @@ import type {
   LookupRecord,
   PaginatedResponse,
   ProfessionalRecord,
+  ProfessionalRelationshipsRecord,
   StaffingPlanRecord,
   UnitRecord,
   UserRecord,
@@ -137,6 +138,9 @@ export const registryApi = {
   },
   listProfessionals(filters: ProfessionalFilters) {
     return request<PaginatedResponse<ProfessionalRecord>>(`/profissionais${queryString(filters)}`);
+  },
+  getProfessionalRelationships(id: string) {
+    return request<ProfessionalRelationshipsRecord>(`/profissionais/${id}/vinculos`);
   },
   listSegments() {
     return request<LookupRecord[]>('/dominios/segmentos');
