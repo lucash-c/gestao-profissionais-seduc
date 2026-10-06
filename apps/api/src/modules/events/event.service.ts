@@ -36,11 +36,11 @@ export interface EventServices {
   update(id: string, input: EventUpdateInput): Promise<EventRecord>;
 }
 
-const eventInclude = {
+export const eventInclude = {
   cargoFuncao: { select: { ativo: true, id: true, nome: true, usaPontuacao: true } },
 } as const;
 
-type EventPayload = Prisma.EventoGetPayload<{ include: typeof eventInclude }>;
+export type EventPayload = Prisma.EventoGetPayload<{ include: typeof eventInclude }>;
 
 const participantInclude = {
   profissional: {
@@ -116,7 +116,7 @@ export function rankCandidates(
   return { gruposEmpate, ranked };
 }
 
-function mapEvent(event: EventPayload): EventRecord {
+export function mapEvent(event: EventPayload): EventRecord {
   return {
     ano: event.ano,
     cargoFuncao: event.cargoFuncao,

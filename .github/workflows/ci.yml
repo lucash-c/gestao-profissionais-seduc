@@ -79,3 +79,6 @@ jobs:
 
       - name: Test PostgreSQL migrations and constraints
         run: pnpm --filter @seduc/database test:integration
+
+      - name: Test Stage 7 PostgreSQL integration
+        run: pnpm --filter @seduc/api test:integration

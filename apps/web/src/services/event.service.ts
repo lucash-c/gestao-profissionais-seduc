@@ -1,4 +1,15 @@
-import type { EventPreparationRecord, EventRecord, PaginatedResponse } from '@seduc/contracts';
+import type {
+  EventCentralRecord,
+  EventChoiceResult,
+  EventChoiceSimulation,
+  EventOperationalMovement,
+  EventPreparationRecord,
+  EventRecord,
+  PaginatedResponse,
+  PublicEventChoice,
+  PublicEventDisplay,
+  WorkPositionRecord,
+} from '@seduc/contracts';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
@@ -38,6 +49,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const eventApi = {
+  central(id: string) {
+    return request<EventCentralRecord>(`/eventos/${id}/central`);
+  },
+  choose(id: string, body: { participanteEsperadoId: string; postoTrabalhoId: string }) {
+    return request<EventChoiceResult>(`/eventos/${id}/escolha`, {
+      body: JSON.stringify(body),
+      method: 'POST',
+    });
+  },
+  close(id: string) {
+    return request<EventRecord>(`/eventos/${id}/encerrar`, { method: 'POST' });
+  },
   create(body: unknown) {
     return request<EventRecord>('/eventos', { body: JSON.stringify(body), method: 'POST' });
   },
@@ -46,6 +69,19 @@ export const eventApi = {
   },
   list(page = 1) {
     return request<PaginatedResponse<EventRecord>>(`/eventos?page=${page}&pageSize=20`);
+  },
+  movements(id: string, page = 1, pageSize = 20) {
+    return request<PaginatedResponse<EventOperationalMovement>>(
+      `/eventos/${id}/movimentacoes?page=${page}&pageSize=${pageSize}`,
+    );
+  },
+  publicChoices(id: string, page = 1, pageSize = 20) {
+    return request<PaginatedResponse<PublicEventChoice>>(
+      `/public/eventos/${id}/escolhas?page=${page}&pageSize=${pageSize}`,
+    );
+  },
+  publicDisplay(id: string) {
+    return request<PublicEventDisplay>(`/public/eventos/${id}/telao`);
   },
   savePreparation(id: string, profissionalIds: string[]) {
     return request<EventPreparationRecord>(`/eventos/${id}/preparacao`, {
@@ -56,10 +92,26 @@ export const eventApi = {
   start(id: string) {
     return request<EventPreparationRecord>(`/eventos/${id}/iniciar`, { method: 'POST' });
   },
+  simulate(id: string, postoTrabalhoId: string) {
+    return request<EventChoiceSimulation>(
+      `/eventos/${id}/simular-escolha?postoTrabalhoId=${encodeURIComponent(postoTrabalhoId)}`,
+    );
+  },
   update(id: string, body: unknown) {
     return request<EventRecord>(`/eventos/${id}`, {
       body: JSON.stringify(body),
       method: 'PATCH',
     });
+  },
+  vacancies(
+    id: string,
+    filters: { periodoId?: string; tipo?: 'SEDE' | 'SEM_SEDE'; unidadeId?: string },
+  ) {
+    const query = new URLSearchParams();
+    if (filters.periodoId) query.set('periodoId', filters.periodoId);
+    if (filters.tipo) query.set('tipo', filters.tipo);
+    if (filters.unidadeId) query.set('unidadeId', filters.unidadeId);
+    const suffix = query.size ? `?${query.toString()}` : '';
+    return request<WorkPositionRecord[]>(`/eventos/${id}/vagas${suffix}`);
   },
 };

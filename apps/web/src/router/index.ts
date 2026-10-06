@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory, type Router, type RouterHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import EventPreparationPage from '@/pages/EventPreparationPage.vue';
 import EventsPage from '@/pages/EventsPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
 import ProfessionalsPage from '@/pages/ProfessionalsPage.vue';
+import PublicEventDisplayPage from '@/pages/PublicEventDisplayPage.vue';
 import ScoresPage from '@/pages/ScoresPage.vue';
 import StaffingPlansPage from '@/pages/StaffingPlansPage.vue';
 import UnitsPage from '@/pages/UnitsPage.vue';
@@ -26,6 +28,12 @@ export function createAppRouter(
         path: '/login',
       },
       {
+        component: PublicEventDisplayPage,
+        meta: { publicAccess: true },
+        name: 'public-event-display',
+        path: '/publico/eventos/:id',
+      },
+      {
         children: [
           { path: '', redirect: { name: 'units' } },
           { component: UnitsPage, name: 'units', path: 'unidades' },
@@ -35,6 +43,12 @@ export function createAppRouter(
             meta: { profiles: ['OPERADOR'] },
             name: 'events',
             path: 'eventos',
+          },
+          {
+            component: EventOperationsPage,
+            meta: { profiles: ['OPERADOR'] },
+            name: 'event-operations',
+            path: 'eventos/:id/central',
           },
           {
             component: EventPreparationPage,
@@ -74,6 +88,7 @@ export function createAppRouter(
   });
 
   appRouter.beforeEach(async (to) => {
+    if (to.meta.publicAccess === true) return true;
     if (to.meta.public === true) {
       return session.state.status === 'authenticated' ? { name: 'units' } : true;
     }

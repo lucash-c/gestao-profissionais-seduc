@@ -397,19 +397,19 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       .expect(409);
     expect(incompatibleCargoChange.body).toMatchObject({ error: 'BUSINESS_RULE_CONFLICT' });
 
-    const globalList = await admin.get('/profissionais').expect(200);
+    const globalList = await admin.get('/profissionais').query({ pageSize: 100 }).expect(200);
     expect(globalList.body.items.map((item: { id: string }) => item.id)).toContain(
       unassigned.body.id,
     );
     await admin.get(`/profissionais/${unassigned.body.id}`).expect(200);
-    const globalUnits = await admin.get('/unidades').expect(200);
+    const globalUnits = await admin.get('/unidades').query({ pageSize: 100 }).expect(200);
     expect(globalUnits.body.items.map((item: { id: string }) => item.id)).toEqual(
       expect.arrayContaining([ids.unitA, ids.unitB, ids.unitC]),
     );
 
     for (const login of [credentials.director, credentials.secretary]) {
       const scoped = await authenticated(login);
-      const list = await scoped.get('/profissionais').expect(200);
+      const list = await scoped.get('/profissionais').query({ pageSize: 100 }).expect(200);
       expect(list.body.items.map((item: { id: string }) => item.id)).toContain(local.body.id);
       expect(list.body.items.map((item: { id: string }) => item.id)).toContain(
         exerciseOnly.body.id,
@@ -438,7 +438,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
 
     for (const login of [credentials.directorB, credentials.secretaryB]) {
       const scoped = await authenticated(login);
-      const listB = await scoped.get('/profissionais').expect(200);
+      const listB = await scoped.get('/profissionais').query({ pageSize: 100 }).expect(200);
       expect(listB.body.items.map((item: { id: string }) => item.id)).toContain(other.body.id);
       expect(listB.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
       expect(listB.body.items.map((item: { id: string }) => item.id)).not.toContain(local.body.id);
@@ -449,7 +449,10 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     }
 
     const directorCBeforeClose = await authenticated(credentials.directorC);
-    const listCBeforeClose = await directorCBeforeClose.get('/profissionais').expect(200);
+    const listCBeforeClose = await directorCBeforeClose
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(listCBeforeClose.body.items.map((item: { id: string }) => item.id)).toContain(
       priority.body.id,
     );
@@ -464,16 +467,25 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       where: { dataFim: null, postoTrabalhoId: priorityExerciseB.id },
     });
     const directorBAfterFirstClose = await authenticated(credentials.directorB);
-    const listBAfterFirstClose = await directorBAfterFirstClose.get('/profissionais').expect(200);
+    const listBAfterFirstClose = await directorBAfterFirstClose
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(listBAfterFirstClose.body.items.map((item: { id: string }) => item.id)).not.toContain(
       priority.body.id,
     );
-    const listCAfterFirstClose = await directorCBeforeClose.get('/profissionais').expect(200);
+    const listCAfterFirstClose = await directorCBeforeClose
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(listCAfterFirstClose.body.items.map((item: { id: string }) => item.id)).toContain(
       priority.body.id,
     );
     const directorAWhileCActive = await authenticated(credentials.director);
-    const listAWhileCActive = await directorAWhileCActive.get('/profissionais').expect(200);
+    const listAWhileCActive = await directorAWhileCActive
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(listAWhileCActive.body.items.map((item: { id: string }) => item.id)).not.toContain(
       priority.body.id,
     );
@@ -484,28 +496,34 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     });
     for (const login of [credentials.director, credentials.secretary]) {
       const scoped = await authenticated(login);
-      const fallbackList = await scoped.get('/profissionais').expect(200);
+      const fallbackList = await scoped.get('/profissionais').query({ pageSize: 100 }).expect(200);
       expect(fallbackList.body.items.map((item: { id: string }) => item.id)).toContain(
         priority.body.id,
       );
       await scoped.patch(`/profissionais/${priority.body.id}`).send({ remocao: false }).expect(200);
     }
     const directorBAfterClose = await authenticated(credentials.directorB);
-    const listBAfterClose = await directorBAfterClose.get('/profissionais').expect(200);
+    const listBAfterClose = await directorBAfterClose
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(listBAfterClose.body.items.map((item: { id: string }) => item.id)).not.toContain(
       priority.body.id,
     );
 
     await exerciseProfessional(priority.body.id, ids.unitC, randomUUID(), 2032, ids.directorCargo);
     const directorC = await authenticated(credentials.directorC);
-    const listC = await directorC.get('/profissionais').expect(200);
+    const listC = await directorC.get('/profissionais').query({ pageSize: 100 }).expect(200);
     expect(listC.body.items.map((item: { id: string }) => item.id)).toContain(priority.body.id);
     await directorC
       .patch(`/profissionais/${priority.body.id}`)
       .send({ permuta: false })
       .expect(200);
     const directorAAfterC = await authenticated(credentials.director);
-    const listAAfterC = await directorAAfterC.get('/profissionais').expect(200);
+    const listAAfterC = await directorAAfterC
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(listAAfterC.body.items.map((item: { id: string }) => item.id)).not.toContain(
       priority.body.id,
     );
@@ -515,11 +533,14 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       .expect(403);
 
     const operator = await authenticated(credentials.operator);
-    const operatorProfessionals = await operator.get('/profissionais').expect(200);
+    const operatorProfessionals = await operator
+      .get('/profissionais')
+      .query({ pageSize: 100 })
+      .expect(200);
     expect(operatorProfessionals.body.items.map((item: { id: string }) => item.id)).toEqual(
       expect.arrayContaining([local.body.id, other.body.id, unassigned.body.id]),
     );
-    const operatorUnits = await operator.get('/unidades').expect(200);
+    const operatorUnits = await operator.get('/unidades').query({ pageSize: 100 }).expect(200);
     expect(operatorUnits.body.items.map((item: { id: string }) => item.id)).toEqual(
       expect.arrayContaining([ids.unitA, ids.unitB, ids.unitC]),
     );

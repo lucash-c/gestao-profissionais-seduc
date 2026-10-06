@@ -34,6 +34,16 @@ function createSession(
 }
 
 describe('proteção de rotas', () => {
+  it('libera o telão público sem autenticação administrativa', async () => {
+    const session = createSession('guest');
+    const router = createAppRouter(session, createMemoryHistory());
+
+    await router.push('/publico/eventos/11111111-1111-4111-8111-111111111111');
+
+    expect(router.currentRoute.value.name).toBe('public-event-display');
+    expect(session.restore).not.toHaveBeenCalled();
+  });
+
   it('redireciona visitante da rota protegida para o login', async () => {
     const session = createSession('guest');
     const router = createAppRouter(session, createMemoryHistory());

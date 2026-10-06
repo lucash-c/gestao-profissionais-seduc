@@ -168,10 +168,20 @@ async function mountPage(component: object, path = '/') {
       { component: { template: '<div />' }, name: 'events', path: '/eventos' },
       {
         component: { template: '<div />' },
+        name: 'event-operations',
+        path: '/eventos/:id/central',
+      },
+      {
+        component: { template: '<div />' },
         name: 'event-preparation',
         path: '/eventos/:id/preparacao',
       },
       { component: { template: '<div />' }, name: 'login', path: '/login' },
+      {
+        component: { template: '<div />' },
+        name: 'public-event-display',
+        path: '/publico/eventos/:id',
+      },
       { component: { template: '<div />' }, name: 'units', path: '/unidades' },
     ],
   });
@@ -245,6 +255,28 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Cargo/função *');
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Tipo *');
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Ano *');
+  });
+
+  it('oferece Central somente para ATIVO REMOCAO/LISTAO e reserva PERMUTA para a Etapa 8', async () => {
+    mocks.list.mockResolvedValue({
+      items: [
+        { ...event, status: 'ATIVO' },
+        { ...event, id: '77777777-7777-4777-8777-777777777777', status: 'ATIVO', tipo: 'LISTAO' },
+        { ...event, id: '88888888-8888-4888-8888-888888888888', status: 'ATIVO', tipo: 'PERMUTA' },
+        { ...event, id: '99999999-9999-4999-8999-999999999999', status: 'ENCERRADO' },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 4,
+      totalPages: 1,
+    });
+    const { wrapper } = await mountPage(EventsPage, '/eventos');
+
+    expect(
+      wrapper.findAll('a').filter((item) => item.text().includes('Abrir Central')),
+    ).toHaveLength(2);
+    expect(wrapper.text()).toContain('Operação de Permuta será disponibilizada na Etapa 8.');
+    expect(wrapper.findAll('a').some((item) => item.text().includes('Ver resultado'))).toBe(true);
   });
 
   it('mantém a lista completa visível durante busca e exibe filhos, chips e inelegível bloqueado', async () => {

@@ -51,7 +51,7 @@ export const positionAvailabilityInclude = {
   },
 } as const;
 
-type PositionAvailabilityPayload = Prisma.PostoTrabalhoGetPayload<{
+export type PositionAvailabilityPayload = Prisma.PostoTrabalhoGetPayload<{
   include: typeof positionAvailabilityInclude;
 }>;
 
@@ -244,7 +244,7 @@ function handleDatabaseError(error: unknown): never {
   throw error;
 }
 
-async function lockProfessionals(
+export async function lockProfessionals(
   transaction: Prisma.TransactionClient,
   ids: string[],
 ): Promise<void> {
@@ -257,7 +257,10 @@ async function lockProfessionals(
   `);
 }
 
-async function lockPositions(transaction: Prisma.TransactionClient, ids: string[]): Promise<void> {
+export async function lockPositions(
+  transaction: Prisma.TransactionClient,
+  ids: string[],
+): Promise<void> {
   const uniqueIds = [...new Set(ids)].sort();
   if (!uniqueIds.length) return;
   await transaction.$queryRaw(Prisma.sql`
@@ -267,7 +270,7 @@ async function lockPositions(transaction: Prisma.TransactionClient, ids: string[
   `);
 }
 
-async function loadPosition(
+export async function loadPosition(
   transaction: Prisma.TransactionClient,
   id: string,
 ): Promise<PositionAvailabilityPayload> {

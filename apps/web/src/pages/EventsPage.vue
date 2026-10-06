@@ -160,11 +160,32 @@ onMounted(async () => {
                 @click="openEdit(props.row)"
               />
               <QBtn
+                v-if="props.row.status === 'RASCUNHO'"
                 flat
                 dense
                 color="primary"
                 label="Preparar fila"
                 :to="{ name: 'event-preparation', params: { id: props.row.id } }"
+              />
+              <QBtn
+                v-if="
+                  props.row.status === 'ATIVO' && ['REMOCAO', 'LISTAO'].includes(props.row.tipo)
+                "
+                flat
+                dense
+                color="primary"
+                label="Abrir Central"
+                :to="{ name: 'event-operations', params: { id: props.row.id } }"
+              />
+              <span v-if="props.row.status === 'ATIVO' && props.row.tipo === 'PERMUTA'">
+                Operação de Permuta será disponibilizada na Etapa 8.
+              </span>
+              <QBtn
+                v-if="props.row.status === 'ENCERRADO' && props.row.tipo !== 'PERMUTA'"
+                flat
+                dense
+                label="Ver resultado"
+                :to="{ name: 'public-event-display', params: { id: props.row.id } }"
               />
             </QTd>
           </QTr>

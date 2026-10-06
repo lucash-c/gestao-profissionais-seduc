@@ -296,3 +296,125 @@ export interface EventPreparationRecord {
     selecionados: number;
   };
 }
+
+export type EventDestinationType = 'SEDE' | 'SEM_SEDE';
+
+export interface EventOperationalLink {
+  periodo: LookupRecord;
+  periodoId: string;
+  postoId: string;
+  unidade: LookupRecord;
+  unidadeId: string;
+}
+
+export interface EventOperationalExercise extends EventOperationalLink {
+  id: string;
+  substituiProfissional: { id: string; nome: string } | null;
+  tipo: 'SEDE' | 'SUBSTITUICAO' | 'SEM_SEDE';
+}
+
+export interface EventOperationalSituation {
+  exerciciosAtuais: EventOperationalExercise[];
+  sedeAtual: EventOperationalLink | null;
+}
+
+export interface EventOperationalParticipant {
+  cargo: string;
+  dataEntradaSnapshot: string;
+  dataNascimentoSnapshot: string;
+  nome: string;
+  numeroFilhosSnapshot: number;
+  participanteId: string;
+  pontuacaoSnapshot: string | null;
+  posicao: number;
+  profissionalId: string;
+  status: 'AGUARDANDO' | 'ATENDIDO';
+}
+
+export interface EventOperationalMovement {
+  dataHora: string;
+  id: string;
+  origem: EventOperationalLink | null;
+  periodo: string;
+  postoDestinoId: string;
+  postoOrigemId: string | null;
+  profissional: string;
+  tipoDestino: EventDestinationType;
+  unidadeDestino: string;
+}
+
+export interface EventPeriodRuleStatus {
+  code: 'EVENT_PERIOD_RULE_REQUIRED' | null;
+  message: string | null;
+  periodoId: string | null;
+}
+
+export interface EventCentralRecord {
+  evento: EventRecord;
+  fila: EventOperationalParticipant[];
+  participanteAtual: EventOperationalParticipant | null;
+  proximos: EventOperationalParticipant[];
+  regraPeriodo: EventPeriodRuleStatus;
+  situacaoAtual: EventOperationalSituation | null;
+  totais: {
+    aguardando: number;
+    atendidos: number;
+    podeEncerrar: boolean;
+    total: number;
+    vagasDisponiveis: number;
+  };
+  ultimasMovimentacoes: EventOperationalMovement[];
+  vagasDisponiveis: WorkPositionRecord[];
+}
+
+export interface EventChoiceSimulation {
+  antes: {
+    exerciciosAtuais: EventOperationalExercise[];
+    profissional: string;
+    sedeOficial: EventOperationalLink | null;
+  };
+  depois: {
+    exercicioNovo: (EventOperationalLink & { tipo: 'SUBSTITUICAO' | 'SEM_SEDE' }) | null;
+    sedeOficial: EventOperationalLink | null;
+    titularidadePreservada: boolean;
+    vinculoEncerrado: EventOperationalLink | null;
+  };
+  destino: EventOperationalLink & {
+    tipo: EventDestinationType;
+    titular: { id: string; nome: string } | null;
+  };
+  novasVagasGeradas: Array<EventOperationalLink & { tipo: EventDestinationType }>;
+  participanteEsperadoId: string;
+}
+
+export interface EventChoiceResult {
+  atendido: EventOperationalParticipant;
+  central: EventCentralRecord;
+  movimentacao: EventOperationalMovement;
+}
+
+export interface PublicEventChoice {
+  dataHora: string;
+  periodo: string;
+  profissional: string;
+  tipoDestino: EventDestinationType;
+  unidadeDestino: string;
+}
+
+export interface PublicEventDisplay {
+  evento: {
+    ano: number;
+    nome: string;
+    status: 'ATIVO' | 'ENCERRADO';
+    tipo: 'REMOCAO' | 'LISTAO';
+  };
+  participanteAtual: { nome: string; posicao: number } | null;
+  proximos: Array<{ nome: string; posicao: number }>;
+  ultimasEscolhas: PublicEventChoice[];
+  vagas: Array<{
+    periodo: string;
+    quantidade: number;
+    tipo: EventDestinationType;
+    unidade: string;
+  }>;
+}
