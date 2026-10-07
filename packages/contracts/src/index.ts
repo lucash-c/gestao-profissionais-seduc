@@ -343,18 +343,32 @@ export interface EventOperationalMovement {
   unidadeDestino: string;
 }
 
-export interface EventPeriodRuleStatus {
-  code: 'EVENT_PERIOD_RULE_REQUIRED' | null;
-  message: string | null;
-  periodoId: string | null;
-}
+export type EventPeriodRuleStatus =
+  | {
+      code: null;
+      message: null;
+      mode: 'FIXED';
+      periodoId: string;
+    }
+  | {
+      code: null;
+      message: string;
+      mode: 'ANY';
+      periodoId: null;
+    }
+  | {
+      code: 'EVENT_PERIOD_RULE_REQUIRED';
+      message: string;
+      mode: 'BLOCKED';
+      periodoId: null;
+    };
 
 export interface EventCentralRecord {
   evento: EventRecord;
   fila: EventOperationalParticipant[];
   participanteAtual: EventOperationalParticipant | null;
   proximos: EventOperationalParticipant[];
-  regraPeriodo: EventPeriodRuleStatus;
+  regraPeriodo: EventPeriodRuleStatus | null;
   situacaoAtual: EventOperationalSituation | null;
   totais: {
     aguardando: number;

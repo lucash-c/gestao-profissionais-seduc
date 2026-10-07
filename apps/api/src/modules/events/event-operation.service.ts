@@ -87,6 +87,8 @@ interface ChoiceAnalysis {
   temporaryExerciseType: 'SUBSTITUICAO' | 'SEM_SEDE' | null;
 }
 
+type AllowedPeriodRule = Extract<EventPeriodRuleStatus, { mode: 'ANY' | 'FIXED' }>;
+
 export interface EventOperationServices {
   central(id: string): Promise<EventCentralRecord>;
   choose(id: string, userId: string, input: EventChoiceInput): Promise<EventChoiceResult>;
@@ -239,30 +241,42 @@ function periodRule(situation: EventOperationalSituation): EventPeriodRuleStatus
   if (situation.exerciciosAtuais.length > 0) {
     const exercisePeriods = new Set(situation.exerciciosAtuais.map(({ periodoId }) => periodoId));
     if (exercisePeriods.size === 1) {
-      return { code: null, message: null, periodoId: [...exercisePeriods][0]! };
+      return {
+        code: null,
+        message: null,
+        mode: 'FIXED',
+        periodoId: [...exercisePeriods][0]!,
+      };
     }
     return {
       code: 'EVENT_PERIOD_RULE_REQUIRED',
       message: 'Os exercícios ativos apontam para períodos diferentes.',
+      mode: 'BLOCKED',
       periodoId: null,
     };
   }
   if (situation.sedeAtual) {
-    return { code: null, message: null, periodoId: situation.sedeAtual.periodoId };
+    return {
+      code: null,
+      message: null,
+      mode: 'FIXED',
+      periodoId: situation.sedeAtual.periodoId,
+    };
   }
   return {
-    code: 'EVENT_PERIOD_RULE_REQUIRED',
-    message: 'Não existe vínculo atual inequívoco para determinar o período permitido.',
+    code: null,
+    message: 'Período permitido: qualquer período disponível.',
+    mode: 'ANY',
     periodoId: null,
   };
 }
 
-function requirePeriod(situation: EventOperationalSituation): string {
+function requireAllowedPeriodRule(situation: EventOperationalSituation): AllowedPeriodRule {
   const rule = periodRule(situation);
-  if (!rule.periodoId) {
-    throw new HttpError(409, 'EVENT_PERIOD_RULE_REQUIRED', rule.message!);
+  if (rule.mode === 'BLOCKED') {
+    throw new HttpError(409, 'EVENT_PERIOD_RULE_REQUIRED', rule.message);
   }
-  return rule.periodoId;
+  return rule;
 }
 
 function handleDatabaseError(error: unknown): never {
@@ -346,10 +360,17 @@ async function loadQueue(
 async function listAvailablePositions(
   transaction: Prisma.TransactionClient,
   event: EventPayload,
-  periodId: string,
+  periodRuleStatus: AllowedPeriodRule,
   query: EventVacancyQuery = {},
 ): Promise<WorkPositionRecord[]> {
-  if (query.periodoId && query.periodoId !== periodId) return [];
+  if (
+    periodRuleStatus.mode === 'FIXED' &&
+    query.periodoId &&
+    query.periodoId !== periodRuleStatus.periodoId
+  ) {
+    return [];
+  }
+  const periodId = periodRuleStatus.mode === 'FIXED' ? periodRuleStatus.periodoId : query.periodoId;
   const positions = await transaction.postoTrabalho.findMany({
     include: positionAvailabilityInclude,
     orderBy: [{ unidadeId: 'asc' }, { periodoId: 'asc' }, { id: 'asc' }],
@@ -357,7 +378,7 @@ async function listAvailablePositions(
       anoLetivo: event.ano,
       ativo: true,
       cargoFuncaoId: event.cargoFuncaoId,
-      periodoId: periodId,
+      ...(periodId ? { periodoId: periodId } : {}),
       ...(query.unidadeId ? { unidadeId: query.unidadeId } : {}),
     },
   });
@@ -386,7 +407,7 @@ async function analyzeChoice(
     );
   }
   const situation = mapSituation(professional);
-  const periodId = requirePeriod(situation);
+  const allowedPeriodRule = requireAllowedPeriodRule(situation);
   const destination = await loadPosition(transaction, postoTrabalhoId);
   if (!destination.ativo) {
     throw new HttpError(409, 'POSITION_NO_LONGER_AVAILABLE', 'O posto está inativo.');
@@ -400,7 +421,7 @@ async function analyzeChoice(
   ) {
     throw new HttpError(409, 'INCOMPATIBLE_POSITION_CARGO', 'O cargo do posto é incompatível.');
   }
-  if (destination.periodoId !== periodId) {
+  if (allowedPeriodRule.mode === 'FIXED' && destination.periodoId !== allowedPeriodRule.periodoId) {
     throw new HttpError(
       409,
       'INCOMPATIBLE_POSITION_PERIOD',
@@ -469,7 +490,7 @@ async function analyzeChoice(
     destinationType,
     oldExercise,
     oldPlacement,
-    periodId,
+    periodId: destination.periodoId,
     professional,
     simulation: {
       antes: {
@@ -532,13 +553,14 @@ async function buildCentral(
   );
   const currentMapped = current ? mapParticipant(current, event.cargoFuncao.nome) : null;
   let situation: EventOperationalSituation | null = null;
-  let rule: EventPeriodRuleStatus = { code: null, message: null, periodoId: null };
+  let rule: EventPeriodRuleStatus | null = null;
   let vacancies: WorkPositionRecord[] = [];
   if (current) {
     situation = mapSituation(await loadProfessionalSituation(transaction, current.profissionalId));
     rule = periodRule(situation);
-    if (rule.periodoId)
-      vacancies = await listAvailablePositions(transaction, event, rule.periodoId);
+    if (rule.mode !== 'BLOCKED') {
+      vacancies = await listAvailablePositions(transaction, event, rule);
+    }
   }
   const waiting = mappedQueue.filter(({ status }) => status === 'AGUARDANDO');
   const attended = mappedQueue.filter(({ status }) => status === 'ATENDIDO');
@@ -814,8 +836,8 @@ export function createPrismaEventOperationServices(
             await loadProfessionalSituation(transaction, current.profissionalId),
           );
           const rule = periodRule(situation);
-          if (rule.periodoId) {
-            positions = await listAvailablePositions(transaction, event, rule.periodoId);
+          if (rule.mode !== 'BLOCKED') {
+            positions = await listAvailablePositions(transaction, event, rule);
           }
         }
         const grouped = new Map<string, PublicEventDisplay['vagas'][number]>();
@@ -876,7 +898,12 @@ export function createPrismaEventOperationServices(
         const situation = mapSituation(
           await loadProfessionalSituation(transaction, current.profissionalId),
         );
-        return listAvailablePositions(transaction, event, requirePeriod(situation), query);
+        return listAvailablePositions(
+          transaction,
+          event,
+          requireAllowedPeriodRule(situation),
+          query,
+        );
       });
     },
   };

@@ -17,15 +17,16 @@ A situação administrativa é derivada dos históricos ativos de lotação de s
 O período usado para consultar vagas é resolvido no backend:
 
 1. exercícios ativos têm prioridade sobre a sede;
-2. quando todos os exercícios ativos apontam para um único período, esse período é usado;
-3. na ausência de exercício ativo, usa-se o período da lotação de sede ativa;
-4. sem vínculo que determine o período, ou com exercícios em períodos diferentes, a escolha é bloqueada com `EVENT_PERIOD_RULE_REQUIRED`.
+2. quando todos os exercícios ativos apontam para um mesmo período, a regra fica `FIXED` nesse período;
+3. sem exercício ativo, mas com lotação de sede ativa, a regra fica `FIXED` no período da sede;
+4. sem sede e sem exercício ativo, a regra fica `ANY`: o profissional pode consultar, simular e escolher vaga disponível de qualquer período;
+5. com exercícios ativos em períodos diferentes, a regra fica `BLOCKED` e a escolha é bloqueada com `EVENT_PERIOD_RULE_REQUIRED`.
 
-Os filtros da interface não substituem essa validação.
+No modo `ANY`, a consulta sem filtro retorna vagas de todos os períodos e o filtro `periodoId` apenas restringe a visualização. Nos modos `FIXED` e `BLOCKED`, os filtros da interface não substituem a validação do backend.
 
 ## Vagas e simulação
 
-As vagas pertencem ao mesmo ano, cargo e período do atendimento. A disponibilidade `COM_SEDE` ou `SEM_SEDE` é calculada pelo motor da Etapa 5; postos indisponíveis continuam excluídos da escolha.
+As vagas pertencem ao mesmo ano e cargo do atendimento. O período deve corresponder ao vínculo no modo `FIXED`; no modo `ANY`, é o período do posto escolhido. A disponibilidade `COM_SEDE` ou `SEM_SEDE` é calculada pelo motor da Etapa 5; postos indisponíveis continuam excluídos da escolha.
 
 A simulação executa as mesmas validações de compatibilidade usadas na confirmação e não produz escrita. Ela informa origem, destino, tipo de destino, eventual profissional substituído e impactos esperados.
 
@@ -72,8 +73,10 @@ Rotas internas, exclusivas de `OPERADOR`:
 
 Rotas públicas, sem autenticação:
 
-- `GET /publico/eventos/:id/telao`;
-- `GET /publico/eventos/:id/escolhas`.
+- `GET /public/eventos/:id/telao`;
+- `GET /public/eventos/:id/escolhas`.
+
+A rota de interface do telão permanece `/publico/eventos/:id`; ela não é um endpoint da API.
 
 ## Telão público
 

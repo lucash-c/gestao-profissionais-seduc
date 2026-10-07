@@ -193,12 +193,19 @@ onMounted(load);
         error
       }}</QBanner>
       <QBanner
-        v-if="central.regraPeriodo.code"
+        v-if="central.regraPeriodo?.mode === 'BLOCKED'"
         class="bg-orange-1 text-dark"
         data-testid="period-rule-warning"
       >
         {{ central.regraPeriodo.message }} As escolhas estão bloqueadas até existir uma origem de
         período inequívoca.
+      </QBanner>
+      <QBanner
+        v-else-if="central.regraPeriodo?.mode === 'ANY'"
+        class="bg-blue-1 text-primary"
+        data-testid="any-period-info"
+      >
+        {{ central.regraPeriodo.message }}
       </QBanner>
       <QBanner v-if="central.evento.status === 'ENCERRADO'" class="bg-blue-1 text-primary">
         Evento encerrado. Esta visualização é somente leitura.

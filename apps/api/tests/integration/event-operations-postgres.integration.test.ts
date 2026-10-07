@@ -27,6 +27,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     cargo: randomUUID(),
     cargoOther: randomUUID(),
     periodAfternoon: randomUUID(),
+    periodIntegral: randomUUID(),
     periodMorning: randomUUID(),
     type: randomUUID(),
     unitA: randomUUID(),
@@ -58,6 +59,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       data: [
         { id: ids.periodMorning, nome: `Manhã Central ${suffix}` },
         { id: ids.periodAfternoon, nome: `Tarde Central ${suffix}` },
+        { id: ids.periodIntegral, nome: `Integral Central ${suffix}` },
       ],
     });
     await database.client.cargoFuncao.createMany({
@@ -398,7 +400,167 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       .expect(200, []);
   });
 
-  it('simula com a mesma regra sem alterar banco e bloqueia período ausente ou ambíguo', async () => {
+  it('permite qualquer período para profissional sem sede e sem exercício, inclusive COM SEDE', async () => {
+    const professional = await createProfessional('Sem vínculo escolhe sede');
+    const morning = await createPosition({ periodId: ids.periodMorning, unitId: ids.unitA });
+    const afternoon = await createPosition({ periodId: ids.periodAfternoon, unitId: ids.unitB });
+    const integral = await createPosition({ periodId: ids.periodIntegral, unitId: ids.unitC });
+    const event = await createEvent({ participants: [{ professionalId: professional.id }] });
+    const operator = await authenticated();
+
+    const central = await operator.get(`/eventos/${event.eventId}/central`).expect(200);
+    expect(central.body.regraPeriodo).toMatchObject({
+      code: null,
+      mode: 'ANY',
+      periodoId: null,
+    });
+    const availableIds = central.body.vagasDisponiveis.map(({ id }: { id: string }) => id);
+    expect(availableIds).toEqual(expect.arrayContaining([morning.id, afternoon.id, integral.id]));
+    expect(
+      central.body.vagasDisponiveis.map(({ periodoId }: { periodoId: string }) => periodoId),
+    ).toEqual(expect.arrayContaining([ids.periodMorning, ids.periodAfternoon, ids.periodIntegral]));
+
+    const filtered = await operator
+      .get(`/eventos/${event.eventId}/vagas?periodoId=${ids.periodAfternoon}`)
+      .expect(200);
+    expect(filtered.body.map(({ id }: { id: string }) => id)).toContain(afternoon.id);
+    expect(
+      filtered.body.every(
+        ({ periodoId }: { periodoId: string }) => periodoId === ids.periodAfternoon,
+      ),
+    ).toBe(true);
+
+    const simulation = await operator
+      .get(`/eventos/${event.eventId}/simular-escolha?postoTrabalhoId=${integral.id}`)
+      .expect(200);
+    expect(simulation.body.destino).toMatchObject({
+      periodoId: ids.periodIntegral,
+      postoId: integral.id,
+      tipo: 'SEDE',
+    });
+
+    const choice = await operator
+      .post(`/eventos/${event.eventId}/escolha`)
+      .send({ participanteEsperadoId: event.participantIds[0], postoTrabalhoId: integral.id })
+      .expect(200);
+    expect(choice.body.movimentacao).toMatchObject({
+      periodo: `Integral Central ${suffix}`,
+      postoDestinoId: integral.id,
+      postoOrigemId: null,
+      tipoDestino: 'SEDE',
+    });
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, postoTrabalhoId: integral.id, profissionalId: professional.id },
+      }),
+    ).not.toBeNull();
+  });
+
+  it('permite SEM SEDE de qualquer período para profissional sem vínculo', async () => {
+    const professional = await createProfessional('Sem vínculo escolhe substituição');
+    const temporary = await availableWithoutSeat(ids.unitB, ids.periodAfternoon);
+    const event = await createEvent({ participants: [{ professionalId: professional.id }] });
+    const operator = await authenticated();
+
+    await operator
+      .get(`/eventos/${event.eventId}/simular-escolha?postoTrabalhoId=${temporary.position.id}`)
+      .expect(200);
+    const choice = await operator
+      .post(`/eventos/${event.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: event.participantIds[0],
+        postoTrabalhoId: temporary.position.id,
+      })
+      .expect(200);
+    expect(choice.body.movimentacao).toMatchObject({
+      periodo: `Tarde Central ${suffix}`,
+      tipoDestino: 'SEM_SEDE',
+    });
+    expect(
+      await database.client.exercicioProfissional.findFirst({
+        where: {
+          dataFim: null,
+          postoTrabalhoId: temporary.position.id,
+          profissionalId: professional.id,
+        },
+      }),
+    ).toMatchObject({
+      substituiProfissionalId: temporary.holder.id,
+      tipoExercicio: 'SEM_SEDE',
+    });
+  });
+
+  it('mantém período fixo por sede, exercício único ou múltiplos exercícios no mesmo período', async () => {
+    const operator = await authenticated();
+    const afternoonDestination = await createPosition({
+      periodId: ids.periodAfternoon,
+      unitId: ids.unitC,
+    });
+
+    const withSeat = await createProfessional('Período fixo pela sede');
+    const morningSeat = await createPosition({ periodId: ids.periodMorning, unitId: ids.unitA });
+    await seat(withSeat.id, morningSeat.id);
+    const seatEvent = await createEvent({ participants: [{ professionalId: withSeat.id }] });
+    expect(
+      (await operator.get(`/eventos/${seatEvent.eventId}/central`).expect(200)).body.regraPeriodo,
+    ).toMatchObject({ mode: 'FIXED', periodoId: ids.periodMorning });
+    const invalidSeatPeriod = await operator
+      .get(
+        `/eventos/${seatEvent.eventId}/simular-escolha?postoTrabalhoId=${afternoonDestination.id}`,
+      )
+      .expect(409);
+    expect(invalidSeatPeriod.body.error).toBe('INCOMPATIBLE_POSITION_PERIOD');
+    const invalidSeatConfirmation = await operator
+      .post(`/eventos/${seatEvent.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: seatEvent.participantIds[0],
+        postoTrabalhoId: afternoonDestination.id,
+      })
+      .expect(409);
+    expect(invalidSeatConfirmation.body.error).toBe('INCOMPATIBLE_POSITION_PERIOD');
+
+    const withExercise = await createProfessional('Período fixo pelo exercício');
+    const firstMorning = await availableWithoutSeat(ids.unitA, ids.periodMorning);
+    await exercise({
+      holderId: firstMorning.holder.id,
+      positionId: firstMorning.position.id,
+      professionalId: withExercise.id,
+      type: 'SEM_SEDE',
+    });
+    const exerciseEvent = await createEvent({
+      participants: [{ professionalId: withExercise.id }],
+    });
+    expect(
+      (await operator.get(`/eventos/${exerciseEvent.eventId}/central`).expect(200)).body
+        .regraPeriodo,
+    ).toMatchObject({ mode: 'FIXED', periodoId: ids.periodMorning });
+    const invalidSingleExercisePeriod = await operator
+      .get(
+        `/eventos/${exerciseEvent.eventId}/simular-escolha?postoTrabalhoId=${afternoonDestination.id}`,
+      )
+      .expect(409);
+    expect(invalidSingleExercisePeriod.body.error).toBe('INCOMPATIBLE_POSITION_PERIOD');
+
+    const secondMorning = await availableWithoutSeat(ids.unitB, ids.periodMorning);
+    await exercise({
+      holderId: secondMorning.holder.id,
+      positionId: secondMorning.position.id,
+      professionalId: withExercise.id,
+      type: 'SEM_SEDE',
+    });
+    expect(
+      (await operator.get(`/eventos/${exerciseEvent.eventId}/central`).expect(200)).body
+        .regraPeriodo,
+    ).toMatchObject({ mode: 'FIXED', periodoId: ids.periodMorning });
+    const invalidExercisePeriod = await operator
+      .get(
+        `/eventos/${exerciseEvent.eventId}/simular-escolha?postoTrabalhoId=${afternoonDestination.id}`,
+      )
+      .expect(409);
+    expect(invalidExercisePeriod.body.error).toBe('INCOMPATIBLE_POSITION_PERIOD');
+  });
+
+  it('simula com a mesma regra sem alterar banco e bloqueia períodos ambíguos', async () => {
     const professional = await createProfessional('Participante simulação');
     const source = await createPosition();
     const destination = await createPosition({ unitId: ids.unitB });
@@ -427,16 +589,6 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       await database.client.lotacaoSede.count({ where: { profissionalId: professional.id } }),
     ).toBe(before.placements);
 
-    const withoutLink = await createProfessional('Sem origem de período');
-    const noPeriodEvent = await createEvent({ participants: [{ professionalId: withoutLink.id }] });
-    const central = await operator.get(`/eventos/${noPeriodEvent.eventId}/central`).expect(200);
-    expect(central.body.regraPeriodo.code).toBe('EVENT_PERIOD_RULE_REQUIRED');
-    expect(central.body.vagasDisponiveis).toEqual([]);
-    const noPeriod = await operator
-      .get(`/eventos/${noPeriodEvent.eventId}/simular-escolha?postoTrabalhoId=${destination.id}`)
-      .expect(409);
-    expect(noPeriod.body.error).toBe('EVENT_PERIOD_RULE_REQUIRED');
-
     const ambiguous = await createProfessional('Períodos ambíguos');
     const holders = await Promise.all([
       availableWithoutSeat(ids.unitA, ids.periodMorning),
@@ -458,7 +610,26 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     const ambiguousCentral = await operator
       .get(`/eventos/${ambiguousEvent.eventId}/central`)
       .expect(200);
-    expect(ambiguousCentral.body.regraPeriodo.code).toBe('EVENT_PERIOD_RULE_REQUIRED');
+    expect(ambiguousCentral.body.regraPeriodo).toMatchObject({
+      code: 'EVENT_PERIOD_RULE_REQUIRED',
+      mode: 'BLOCKED',
+      periodoId: null,
+    });
+    const ambiguousSimulation = await operator
+      .get(`/eventos/${ambiguousEvent.eventId}/simular-escolha?postoTrabalhoId=${destination.id}`)
+      .expect(409);
+    expect(ambiguousSimulation.body.error).toBe('EVENT_PERIOD_RULE_REQUIRED');
+    const ambiguousConfirmation = await operator
+      .post(`/eventos/${ambiguousEvent.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: ambiguousEvent.participantIds[0],
+        postoTrabalhoId: destination.id,
+      })
+      .expect(409);
+    expect(ambiguousConfirmation.body.error).toBe('EVENT_PERIOD_RULE_REQUIRED');
+    expect(
+      await database.client.movimentacao.count({ where: { eventoId: ambiguousEvent.eventId } }),
+    ).toBe(0);
   });
 
   it('confirma COM SEDE atomicamente, libera a sede anterior e avança a fila', async () => {

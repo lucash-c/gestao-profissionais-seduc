@@ -114,7 +114,7 @@ const central: EventCentralRecord = {
   fila: [participantA, participantB],
   participanteAtual: participantA,
   proximos: [participantB],
-  regraPeriodo: { code: null, message: null, periodoId: PERIOD },
+  regraPeriodo: { code: null, message: null, mode: 'FIXED', periodoId: PERIOD },
   situacaoAtual: {
     exerciciosAtuais: [
       {
@@ -401,6 +401,7 @@ describe('Etapa 7 frontend da Central', () => {
       regraPeriodo: {
         code: 'EVENT_PERIOD_RULE_REQUIRED',
         message: 'Não existe vínculo atual inequívoco.',
+        mode: 'BLOCKED',
         periodoId: null,
       },
       vagasDisponiveis: [],
@@ -413,6 +414,39 @@ describe('Etapa 7 frontend da Central', () => {
     expect(wrapper.findAll('button').some((item) => item.text().includes('Simular escolha'))).toBe(
       false,
     );
+    wrapper.unmount();
+  });
+
+  it('informa quando profissional sem vínculo pode escolher qualquer período', async () => {
+    mocks.central.mockResolvedValue({
+      ...structuredClone(central),
+      regraPeriodo: {
+        code: null,
+        message: 'Período permitido: qualquer período disponível.',
+        mode: 'ANY',
+        periodoId: null,
+      },
+      situacaoAtual: { exerciciosAtuais: [], sedeAtual: null },
+      vagasDisponiveis: [
+        vacancies[0],
+        {
+          ...vacancies[1],
+          periodo: {
+            ativo: true,
+            id: '12121212-1212-4121-8121-121212121212',
+            nome: 'Tarde',
+          },
+          periodoId: '12121212-1212-4121-8121-121212121212',
+        },
+      ],
+    });
+    const wrapper = await mountPage(EventOperationsPage, `/eventos/${EVENT_ID}/central`);
+
+    expect(wrapper.get('[data-testid="any-period-info"]').text()).toContain(
+      'qualquer período disponível',
+    );
+    expect(wrapper.find('[data-testid="period-rule-warning"]').exists()).toBe(false);
+    expect(wrapper.findAllComponents(QSelect)[1]!.props('options')).toHaveLength(2);
     wrapper.unmount();
   });
 });
