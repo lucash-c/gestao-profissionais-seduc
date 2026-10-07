@@ -10,6 +10,7 @@ import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
 import { hashPassword } from '../auth/auth.crypto.js';
+import { writeAudit } from '../audit/audit.service.js';
 import { assertUserIdentifiersAvailable } from '../users/user-identifier.service.js';
 import type {
   PhoneCollectionInput,
@@ -35,7 +36,7 @@ export interface RegistryServices {
   };
   professionals: {
     addPhone(id: string, input: PhoneInput, user: AuthenticatedUser): Promise<ProfessionalRecord>;
-    create(input: ProfessionalCreateInput): Promise<ProfessionalRecord>;
+    create(input: ProfessionalCreateInput, user: AuthenticatedUser): Promise<ProfessionalRecord>;
     deletePhone(id: string, phoneId: string, user: AuthenticatedUser): Promise<void>;
     get(id: string, user: AuthenticatedUser): Promise<ProfessionalRecord>;
     list(
@@ -54,11 +55,11 @@ export interface RegistryServices {
       input: PhoneInput,
       user: AuthenticatedUser,
     ): Promise<ProfessionalRecord>;
-    updateScore(id: string, score: number): Promise<ProfessionalRecord>;
+    updateScore(id: string, score: number, user: AuthenticatedUser): Promise<ProfessionalRecord>;
   };
   units: {
     addPhone(id: string, input: PhoneInput, user: AuthenticatedUser): Promise<UnitRecord>;
-    create(input: UnitCreateInput): Promise<UnitRecord>;
+    create(input: UnitCreateInput, user: AuthenticatedUser): Promise<UnitRecord>;
     deletePhone(id: string, phoneId: string, user: AuthenticatedUser): Promise<void>;
     get(id: string, user: AuthenticatedUser): Promise<UnitRecord>;
     list(query: UnitQuery, user: AuthenticatedUser): Promise<PaginatedResponse<UnitRecord>>;
@@ -71,10 +72,10 @@ export interface RegistryServices {
     ): Promise<UnitRecord>;
   };
   users: {
-    create(input: UserCreateInput): Promise<UserRecord>;
+    create(input: UserCreateInput, actor: AuthenticatedUser): Promise<UserRecord>;
     list(query: UserQuery): Promise<PaginatedResponse<UserRecord>>;
-    resetPassword(id: string, password: string): Promise<void>;
-    update(id: string, input: UserUpdateInput): Promise<UserRecord>;
+    resetPassword(id: string, password: string, actor: AuthenticatedUser): Promise<void>;
+    update(id: string, input: UserUpdateInput, actor: AuthenticatedUser): Promise<UserRecord>;
   };
 }
 
@@ -487,21 +488,45 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
     professionals: {
       async addPhone(id, input, user) {
         await getProfessional(id, user);
-        await client.profissionalTelefone.create({ data: { ...input, profissionalId: id } });
+        await client.$transaction(async (transaction) => {
+          const phone = await transaction.profissionalTelefone.create({
+            data: { ...input, profissionalId: id },
+          });
+          await writeAudit(transaction, {
+            acao: 'CREATE',
+            after: phone,
+            entidade: 'PROFISSIONAL_TELEFONE',
+            profissionalId: id,
+            registroId: phone.id,
+            usuarioId: user.id,
+          });
+        });
         return getProfessional(id, user);
       },
-      async create(input) {
+      async create(input, user) {
         const { telefones, ...fields } = input;
         try {
-          const professional = await client.profissional.create({
-            data: {
-              ...fields,
-              dataDesligamento: fields.dataDesligamento ? asDate(fields.dataDesligamento) : null,
-              dataEntradaPrefeitura: asDate(fields.dataEntradaPrefeitura),
-              dataNascimento: asDate(fields.dataNascimento),
-              telefones: { create: telefones },
-            },
-            include: professionalInclude,
+          const professional = await client.$transaction(async (transaction) => {
+            const created = await transaction.profissional.create({
+              data: {
+                ...fields,
+                dataDesligamento: fields.dataDesligamento ? asDate(fields.dataDesligamento) : null,
+                dataEntradaPrefeitura: asDate(fields.dataEntradaPrefeitura),
+                dataNascimento: asDate(fields.dataNascimento),
+                telefones: { create: telefones },
+              },
+              include: professionalInclude,
+            });
+            const mapped = mapProfessional(created);
+            await writeAudit(transaction, {
+              acao: 'CREATE',
+              after: mapped,
+              entidade: 'PROFISSIONAL',
+              profissionalId: created.id,
+              registroId: created.id,
+              usuarioId: user.id,
+            });
+            return created;
           });
           return mapProfessional(professional);
         } catch (error) {
@@ -510,10 +535,23 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       async deletePhone(id, phoneId, user) {
         await getProfessional(id, user);
-        const result = await client.profissionalTelefone.deleteMany({
-          where: { id: phoneId, profissionalId: id },
+        const found = await client.$transaction(async (transaction) => {
+          const before = await transaction.profissionalTelefone.findFirst({
+            where: { id: phoneId, profissionalId: id },
+          });
+          if (!before) return false;
+          await transaction.profissionalTelefone.delete({ where: { id: phoneId } });
+          await writeAudit(transaction, {
+            acao: 'DELETE',
+            before,
+            entidade: 'PROFISSIONAL_TELEFONE',
+            profissionalId: id,
+            registroId: phoneId,
+            usuarioId: user.id,
+          });
+          return true;
         });
-        if (result.count === 0) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
+        if (!found) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
       },
       get: getProfessional,
       async list(query, user) {
@@ -569,10 +607,31 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         } as Prisma.ProfissionalUncheckedUpdateInput;
         try {
           await client.$transaction(async (transaction) => {
+            const before = mapProfessional(
+              await transaction.profissional.findUniqueOrThrow({
+                include: professionalInclude,
+                where: { id },
+              }),
+            );
             if (Object.keys(data).length) {
               await transaction.profissional.update({ data, where: { id } });
             }
             if (telefones) await syncProfessionalPhones(transaction, id, telefones);
+            const after = mapProfessional(
+              await transaction.profissional.findUniqueOrThrow({
+                include: professionalInclude,
+                where: { id },
+              }),
+            );
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after,
+              before,
+              entidade: 'PROFISSIONAL',
+              profissionalId: id,
+              registroId: id,
+              usuarioId: user.id,
+            });
           });
           return getProfessional(id, user);
         } catch (error) {
@@ -581,14 +640,30 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       async updatePhone(id, phoneId, input, user) {
         await getProfessional(id, user);
-        const result = await client.profissionalTelefone.updateMany({
-          data: input,
-          where: { id: phoneId, profissionalId: id },
+        const found = await client.$transaction(async (transaction) => {
+          const before = await transaction.profissionalTelefone.findFirst({
+            where: { id: phoneId, profissionalId: id },
+          });
+          if (!before) return false;
+          const after = await transaction.profissionalTelefone.update({
+            data: input,
+            where: { id: phoneId },
+          });
+          await writeAudit(transaction, {
+            acao: 'UPDATE',
+            after,
+            before,
+            entidade: 'PROFISSIONAL_TELEFONE',
+            profissionalId: id,
+            registroId: phoneId,
+            usuarioId: user.id,
+          });
+          return true;
         });
-        if (result.count === 0) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
+        if (!found) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
         return getProfessional(id, user);
       },
-      async updateScore(id, score) {
+      async updateScore(id, score, user) {
         const target = await client.profissional.findUnique({
           select: { cargoFuncao: { select: { ehProfessor: true, usaPontuacao: true } } },
           where: { id },
@@ -601,7 +676,26 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
             'O cargo deste profissional não utiliza pontuação.',
           );
         }
-        await client.profissional.update({ data: { pontuacao: score }, where: { id } });
+        await client.$transaction(async (transaction) => {
+          const before = await transaction.profissional.findUniqueOrThrow({
+            select: { id: true, pontuacao: true },
+            where: { id },
+          });
+          const after = await transaction.profissional.update({
+            data: { pontuacao: score },
+            select: { id: true, pontuacao: true },
+            where: { id },
+          });
+          await writeAudit(transaction, {
+            acao: 'UPDATE',
+            after,
+            before,
+            entidade: 'PROFISSIONAL_PONTUACAO',
+            profissionalId: id,
+            registroId: id,
+            usuarioId: user.id,
+          });
+        });
         const professional = await client.profissional.findUniqueOrThrow({
           include: professionalInclude,
           where: { id },
@@ -612,28 +706,63 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
     units: {
       async addPhone(id, input, user) {
         await getUnit(id, user);
-        await client.unidadeTelefone.create({ data: { ...input, unidadeId: id } });
+        await client.$transaction(async (transaction) => {
+          const phone = await transaction.unidadeTelefone.create({
+            data: { ...input, unidadeId: id },
+          });
+          await writeAudit(transaction, {
+            acao: 'CREATE',
+            after: phone,
+            entidade: 'UNIDADE_TELEFONE',
+            registroId: phone.id,
+            unidadeId: id,
+            usuarioId: user.id,
+          });
+        });
         return getUnit(id, user);
       },
-      async create(input) {
+      async create(input, user) {
         const { telefones, ...fields } = input;
         try {
-          return mapUnit(
-            await client.unidade.create({
+          return await client.$transaction(async (transaction) => {
+            const created = await transaction.unidade.create({
               data: { ...fields, telefones: { create: telefones } },
               include: unitInclude,
-            }),
-          );
+            });
+            const mapped = mapUnit(created);
+            await writeAudit(transaction, {
+              acao: 'CREATE',
+              after: mapped,
+              entidade: 'UNIDADE',
+              registroId: created.id,
+              unidadeId: created.id,
+              usuarioId: user.id,
+            });
+            return mapped;
+          });
         } catch (error) {
           handleDatabaseError(error);
         }
       },
       async deletePhone(id, phoneId, user) {
         await getUnit(id, user);
-        const result = await client.unidadeTelefone.deleteMany({
-          where: { id: phoneId, unidadeId: id },
+        const found = await client.$transaction(async (transaction) => {
+          const before = await transaction.unidadeTelefone.findFirst({
+            where: { id: phoneId, unidadeId: id },
+          });
+          if (!before) return false;
+          await transaction.unidadeTelefone.delete({ where: { id: phoneId } });
+          await writeAudit(transaction, {
+            acao: 'DELETE',
+            before,
+            entidade: 'UNIDADE_TELEFONE',
+            registroId: phoneId,
+            unidadeId: id,
+            usuarioId: user.id,
+          });
+          return true;
         });
-        if (result.count === 0) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
+        if (!found) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
       },
       get: getUnit,
       async list(query, user) {
@@ -661,11 +790,26 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         const { telefones, ...fields } = input;
         try {
           await client.$transaction(async (transaction) => {
+            const before = mapUnit(
+              await transaction.unidade.findUniqueOrThrow({ include: unitInclude, where: { id } }),
+            );
             const data = compact(fields) as Prisma.UnidadeUncheckedUpdateInput;
             if (Object.keys(data).length) {
               await transaction.unidade.update({ data, where: { id } });
             }
             if (telefones) await syncUnitPhones(transaction, id, telefones);
+            const after = mapUnit(
+              await transaction.unidade.findUniqueOrThrow({ include: unitInclude, where: { id } }),
+            );
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after,
+              before,
+              entidade: 'UNIDADE',
+              registroId: id,
+              unidadeId: id,
+              usuarioId: user.id,
+            });
           });
           return getUnit(id, user);
         } catch (error) {
@@ -674,22 +818,38 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       async updatePhone(id, phoneId, input, user) {
         await getUnit(id, user);
-        const result = await client.unidadeTelefone.updateMany({
-          data: input,
-          where: { id: phoneId, unidadeId: id },
+        const found = await client.$transaction(async (transaction) => {
+          const before = await transaction.unidadeTelefone.findFirst({
+            where: { id: phoneId, unidadeId: id },
+          });
+          if (!before) return false;
+          const after = await transaction.unidadeTelefone.update({
+            data: input,
+            where: { id: phoneId },
+          });
+          await writeAudit(transaction, {
+            acao: 'UPDATE',
+            after,
+            before,
+            entidade: 'UNIDADE_TELEFONE',
+            registroId: phoneId,
+            unidadeId: id,
+            usuarioId: user.id,
+          });
+          return true;
         });
-        if (result.count === 0) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
+        if (!found) throw new HttpError(404, 'NOT_FOUND', 'Telefone não encontrado.');
         return getUnit(id, user);
       },
     },
     users: {
-      async create(input) {
+      async create(input, actor) {
         await assertIdentifiers(input);
         assertUserUnitCardinality(input.perfil, input.unidadeIds);
         try {
           const senhaHash = await hashPassword(input.senha);
           const user = await client.$transaction(async (transaction) => {
-            return transaction.usuario.create({
+            const created = await transaction.usuario.create({
               data: {
                 ativo: input.ativo,
                 email: input.email,
@@ -703,6 +863,15 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
               },
               include: userInclude,
             });
+            const mapped = mapUser(created);
+            await writeAudit(transaction, {
+              acao: 'CREATE',
+              after: mapped,
+              entidade: 'USUARIO',
+              registroId: created.id,
+              usuarioId: actor.id,
+            });
+            return created;
           });
           return mapUser(user);
         } catch (error) {
@@ -734,18 +903,26 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         ]);
         return pagination(items.map(mapUser), query.page, query.pageSize, total);
       },
-      async resetPassword(id, password) {
+      async resetPassword(id, password, actor) {
         const exists = await client.usuario.findUnique({ select: { id: true }, where: { id } });
         if (!exists) throw new HttpError(404, 'NOT_FOUND', 'Usuário não encontrado.');
-        await client.$transaction([
-          client.usuario.update({
+        await client.$transaction(async (transaction) => {
+          await transaction.usuario.update({
             data: { senhaHash: await hashPassword(password) },
             where: { id },
-          }),
-          client.sessaoUsuario.deleteMany({ where: { usuarioId: id } }),
-        ]);
+          });
+          await transaction.sessaoUsuario.deleteMany({ where: { usuarioId: id } });
+          await writeAudit(transaction, {
+            acao: 'UPDATE',
+            after: { credencialAlterada: true, id },
+            before: { credencialAlterada: false, id },
+            entidade: 'USUARIO_CREDENCIAL',
+            registroId: id,
+            usuarioId: actor.id,
+          });
+        });
       },
-      async update(id, input) {
+      async update(id, input, actor) {
         const current = await client.usuario.findUnique({ include: userInclude, where: { id } });
         if (!current) throw new HttpError(404, 'NOT_FOUND', 'Usuário não encontrado.');
         const perfil = input.perfil ?? current.perfil;
@@ -775,6 +952,18 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
                 data: unidadeIds.map((unidadeId) => ({ unidadeId, usuarioId: id })),
               });
             }
+            const after = await transaction.usuario.findUniqueOrThrow({
+              include: userInclude,
+              where: { id },
+            });
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after: mapUser(after),
+              before: mapUser(current),
+              entidade: 'USUARIO',
+              registroId: id,
+              usuarioId: actor.id,
+            });
           });
           return getUser(id);
         } catch (error) {

@@ -86,6 +86,9 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
   }, 30_000);
 
   afterAll(async () => {
+    await database.client.auditoria.deleteMany({
+      where: { usuario: { login: { contains: suffix } } },
+    });
     await database.client.sessaoUsuario.deleteMany({
       where: { usuario: { login: { contains: suffix } } },
     });

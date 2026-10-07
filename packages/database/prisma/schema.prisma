@@ -478,10 +478,14 @@ model Auditoria {
   dadosAnteriores Json?         @map("dados_anteriores") @db.JsonB
   dadosNovos      Json?         @map("dados_novos") @db.JsonB
   dataHora        DateTime      @default(now()) @map("data_hora") @db.Timestamptz(3)
+  unidadeId       String?       @map("unidade_id") @db.Uuid
+  profissionalId  String?       @map("profissional_id") @db.Uuid
   usuario         Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([usuarioId, dataHora], map: "auditoria_usuario_data_idx")
   @@index([entidade, registroId], map: "auditoria_registro_idx")
   @@index([dataHora], map: "auditoria_data_idx")
+  @@index([unidadeId, dataHora], map: "auditoria_unidade_data_idx")
+  @@index([profissionalId, dataHora], map: "auditoria_profissional_data_idx")
   @@map("auditoria")
 }

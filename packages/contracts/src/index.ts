@@ -462,6 +462,29 @@ export interface EventExchangeResult {
   movimentacao: EventExchangeMovement;
 }
 
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
+
+export interface AuditRecord {
+  acao: AuditAction;
+  dadosAnteriores: unknown | null;
+  dadosNovos: unknown | null;
+  dataHora: string;
+  entidade: string;
+  id: string;
+  profissionalId: string | null;
+  registroId: string;
+  unidadeId: string | null;
+  usuario: { id: string; nome: string; login: string };
+  usuarioId: string;
+}
+
+export interface AdministrativeCorrectionPreview {
+  entidade: 'PROFISSIONAL' | 'UNIDADE';
+  registroId: string;
+  antes: Record<string, unknown>;
+  depois: Record<string, unknown>;
+}
+
 export interface PublicEventChoice {
   dataHora: string;
   periodo: string;

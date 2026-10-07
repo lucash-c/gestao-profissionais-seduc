@@ -476,6 +476,8 @@ describe('Etapa 3 Quasar pages', () => {
     expect(admin.find('[data-testid="scores-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="staffing-plans-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="work-positions-menu"]').exists()).toBe(true);
+    expect(admin.find('[data-testid="audit-menu"]').exists()).toBe(true);
+    expect(admin.find('[data-testid="correction-menu"]').exists()).toBe(true);
     admin.unmount();
 
     setProfile('OPERADOR');
@@ -484,6 +486,8 @@ describe('Etapa 3 Quasar pages', () => {
     expect(operator.find('[data-testid="scores-menu"]').exists()).toBe(false);
     expect(operator.find('[data-testid="staffing-plans-menu"]').exists()).toBe(true);
     expect(operator.find('[data-testid="work-positions-menu"]').exists()).toBe(true);
+    expect(operator.find('[data-testid="audit-menu"]').exists()).toBe(false);
+    expect(operator.find('[data-testid="correction-menu"]').exists()).toBe(false);
   });
 });
 

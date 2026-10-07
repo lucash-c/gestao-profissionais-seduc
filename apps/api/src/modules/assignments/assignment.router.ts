@@ -59,25 +59,36 @@ export function createAssignmentRouter(service: AssignmentServices): Router {
   });
 
   router.post('/:id/afastamentos', async (request, response) => {
-    const { profissionalId } = await authorizeProfessional(
+    const { profissionalId, user } = await authorizeProfessional(
       request,
       service,
       AUTHORIZATION_ACTIONS.MANAGE_ABSENCES,
     );
     response
       .status(201)
-      .json(await service.absences.create(profissionalId, absenceCreateSchema.parse(request.body)));
+      .json(
+        await service.absences.create(
+          profissionalId,
+          absenceCreateSchema.parse(request.body),
+          user,
+        ),
+      );
   });
 
   router.patch('/:id/afastamentos/:absenceId/encerrar', async (request, response) => {
-    const { profissionalId } = await authorizeProfessional(
+    const { profissionalId, user } = await authorizeProfessional(
       request,
       service,
       AUTHORIZATION_ACTIONS.MANAGE_ABSENCES,
     );
     const input = absenceEndSchema.parse(request.body);
     response.json(
-      await service.absences.end(profissionalId, routeId(request, 'absenceId'), input.dataFim),
+      await service.absences.end(
+        profissionalId,
+        routeId(request, 'absenceId'),
+        input.dataFim,
+        user,
+      ),
     );
   });
 

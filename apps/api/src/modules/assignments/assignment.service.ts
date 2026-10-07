@@ -1,4 +1,5 @@
 import type {
+  AuthenticatedUser,
   ProfessionalAbsenceRecord,
   ProfessionalExerciseHistory,
   ProfessionalPlacementHistory,
@@ -10,6 +11,7 @@ import type {
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
+import { writeAudit } from '../audit/audit.service.js';
 import type { AbsenceCreateInput, AbsenceQuery } from './assignment.schemas.js';
 
 const professionalSummary = {
@@ -74,8 +76,17 @@ type RelationshipPayload = Prisma.ProfissionalGetPayload<{ include: typeof relat
 
 export interface AssignmentServices {
   absences: {
-    create(profissionalId: string, input: AbsenceCreateInput): Promise<ProfessionalAbsenceRecord>;
-    end(profissionalId: string, id: string, dataFim?: Date): Promise<ProfessionalAbsenceRecord>;
+    create(
+      profissionalId: string,
+      input: AbsenceCreateInput,
+      user?: AuthenticatedUser,
+    ): Promise<ProfessionalAbsenceRecord>;
+    end(
+      profissionalId: string,
+      id: string,
+      dataFim?: Date,
+      user?: AuthenticatedUser,
+    ): Promise<ProfessionalAbsenceRecord>;
     list(profissionalId: string, query: AbsenceQuery): Promise<ProfessionalAbsenceRecord[]>;
   };
   exercises: {
@@ -352,7 +363,7 @@ export function createPrismaAssignmentServices(
 
   return {
     absences: {
-      async create(profissionalId, input) {
+      async create(profissionalId, input, user) {
         try {
           return await client.$transaction(async (transaction) => {
             await lockProfessionals(transaction, [profissionalId]);
@@ -365,7 +376,7 @@ export function createPrismaAssignmentServices(
             if (!professional.ativo) {
               throw new HttpError(409, 'INACTIVE_PROFESSIONAL', 'O profissional está inativo.');
             }
-            return mapAbsence(
+            const created = mapAbsence(
               await transaction.afastamentoProfissional.create({
                 data: {
                   dataInicio: input.dataInicio ?? clock(),
@@ -375,12 +386,23 @@ export function createPrismaAssignmentServices(
                 },
               }),
             );
+            if (user) {
+              await writeAudit(transaction, {
+                acao: 'CREATE',
+                after: created,
+                entidade: 'AFASTAMENTO_PROFISSIONAL',
+                profissionalId,
+                registroId: created.id,
+                usuarioId: user.id,
+              });
+            }
+            return created;
           });
         } catch (error) {
           handleDatabaseError(error);
         }
       },
-      async end(profissionalId, id, requestedEnd) {
+      async end(profissionalId, id, requestedEnd, user) {
         try {
           return await client.$transaction(async (transaction) => {
             const initial = await transaction.afastamentoProfissional.findUnique({
@@ -406,12 +428,24 @@ export function createPrismaAssignmentServices(
             });
             const dataFim = requestedEnd ?? clock();
             assertEndAfterStart(dataFim, absence.dataInicio);
-            return mapAbsence(
+            const updated = mapAbsence(
               await transaction.afastamentoProfissional.update({
                 data: { dataFim },
                 where: { id },
               }),
             );
+            if (user) {
+              await writeAudit(transaction, {
+                acao: 'UPDATE',
+                after: updated,
+                before: mapAbsence(absence),
+                entidade: 'AFASTAMENTO_PROFISSIONAL',
+                profissionalId,
+                registroId: id,
+                usuarioId: user.id,
+              });
+            }
+            return updated;
           });
         } catch (error) {
           handleDatabaseError(error);

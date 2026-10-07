@@ -103,6 +103,9 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
   }, 30_000);
 
   afterAll(async () => {
+    await database.client.auditoria.deleteMany({
+      where: { usuario: { login: { contains: suffix } } },
+    });
     await database.client.sessaoUsuario.deleteMany({
       where: { usuario: { login: { contains: suffix } } },
     });

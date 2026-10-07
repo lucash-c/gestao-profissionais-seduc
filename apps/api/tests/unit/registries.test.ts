@@ -233,6 +233,7 @@ describe('Etapa 3 registry API and RBAC', () => {
       .expect(201);
     expect(services.units.create).toHaveBeenCalledWith(
       expect.objectContaining({ codigoInep: null, poloRegiao: null }),
+      expect.objectContaining({ perfil: 'ADMINISTRADOR' }),
     );
     expect(services.units.update).toHaveBeenCalledTimes(2);
     expect(services.units.addPhone).toHaveBeenCalled();
@@ -281,7 +282,11 @@ describe('Etapa 3 registry API and RBAC', () => {
       .expect(200);
     await agent.patch(`/profissionais/${RECORD_ID}`).send({ pontuacao: 123 }).expect(400);
     await agent.patch(`/profissionais/${RECORD_ID}/pontuacao`).send({ pontuacao: 123 }).expect(200);
-    expect(services.professionals.updateScore).toHaveBeenCalledWith(RECORD_ID, 123);
+    expect(services.professionals.updateScore).toHaveBeenCalledWith(
+      RECORD_ID,
+      123,
+      expect.objectContaining({ perfil: 'ADMINISTRADOR' }),
+    );
   });
 
   it('aceita a coleção final de telefones nos PATCH cadastrais', async () => {
@@ -407,6 +412,7 @@ describe('Etapa 3 validation rules', () => {
   it('mapeia respostas de usuário por allowlist e nunca expõe senhaHash', async () => {
     const client = {
       $transaction: vi.fn(async (callback: (transaction: unknown) => unknown) => callback(client)),
+      auditoria: { create: vi.fn().mockResolvedValue({}) },
       usuario: {
         create: vi.fn().mockResolvedValue({
           ativo: true,
@@ -436,6 +442,14 @@ describe('Etapa 3 validation rules', () => {
         perfil: 'ADMINISTRADOR',
         senha: PASSWORD,
       }),
+      {
+        email: null,
+        id: RECORD_ID,
+        login: 'admin-seguro',
+        nome: 'Admin seguro',
+        perfil: 'ADMINISTRADOR',
+        unidades: [],
+      },
     );
 
     expect(output).not.toHaveProperty('senhaHash');
@@ -476,6 +490,7 @@ describe('Etapa 3 validation rules', () => {
       $transaction: vi.fn(async (callback: (transaction: unknown) => unknown) => callback(client)),
       profissional: {
         findFirst: vi.fn().mockResolvedValue(rawProfessional),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(rawProfessional),
         update: vi
           .fn()
           .mockRejectedValue(

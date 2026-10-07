@@ -17,6 +17,7 @@ import type {
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
+import { writeAudit } from '../audit/audit.service.js';
 import {
   loadPosition,
   lockPositions,
@@ -92,7 +93,7 @@ type AllowedPeriodRule = Extract<EventPeriodRuleStatus, { mode: 'ANY' | 'FIXED' 
 export interface EventOperationServices {
   central(id: string): Promise<EventCentralRecord>;
   choose(id: string, userId: string, input: EventChoiceInput): Promise<EventChoiceResult>;
-  close(id: string): Promise<EventRecord>;
+  close(id: string, userId?: string): Promise<EventRecord>;
   movements(
     id: string,
     query: EventMovementQuery,
@@ -740,7 +741,7 @@ export function createPrismaEventOperationServices(
         handleDatabaseError(error);
       }
     },
-    async close(id) {
+    async close(id, userId) {
       try {
         return await client.$transaction(async (transaction) => {
           await lockEvent(transaction, id);
@@ -756,13 +757,24 @@ export function createPrismaEventOperationServices(
               'Todos os participantes precisam ser atendidos antes do encerramento.',
             );
           }
-          return mapEvent(
+          const closed = mapEvent(
             await transaction.evento.update({
               data: { dataFim: clock(), status: 'ENCERRADO' },
               include: eventInclude,
               where: { id },
             }),
           );
+          if (userId) {
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after: closed,
+              before: mapEvent(event),
+              entidade: 'EVENTO',
+              registroId: id,
+              usuarioId: userId,
+            });
+          }
+          return closed;
         });
       } catch (error) {
         handleDatabaseError(error);

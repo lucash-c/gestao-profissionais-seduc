@@ -15,8 +15,9 @@ O projeto contém as etapas aprovadas até o momento:
 - **Etapa 6 — Eventos e preparação da fila:** eventos em RASCUNHO, cargo da sessão, elegibilidade, seleção, prévia oficial, snapshots, tratamento de empates, congelamento da fila e transição para ATIVO.
 - **Etapa 7 — Central Operacional de Remoção/Listão:** atendimento da fila congelada, consulta e simulação de vagas, escolha transacional, movimentações, encerramento controlado, histórico e telão público sanitizado.
 - **Etapa 8 — Permuta:** seleção bilateral na fila congelada, simulação antes/depois, troca atômica de sedes oficiais, histórico único com dois itens e proteção transacional contra concorrência e estado obsoleto.
+- **Etapa 9 — Auditoria e Correção Administrativa:** histórico técnico transacional das alterações normais, consulta paginada exclusiva do Administrador e módulo excepcional isolado de correção cadastral com confirmação antes/depois.
 
-Ainda não estão implementados ausência, desistência, salto de participante e auditoria/correção administrativa previstos para etapas futuras.
+Ainda não estão implementados ausência e desistência em eventos, salto de participante e os demais fluxos previstos para etapas futuras.
 
 ## Requisitos
 

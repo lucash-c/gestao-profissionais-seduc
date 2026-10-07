@@ -49,7 +49,7 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
   router.post('/', async (request, response) => {
     const user = currentUser(request);
     assertAuthorized({ action: AUTHORIZATION_ACTIONS.CREATE_UNIT, user });
-    response.status(201).json(await service.create(unitCreateSchema.parse(request.body)));
+    response.status(201).json(await service.create(unitCreateSchema.parse(request.body), user));
   });
 
   router.get('/:id', async (request, response) => {
@@ -119,14 +119,16 @@ export function createProfessionalRouter(service: RegistryServices['professional
   router.post('/', async (request, response) => {
     const user = currentUser(request);
     assertAuthorized({ action: AUTHORIZATION_ACTIONS.CREATE_PROFESSIONAL, user });
-    response.status(201).json(await service.create(professionalCreateSchema.parse(request.body)));
+    response
+      .status(201)
+      .json(await service.create(professionalCreateSchema.parse(request.body), user));
   });
 
   router.patch('/:id/pontuacao', async (request, response) => {
     const user = currentUser(request);
     assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_PROFESSIONAL_SCORE, user });
     const input = scoreUpdateSchema.parse(request.body);
-    response.json(await service.updateScore(routeId(request), input.pontuacao));
+    response.json(await service.updateScore(routeId(request), input.pontuacao, user));
   });
 
   router.get('/:id', async (request, response) => {
@@ -208,14 +210,22 @@ export function createUserRouter(service: RegistryServices['users']): Router {
     response.json(await service.list(userQuerySchema.parse(request.query)));
   });
   router.post('/', async (request, response) => {
-    response.status(201).json(await service.create(userCreateSchema.parse(request.body)));
+    response
+      .status(201)
+      .json(await service.create(userCreateSchema.parse(request.body), currentUser(request)));
   });
   router.patch('/:id', async (request, response) => {
-    response.json(await service.update(routeId(request), userUpdateSchema.parse(request.body)));
+    response.json(
+      await service.update(
+        routeId(request),
+        userUpdateSchema.parse(request.body),
+        currentUser(request),
+      ),
+    );
   });
   router.patch('/:id/senha', async (request, response) => {
     const input = passwordResetSchema.parse(request.body);
-    await service.resetPassword(routeId(request), input.senha);
+    await service.resetPassword(routeId(request), input.senha, currentUser(request));
     response.status(204).send();
   });
 

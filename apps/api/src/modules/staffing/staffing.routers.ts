@@ -33,17 +33,21 @@ export function createStaffingPlanRouter(service: StaffingServices['staffingPlan
     response.json(await service.list(staffingPlanQuerySchema.parse(request.query)));
   });
   router.post('/', async (request, response) => {
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_STAFFING, user: currentUser(request) });
-    response.status(201).json(await service.create(staffingPlanCreateSchema.parse(request.body)));
+    const user = currentUser(request);
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_STAFFING, user });
+    response
+      .status(201)
+      .json(await service.create(staffingPlanCreateSchema.parse(request.body), user));
   });
   router.get('/:id', async (request, response) => {
     assertAuthorized({ action: AUTHORIZATION_ACTIONS.READ_STAFFING, user: currentUser(request) });
     response.json(await service.get(routeId(request)));
   });
   router.patch('/:id', async (request, response) => {
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_STAFFING, user: currentUser(request) });
+    const user = currentUser(request);
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_STAFFING, user });
     response.json(
-      await service.update(routeId(request), staffingPlanUpdateSchema.parse(request.body)),
+      await service.update(routeId(request), staffingPlanUpdateSchema.parse(request.body), user),
     );
   });
   return router;
@@ -60,9 +64,10 @@ export function createWorkPositionRouter(service: StaffingServices['workPosition
     response.json(await service.get(routeId(request)));
   });
   router.patch('/:id/status', async (request, response) => {
-    assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_STAFFING, user: currentUser(request) });
+    const user = currentUser(request);
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_STAFFING, user });
     const input = workPositionStatusSchema.parse(request.body);
-    response.json(await service.updateStatus(routeId(request), input.ativo));
+    response.json(await service.updateStatus(routeId(request), input.ativo, user));
   });
   return router;
 }

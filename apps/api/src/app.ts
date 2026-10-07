@@ -19,6 +19,8 @@ import { createPrismaAuthRepository } from './modules/auth/auth.repository.js';
 import { createAuthRouter } from './modules/auth/auth.router.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import type { AuthRepository } from './modules/auth/auth.types.js';
+import { createAuditRouter, createCorrectionRouter } from './modules/audit/audit.router.js';
+import { createPrismaAuditServices, type AuditServices } from './modules/audit/audit.service.js';
 import { createHealthRouter } from './modules/health/health.router.js';
 import { createEventRouter, createPublicEventRouter } from './modules/events/event.router.js';
 import {
@@ -50,6 +52,7 @@ import {
 } from './modules/staffing/staffing.service.js';
 
 export interface AppDependencies {
+  auditServices?: AuditServices;
   assignmentServices?: AssignmentServices;
   authRepository?: AuthRepository;
   clock?: () => Date;
@@ -63,6 +66,7 @@ export interface AppDependencies {
 }
 
 export function createApp({
+  auditServices,
   assignmentServices,
   authRepository,
   clock,
@@ -111,6 +115,7 @@ export function createApp({
     sessionTtlHours: environment.SESSION_TTL_HOURS,
   });
   const services = registryServices ?? createPrismaRegistryServices(database);
+  const audit = auditServices ?? createPrismaAuditServices(database);
   const staffing = staffingServices ?? createPrismaStaffingServices(database);
   const assignments = assignmentServices ?? createPrismaAssignmentServices(database, clock);
   const events = eventServices ?? createPrismaEventServices(database, clock);
@@ -124,13 +129,25 @@ export function createApp({
   app.get('/', (_request, response) => {
     response.json({
       service: 'seduc-api',
-      stage: 8,
+      stage: 9,
       status: 'ok',
     });
   });
   app.use('/health', createHealthRouter({ database, ...(clock ? { clock } : {}) }));
   app.use('/auth', createAuthRouter({ authService, environment }));
   app.use('/public/eventos', createPublicEventRouter(eventOperations));
+  app.use(
+    '/auditoria',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createAuditRouter(audit.history),
+  );
+  app.use(
+    '/correcao-administrativa',
+    requireAuthentication,
+    requireAllowedOrigin,
+    createCorrectionRouter(audit.corrections),
+  );
   app.use(
     '/dominios',
     requireAuthentication,

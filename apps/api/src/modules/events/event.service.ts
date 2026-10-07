@@ -1,4 +1,5 @@
 import type {
+  AuthenticatedUser,
   EventPreparationRecord,
   EventQueuePreviewItem,
   EventRecord,
@@ -9,6 +10,7 @@ import type {
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
+import { writeAudit } from '../audit/audit.service.js';
 import type { EventCreateInput, EventQuery, EventUpdateInput } from './event.schemas.js';
 
 export interface RankingCandidate {
@@ -27,13 +29,17 @@ export interface RankedCandidate extends RankingCandidate {
 }
 
 export interface EventServices {
-  create(input: EventCreateInput): Promise<EventRecord>;
+  create(input: EventCreateInput, user?: AuthenticatedUser): Promise<EventRecord>;
   get(id: string): Promise<EventRecord>;
   list(query: EventQuery): Promise<PaginatedResponse<EventRecord>>;
   preparation(id: string): Promise<EventPreparationRecord>;
-  savePreparation(id: string, profissionalIds: string[]): Promise<EventPreparationRecord>;
+  savePreparation(
+    id: string,
+    profissionalIds: string[],
+    user?: AuthenticatedUser,
+  ): Promise<EventPreparationRecord>;
   start(id: string, userId: string): Promise<EventPreparationRecord>;
-  update(id: string, input: EventUpdateInput): Promise<EventRecord>;
+  update(id: string, input: EventUpdateInput, user?: AuthenticatedUser): Promise<EventRecord>;
 }
 
 export const eventInclude = {
@@ -312,11 +318,23 @@ export function createPrismaEventServices(
   }
 
   return {
-    async create(input) {
+    async create(input, user) {
       try {
-        await assertActiveCargo(client, input.cargoFuncaoId);
-        const event = await client.evento.create({ data: input, include: eventInclude });
-        return mapEvent(event);
+        return await client.$transaction(async (transaction) => {
+          await assertActiveCargo(transaction, input.cargoFuncaoId);
+          const event = await transaction.evento.create({ data: input, include: eventInclude });
+          const mapped = mapEvent(event);
+          if (user) {
+            await writeAudit(transaction, {
+              acao: 'CREATE',
+              after: mapped,
+              entidade: 'EVENTO',
+              registroId: event.id,
+              usuarioId: user.id,
+            });
+          }
+          return mapped;
+        });
       } catch (error) {
         handleDatabaseError(error);
       }
@@ -348,7 +366,7 @@ export function createPrismaEventServices(
       };
     },
     preparation,
-    async savePreparation(id, profissionalIds) {
+    async savePreparation(id, profissionalIds, user) {
       const uniqueIds = [...new Set(profissionalIds)];
       if (uniqueIds.length !== profissionalIds.length) {
         throw new HttpError(
@@ -394,10 +412,25 @@ export function createPrismaEventServices(
               'A seleção contém profissional inelegível para o evento.',
             );
           }
+          const before = await transaction.eventoParticipante.findMany({
+            orderBy: { profissionalId: 'asc' },
+            select: { profissionalId: true },
+            where: { eventoId: id },
+          });
           await transaction.eventoParticipante.deleteMany({ where: { eventoId: id } });
           if (uniqueIds.length > 0) {
             await transaction.eventoParticipante.createMany({
               data: uniqueIds.map((profissionalId) => ({ eventoId: id, profissionalId })),
+            });
+          }
+          if (user) {
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after: uniqueIds.toSorted().map((profissionalId) => ({ profissionalId })),
+              before,
+              entidade: 'EVENTO_PREPARACAO',
+              registroId: id,
+              usuarioId: user.id,
             });
           }
         });
@@ -488,13 +521,21 @@ export function createPrismaEventServices(
             data: { dataInicio: clock(), iniciadoPorUsuarioId: userId, status: 'ATIVO' },
             where: { id },
           });
+          await writeAudit(transaction, {
+            acao: 'UPDATE',
+            after: { status: 'ATIVO' },
+            before: { status: 'RASCUNHO' },
+            entidade: 'EVENTO',
+            registroId: id,
+            usuarioId: userId,
+          });
         });
         return preparation(id);
       } catch (error) {
         handleDatabaseError(error);
       }
     },
-    async update(id, input) {
+    async update(id, input, user) {
       try {
         return await client.$transaction(async (transaction) => {
           await lockEvent(transaction, id);
@@ -530,7 +571,18 @@ export function createPrismaEventServices(
             include: eventInclude,
             where: { id },
           });
-          return mapEvent(updated);
+          const mapped = mapEvent(updated);
+          if (user) {
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after: mapped,
+              before: current,
+              entidade: 'EVENTO',
+              registroId: id,
+              usuarioId: user.id,
+            });
+          }
+          return mapped;
         });
       } catch (error) {
         handleDatabaseError(error);

@@ -127,6 +127,9 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
   }, 30_000);
 
   afterAll(async () => {
+    await database.client.auditoria.deleteMany({
+      where: { usuario: { login: { contains: suffix } } },
+    });
     await database.client.sessaoUsuario.deleteMany({
       where: { usuario: { login: { contains: suffix } } },
     });

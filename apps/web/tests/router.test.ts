@@ -77,6 +77,12 @@ describe('proteção de rotas', () => {
 
     await router.push('/pontuacoes');
     expect(router.currentRoute.value.name).toBe('units');
+
+    await router.push('/auditoria');
+    expect(router.currentRoute.value.name).toBe('units');
+
+    await router.push('/correcao-administrativa');
+    expect(router.currentRoute.value.name).toBe('units');
   });
 
   it('permite Quadro/Postos ao Operador e bloqueia os perfis escolares', async () => {

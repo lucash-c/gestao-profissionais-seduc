@@ -68,7 +68,7 @@ async function logout(): Promise<void> {
             ></small
           >
         </div>
-        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 6" />
+        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 9" />
         <QBtn
           aria-label="Sair do sistema"
           data-testid="logout-button"
@@ -139,6 +139,26 @@ async function logout(): Promise<void> {
         >
           <QItemSection avatar><span class="material-icons">manage_accounts</span></QItemSection>
           <QItemSection>Usuários</QItemSection>
+        </QItem>
+        <QItem
+          v-if="isAdmin"
+          data-testid="audit-menu"
+          clickable
+          :to="{ name: 'audit-history' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">history</span></QItemSection>
+          <QItemSection>Auditoria / Histórico</QItemSection>
+        </QItem>
+        <QItem
+          v-if="isAdmin"
+          data-testid="correction-menu"
+          clickable
+          :to="{ name: 'administrative-correction' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">build</span></QItemSection>
+          <QItemSection>Correção Administrativa</QItemSection>
         </QItem>
       </QList>
     </QDrawer>

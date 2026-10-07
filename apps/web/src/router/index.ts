@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory, type Router, type RouterHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import AdministrativeCorrectionPage from '@/pages/AdministrativeCorrectionPage.vue';
+import AuditHistoryPage from '@/pages/AuditHistoryPage.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import EventExchangePage from '@/pages/EventExchangePage.vue';
 import EventPreparationPage from '@/pages/EventPreparationPage.vue';
@@ -86,6 +88,18 @@ export function createAppRouter(
             meta: { profiles: ['ADMINISTRADOR'] },
             name: 'users',
             path: 'usuarios',
+          },
+          {
+            component: AuditHistoryPage,
+            meta: { profiles: ['ADMINISTRADOR'] },
+            name: 'audit-history',
+            path: 'auditoria',
+          },
+          {
+            component: AdministrativeCorrectionPage,
+            meta: { profiles: ['ADMINISTRADOR'] },
+            name: 'administrative-correction',
+            path: 'correcao-administrativa',
           },
         ],
         component: AdminLayout,

@@ -1,7 +1,13 @@
-import type { PaginatedResponse, StaffingPlanRecord, WorkPositionRecord } from '@seduc/contracts';
+import type {
+  AuthenticatedUser,
+  PaginatedResponse,
+  StaffingPlanRecord,
+  WorkPositionRecord,
+} from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
+import { writeAudit } from '../audit/audit.service.js';
 import { mapWorkPosition, positionAvailabilityInclude } from '../assignments/assignment.service.js';
 import type {
   StaffingPlanCreateInput,
@@ -12,15 +18,19 @@ import type {
 
 export interface StaffingServices {
   staffingPlans: {
-    create(input: StaffingPlanCreateInput): Promise<StaffingPlanRecord>;
+    create(input: StaffingPlanCreateInput, user: AuthenticatedUser): Promise<StaffingPlanRecord>;
     get(id: string): Promise<StaffingPlanRecord>;
     list(query: StaffingPlanQuery): Promise<PaginatedResponse<StaffingPlanRecord>>;
-    update(id: string, input: StaffingPlanUpdateInput): Promise<StaffingPlanRecord>;
+    update(
+      id: string,
+      input: StaffingPlanUpdateInput,
+      user: AuthenticatedUser,
+    ): Promise<StaffingPlanRecord>;
   };
   workPositions: {
     get(id: string): Promise<WorkPositionRecord>;
     list(query: WorkPositionQuery): Promise<PaginatedResponse<WorkPositionRecord>>;
-    updateStatus(id: string, ativo: boolean): Promise<WorkPositionRecord>;
+    updateStatus(id: string, ativo: boolean, user: AuthenticatedUser): Promise<WorkPositionRecord>;
   };
 }
 
@@ -143,7 +153,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
 
   return {
     staffingPlans: {
-      async create(input) {
+      async create(input, user) {
         try {
           return await client.$transaction(async (transaction) => {
             await assertCompatible(transaction, input.unidadeId, input.cargoFuncaoId);
@@ -161,7 +171,16 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
                 })),
               });
             }
-            return loadPlan(transaction, plan.id);
+            const after = await loadPlan(transaction, plan.id);
+            await writeAudit(transaction, {
+              acao: 'CREATE',
+              after,
+              entidade: 'QUADRO_NECESSIDADE',
+              registroId: plan.id,
+              unidadeId: plan.unidadeId,
+              usuarioId: user.id,
+            });
+            return after;
           });
         } catch (error) {
           handleDatabaseError(error);
@@ -200,7 +219,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
         ]);
         return pagination(items.map(mapPlan), query.page, query.pageSize, total);
       },
-      async update(id, input) {
+      async update(id, input, user) {
         try {
           return await client.$transaction(async (transaction) => {
             await lockPlan(transaction, id);
@@ -208,6 +227,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
               include: { _count: { select: { postos: true } } },
               where: { id },
             });
+            const before = await loadPlan(transaction, id);
             const structuralChanges = {
               anoLetivo: input.anoLetivo,
               cargoFuncaoId: input.cargoFuncaoId,
@@ -309,7 +329,17 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
               },
               where: { id },
             });
-            return loadPlan(transaction, id);
+            const after = await loadPlan(transaction, id);
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after,
+              before,
+              entidade: 'QUADRO_NECESSIDADE',
+              registroId: id,
+              unidadeId: after.unidadeId,
+              usuarioId: user.id,
+            });
+            return after;
           });
         } catch (error) {
           handleDatabaseError(error);
@@ -349,7 +379,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
         ]);
         return pagination(items.map(mapWorkPosition), query.page, query.pageSize, total);
       },
-      async updateStatus(id, ativo) {
+      async updateStatus(id, ativo, user) {
         try {
           return await client.$transaction(async (transaction) => {
             const target = await transaction.postoTrabalho.findUnique({
@@ -371,7 +401,8 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
               },
               where: { id },
             });
-            if (current.ativo === ativo) return loadPosition(transaction, id);
+            const before = await loadPosition(transaction, id);
+            if (current.ativo === ativo) return before;
 
             const activeCount = await transaction.postoTrabalho.count({
               where: { ativo: true, quadroNecessidadeId: current.quadroNecessidadeId },
@@ -404,7 +435,17 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
               data: { quantidade: { increment: ativo ? 1 : -1 } },
               where: { id: current.quadroNecessidadeId },
             });
-            return loadPosition(transaction, id);
+            const after = await loadPosition(transaction, id);
+            await writeAudit(transaction, {
+              acao: 'UPDATE',
+              after,
+              before,
+              entidade: 'POSTO_TRABALHO',
+              registroId: id,
+              unidadeId: after.unidadeId,
+              usuarioId: user.id,
+            });
+            return after;
           });
         } catch (error) {
           handleDatabaseError(error);

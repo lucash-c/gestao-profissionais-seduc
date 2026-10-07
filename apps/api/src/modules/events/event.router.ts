@@ -57,25 +57,27 @@ export function createEventRouter(
     response.json(await service.list(eventQuerySchema.parse(request.query)));
   });
   router.post('/', async (request, response) => {
-    operator(request);
-    response.status(201).json(await service.create(eventCreateSchema.parse(request.body)));
+    const user = operator(request);
+    response.status(201).json(await service.create(eventCreateSchema.parse(request.body), user));
   });
   router.get('/:id', async (request, response) => {
     operator(request);
     response.json(await service.get(eventId(request)));
   });
   router.patch('/:id', async (request, response) => {
-    operator(request);
-    response.json(await service.update(eventId(request), eventUpdateSchema.parse(request.body)));
+    const user = operator(request);
+    response.json(
+      await service.update(eventId(request), eventUpdateSchema.parse(request.body), user),
+    );
   });
   router.get('/:id/preparacao', async (request, response) => {
     operator(request);
     response.json(await service.preparation(eventId(request)));
   });
   router.put('/:id/preparacao', async (request, response) => {
-    operator(request);
+    const user = operator(request);
     const input = eventPreparationSchema.parse(request.body);
-    response.json(await service.savePreparation(eventId(request), input.profissionalIds));
+    response.json(await service.savePreparation(eventId(request), input.profissionalIds, user));
   });
   router.post('/:id/iniciar', async (request, response) => {
     const user = operator(request);
@@ -110,8 +112,8 @@ export function createEventRouter(
       );
     });
     router.post('/:id/encerrar', async (request, response) => {
-      operator(request, AUTHORIZATION_ACTIONS.OPERATE_EVENT);
-      response.json(await operations.close(eventId(request)));
+      const user = operator(request, AUTHORIZATION_ACTIONS.OPERATE_EVENT);
+      response.json(await operations.close(eventId(request), user.id));
     });
   }
   if (exchanges) {
