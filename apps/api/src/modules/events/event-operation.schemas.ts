@@ -26,6 +26,21 @@ export const eventMovementQuerySchema = z
   })
   .strict();
 
+export const eventExchangeSimulationQuerySchema = z
+  .object({ segundoParticipanteId: uuid })
+  .strict();
+
+export const eventExchangeConfirmationSchema = z
+  .object({
+    participanteEsperadoId: uuid,
+    postoOrigemAtualEsperadoId: uuid,
+    postoOrigemSegundoEsperadoId: uuid,
+    segundoParticipanteId: uuid,
+  })
+  .strict();
+
 export type EventVacancyQuery = z.infer<typeof eventVacancyQuerySchema>;
 export type EventChoiceInput = z.infer<typeof eventChoiceSchema>;
 export type EventMovementQuery = z.infer<typeof eventMovementQuerySchema>;
+export type EventExchangeSimulationQuery = z.infer<typeof eventExchangeSimulationQuerySchema>;
+export type EventExchangeConfirmationInput = z.infer<typeof eventExchangeConfirmationSchema>;

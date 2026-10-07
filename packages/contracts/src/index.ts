@@ -407,6 +407,61 @@ export interface EventChoiceResult {
   movimentacao: EventOperationalMovement;
 }
 
+export interface EventExchangeParticipant extends EventOperationalParticipant {
+  sedeAtual: EventOperationalLink | null;
+}
+
+export interface EventExchangeCentralRecord {
+  candidatos: EventExchangeParticipant[];
+  evento: EventRecord;
+  fila: EventOperationalParticipant[];
+  participanteAtual: EventExchangeParticipant | null;
+  proximos: EventOperationalParticipant[];
+  totais: {
+    aguardando: number;
+    atendidos: number;
+    total: number;
+  };
+  ultimasPermutas: EventExchangeMovement[];
+}
+
+export interface EventExchangeSide {
+  depois: EventOperationalLink;
+  nome: string;
+  participanteId: string;
+  profissionalId: string;
+  sedeAtual: EventOperationalLink;
+}
+
+export interface EventExchangeSimulation {
+  compatibilidade: 'COMPATIVEL';
+  consequenciaQuadro: string;
+  impedimentos: string[];
+  participanteAtualEsperadoId: string;
+  postoOrigemAtualEsperadoId: string;
+  postoOrigemSegundoEsperadoId: string;
+  profissionalA: EventExchangeSide;
+  profissionalB: EventExchangeSide;
+}
+
+export interface EventExchangeMovementItem {
+  destino: EventOperationalLink;
+  origem: EventOperationalLink;
+  profissional: string;
+  profissionalId: string;
+}
+
+export interface EventExchangeMovement {
+  dataHora: string;
+  id: string;
+  itens: EventExchangeMovementItem[];
+}
+
+export interface EventExchangeResult {
+  central: EventExchangeCentralRecord;
+  movimentacao: EventExchangeMovement;
+}
+
 export interface PublicEventChoice {
   dataHora: string;
   periodo: string;

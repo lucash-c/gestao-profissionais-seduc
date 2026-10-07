@@ -14,8 +14,9 @@ O projeto contém as etapas aprovadas até o momento:
 - **Etapa 5 — Lotação, exercício e afastamentos:** lotação de sede, exercício temporário, afastamentos, disponibilidade calculada COM SEDE e SEM SEDE, substituições em cadeia, históricos e regras transacionais e de concorrência.
 - **Etapa 6 — Eventos e preparação da fila:** eventos em RASCUNHO, cargo da sessão, elegibilidade, seleção, prévia oficial, snapshots, tratamento de empates, congelamento da fila e transição para ATIVO.
 - **Etapa 7 — Central Operacional de Remoção/Listão:** atendimento da fila congelada, consulta e simulação de vagas, escolha transacional, movimentações, encerramento controlado, histórico e telão público sanitizado.
+- **Etapa 8 — Permuta:** seleção bilateral na fila congelada, simulação antes/depois, troca atômica de sedes oficiais, histórico único com dois itens e proteção transacional contra concorrência e estado obsoleto.
 
-Ainda não estão implementados Permuta operacional, ausência, desistência, salto de participante e auditoria/correção administrativa previstos para etapas futuras.
+Ainda não estão implementados ausência, desistência, salto de participante e auditoria/correção administrativa previstos para etapas futuras.
 
 ## Requisitos
 

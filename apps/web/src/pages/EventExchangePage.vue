@@ -1,0 +1,235 @@
+<script setup lang="ts">
+import type {
+  EventExchangeCentralRecord,
+  EventExchangeParticipant,
+  EventExchangeSimulation,
+} from '@seduc/contracts';
+import {
+  QBanner,
+  QBtn,
+  QCard,
+  QCardActions,
+  QCardSection,
+  QDialog,
+  QPage,
+  QSelect,
+  QSpinner,
+} from 'quasar';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
+
+import { eventApi } from '@/services/event.service';
+
+const route = useRoute();
+const eventId = computed(() => String(route.params.id));
+const central = ref<EventExchangeCentralRecord | null>(null);
+const selected = ref<EventExchangeParticipant | null>(null);
+const simulation = ref<EventExchangeSimulation | null>(null);
+const loading = ref(true);
+const simulating = ref(false);
+const confirming = ref(false);
+const error = ref('');
+const dialogOpen = ref(false);
+
+const candidateOptions = computed(() =>
+  (central.value?.candidatos ?? []).map((candidate) => ({
+    label: `${candidate.posicao}º · ${candidate.nome} · ${candidate.sedeAtual?.unidade.nome ?? 'Sem sede'}`,
+    value: candidate,
+  })),
+);
+
+async function load(): Promise<void> {
+  loading.value = true;
+  error.value = '';
+  try {
+    central.value = await eventApi.exchangeCentral(eventId.value);
+  } catch (loadError) {
+    error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar a Permuta.';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function simulate(): Promise<void> {
+  if (!selected.value || simulating.value) return;
+  simulating.value = true;
+  error.value = '';
+  simulation.value = null;
+  try {
+    simulation.value = await eventApi.simulateExchange(
+      eventId.value,
+      selected.value.participanteId,
+    );
+    dialogOpen.value = true;
+  } catch (simulationError) {
+    error.value =
+      simulationError instanceof Error ? simulationError.message : 'Não foi possível simular.';
+  } finally {
+    simulating.value = false;
+  }
+}
+
+async function confirm(): Promise<void> {
+  if (!simulation.value || confirming.value) return;
+  confirming.value = true;
+  error.value = '';
+  try {
+    const result = await eventApi.confirmExchange(eventId.value, {
+      participanteEsperadoId: simulation.value.participanteAtualEsperadoId,
+      postoOrigemAtualEsperadoId: simulation.value.postoOrigemAtualEsperadoId,
+      postoOrigemSegundoEsperadoId: simulation.value.postoOrigemSegundoEsperadoId,
+      segundoParticipanteId: simulation.value.profissionalB.participanteId,
+    });
+    central.value = result.central;
+    selected.value = null;
+    simulation.value = null;
+    dialogOpen.value = false;
+  } catch (confirmationError) {
+    error.value =
+      confirmationError instanceof Error
+        ? confirmationError.message
+        : 'Não foi possível confirmar a permuta.';
+  } finally {
+    confirming.value = false;
+  }
+}
+
+onMounted(load);
+</script>
+
+<template>
+  <QPage class="registry-page" data-testid="event-exchange-page">
+    <div v-if="loading" class="registry-state"><QSpinner size="36px" /> Carregando Permuta…</div>
+    <template v-else-if="central">
+      <div class="registry-heading">
+        <div>
+          <p class="eyebrow">Operação presencial de Permuta</p>
+          <h1>{{ central.evento.nome }}</h1>
+          <p>{{ central.evento.cargoFuncao.nome }} · {{ central.evento.ano }}</p>
+        </div>
+      </div>
+      <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="exchange-error">
+        {{ error }}
+      </QBanner>
+
+      <section class="exchange-grid">
+        <QCard flat bordered data-testid="exchange-current">
+          <QCardSection>
+            <p class="eyebrow">Profissional atual</p>
+            <template v-if="central.participanteAtual">
+              <h2>
+                {{ central.participanteAtual.posicao }}º · {{ central.participanteAtual.nome }}
+              </h2>
+              <p>
+                Sede A:
+                {{ central.participanteAtual.sedeAtual?.unidade.nome ?? 'Sem sede ativa' }} ·
+                {{ central.participanteAtual.sedeAtual?.periodo.nome ?? 'sem período' }}
+              </p>
+            </template>
+            <p v-else>Nenhum participante aguardando.</p>
+          </QCardSection>
+        </QCard>
+        <QCard flat bordered data-testid="exchange-partner">
+          <QCardSection>
+            <p class="eyebrow">Segundo participante</p>
+            <QSelect
+              v-model="selected"
+              outlined
+              emit-value
+              map-options
+              label="Selecionar participante da fila"
+              :options="candidateOptions"
+            />
+            <p v-if="selected">
+              Sede B: {{ selected.sedeAtual?.unidade.nome ?? 'Sem sede ativa' }} ·
+              {{ selected.sedeAtual?.periodo.nome ?? 'sem período' }}
+            </p>
+          </QCardSection>
+          <QCardActions align="right">
+            <QBtn
+              color="primary"
+              label="Simular Permuta"
+              :disable="!selected || simulating || confirming"
+              :loading="simulating"
+              @click="simulate"
+            />
+          </QCardActions>
+        </QCard>
+      </section>
+
+      <QCard flat bordered class="q-mt-md" data-testid="exchange-queue">
+        <QCardSection>
+          <p class="eyebrow">Fila congelada</p>
+          <p v-for="participant in central.fila" :key="participant.participanteId">
+            {{ participant.posicao }}º · {{ participant.nome }} · {{ participant.status }}
+          </p>
+        </QCardSection>
+      </QCard>
+
+      <QCard flat bordered class="q-mt-md" data-testid="exchange-history">
+        <QCardSection>
+          <p class="eyebrow">Últimas Permutas</p>
+          <div v-for="movement in central.ultimasPermutas" :key="movement.id">
+            <p v-for="item in movement.itens" :key="item.profissionalId">
+              {{ item.profissional }}: {{ item.origem.unidade.nome }} →
+              {{ item.destino.unidade.nome }}
+            </p>
+          </div>
+          <p v-if="central.ultimasPermutas.length === 0">Nenhuma permuta registrada.</p>
+        </QCardSection>
+      </QCard>
+
+      <QDialog v-model="dialogOpen" persistent>
+        <QCard v-if="simulation" class="registry-dialog" data-testid="exchange-dialog">
+          <QCardSection>
+            <h2>Confirmar Permuta</h2>
+            <p><strong>ANTES</strong></p>
+            <p>
+              {{ simulation.profissionalA.nome }} →
+              {{ simulation.profissionalA.sedeAtual.unidade.nome }}
+            </p>
+            <p>
+              {{ simulation.profissionalB.nome }} →
+              {{ simulation.profissionalB.sedeAtual.unidade.nome }}
+            </p>
+            <p><strong>DEPOIS</strong></p>
+            <p>
+              {{ simulation.profissionalA.nome }} →
+              {{ simulation.profissionalA.depois.unidade.nome }}
+            </p>
+            <p>
+              {{ simulation.profissionalB.nome }} →
+              {{ simulation.profissionalB.depois.unidade.nome }}
+            </p>
+            <p>{{ simulation.consequenciaQuadro }}</p>
+          </QCardSection>
+          <QCardActions align="right">
+            <QBtn flat label="Cancelar" :disable="confirming" @click="dialogOpen = false" />
+            <QBtn
+              data-testid="confirm-exchange"
+              color="primary"
+              label="Confirmar Permuta"
+              :disable="confirming || simulation.impedimentos.length > 0"
+              :loading="confirming"
+              @click="confirm"
+            />
+          </QCardActions>
+        </QCard>
+      </QDialog>
+    </template>
+    <QBanner v-else-if="error" class="bg-red-1 text-negative">{{ error }}</QBanner>
+  </QPage>
+</template>
+
+<style scoped>
+.exchange-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 800px) {
+  .exchange-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -22,6 +22,10 @@ import type { AuthRepository } from './modules/auth/auth.types.js';
 import { createHealthRouter } from './modules/health/health.router.js';
 import { createEventRouter, createPublicEventRouter } from './modules/events/event.router.js';
 import {
+  createPrismaEventExchangeServices,
+  type EventExchangeServices,
+} from './modules/events/event-exchange.service.js';
+import {
   createPrismaEventOperationServices,
   type EventOperationServices,
 } from './modules/events/event-operation.service.js';
@@ -52,6 +56,7 @@ export interface AppDependencies {
   database: DatabaseConnection;
   environment: Environment;
   eventOperationServices?: EventOperationServices;
+  eventExchangeServices?: EventExchangeServices;
   eventServices?: EventServices;
   registryServices?: RegistryServices;
   staffingServices?: StaffingServices;
@@ -64,6 +69,7 @@ export function createApp({
   database,
   environment,
   eventOperationServices,
+  eventExchangeServices,
   eventServices,
   registryServices,
   staffingServices,
@@ -110,13 +116,15 @@ export function createApp({
   const events = eventServices ?? createPrismaEventServices(database, clock);
   const eventOperations =
     eventOperationServices ?? createPrismaEventOperationServices(database, clock);
+  const eventExchanges =
+    eventExchangeServices ?? createPrismaEventExchangeServices(database, clock);
   const requireAuthentication = createRequireAuthentication(authService);
   const requireAllowedOrigin = createRequireAllowedOrigin(environment);
 
   app.get('/', (_request, response) => {
     response.json({
       service: 'seduc-api',
-      stage: 7,
+      stage: 8,
       status: 'ok',
     });
   });
@@ -157,7 +165,7 @@ export function createApp({
     '/eventos',
     requireAuthentication,
     requireAllowedOrigin,
-    createEventRouter(events, eventOperations),
+    createEventRouter(events, eventOperations, eventExchanges),
   );
   app.use(
     '/quadros',

@@ -177,9 +177,14 @@ onMounted(async () => {
                 label="Abrir Central"
                 :to="{ name: 'event-operations', params: { id: props.row.id } }"
               />
-              <span v-if="props.row.status === 'ATIVO' && props.row.tipo === 'PERMUTA'">
-                Operação de Permuta será disponibilizada na Etapa 8.
-              </span>
+              <QBtn
+                v-if="props.row.status === 'ATIVO' && props.row.tipo === 'PERMUTA'"
+                flat
+                dense
+                color="primary"
+                label="Abrir Permuta"
+                :to="{ name: 'event-exchange', params: { id: props.row.id } }"
+              />
               <QBtn
                 v-if="props.row.status === 'ENCERRADO' && props.row.tipo !== 'PERMUTA'"
                 flat

@@ -11,10 +11,13 @@ import {
 import {
   eventChoiceSchema,
   eventChoiceSimulationQuerySchema,
+  eventExchangeConfirmationSchema,
+  eventExchangeSimulationQuerySchema,
   eventMovementQuerySchema,
   eventVacancyQuerySchema,
 } from './event-operation.schemas.js';
 import type { EventOperationServices } from './event-operation.service.js';
+import type { EventExchangeServices } from './event-exchange.service.js';
 import {
   eventCreateSchema,
   eventPreparationSchema,
@@ -46,6 +49,7 @@ function eventId(request: Request): string {
 export function createEventRouter(
   service: EventServices,
   operations?: EventOperationServices,
+  exchanges?: EventExchangeServices,
 ): Router {
   const router = Router();
   router.get('/', async (request, response) => {
@@ -108,6 +112,27 @@ export function createEventRouter(
     router.post('/:id/encerrar', async (request, response) => {
       operator(request, AUTHORIZATION_ACTIONS.OPERATE_EVENT);
       response.json(await operations.close(eventId(request)));
+    });
+  }
+  if (exchanges) {
+    router.get('/:id/permuta', async (request, response) => {
+      operator(request, AUTHORIZATION_ACTIONS.OPERATE_EVENT);
+      response.json(await exchanges.central(eventId(request)));
+    });
+    router.get('/:id/simular-permuta', async (request, response) => {
+      operator(request, AUTHORIZATION_ACTIONS.OPERATE_EVENT);
+      const input = eventExchangeSimulationQuerySchema.parse(request.query);
+      response.json(await exchanges.simulate(eventId(request), input.segundoParticipanteId));
+    });
+    router.post('/:id/confirmar-permuta', async (request, response) => {
+      const user = operator(request, AUTHORIZATION_ACTIONS.OPERATE_EVENT);
+      response.json(
+        await exchanges.confirm(
+          eventId(request),
+          user.id,
+          eventExchangeConfirmationSchema.parse(request.body),
+        ),
+      );
     });
   }
   return router;

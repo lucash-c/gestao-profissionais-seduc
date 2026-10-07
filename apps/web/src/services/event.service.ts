@@ -2,6 +2,9 @@ import type {
   EventCentralRecord,
   EventChoiceResult,
   EventChoiceSimulation,
+  EventExchangeCentralRecord,
+  EventExchangeResult,
+  EventExchangeSimulation,
   EventOperationalMovement,
   EventPreparationRecord,
   EventRecord,
@@ -70,6 +73,23 @@ export const eventApi = {
   list(page = 1) {
     return request<PaginatedResponse<EventRecord>>(`/eventos?page=${page}&pageSize=20`);
   },
+  exchangeCentral(id: string) {
+    return request<EventExchangeCentralRecord>(`/eventos/${id}/permuta`);
+  },
+  confirmExchange(
+    id: string,
+    body: {
+      participanteEsperadoId: string;
+      postoOrigemAtualEsperadoId: string;
+      postoOrigemSegundoEsperadoId: string;
+      segundoParticipanteId: string;
+    },
+  ) {
+    return request<EventExchangeResult>(`/eventos/${id}/confirmar-permuta`, {
+      body: JSON.stringify(body),
+      method: 'POST',
+    });
+  },
   movements(id: string, page = 1, pageSize = 20) {
     return request<PaginatedResponse<EventOperationalMovement>>(
       `/eventos/${id}/movimentacoes?page=${page}&pageSize=${pageSize}`,
@@ -95,6 +115,11 @@ export const eventApi = {
   simulate(id: string, postoTrabalhoId: string) {
     return request<EventChoiceSimulation>(
       `/eventos/${id}/simular-escolha?postoTrabalhoId=${encodeURIComponent(postoTrabalhoId)}`,
+    );
+  },
+  simulateExchange(id: string, segundoParticipanteId: string) {
+    return request<EventExchangeSimulation>(
+      `/eventos/${id}/simular-permuta?segundoParticipanteId=${encodeURIComponent(segundoParticipanteId)}`,
     );
   },
   update(id: string, body: unknown) {

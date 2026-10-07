@@ -176,6 +176,11 @@ async function mountPage(component: object, path = '/') {
         name: 'event-preparation',
         path: '/eventos/:id/preparacao',
       },
+      {
+        component: { template: '<div />' },
+        name: 'event-exchange',
+        path: '/eventos/:id/permuta',
+      },
       { component: { template: '<div />' }, name: 'login', path: '/login' },
       {
         component: { template: '<div />' },
@@ -257,7 +262,7 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Ano *');
   });
 
-  it('oferece Central somente para ATIVO REMOCAO/LISTAO e reserva PERMUTA para a Etapa 8', async () => {
+  it('oferece a operação adequada para cada evento ATIVO', async () => {
     mocks.list.mockResolvedValue({
       items: [
         { ...event, status: 'ATIVO' },
@@ -275,7 +280,9 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(
       wrapper.findAll('a').filter((item) => item.text().includes('Abrir Central')),
     ).toHaveLength(2);
-    expect(wrapper.text()).toContain('Operação de Permuta será disponibilizada na Etapa 8.');
+    expect(
+      wrapper.findAll('a').filter((item) => item.text().includes('Abrir Permuta')),
+    ).toHaveLength(1);
     expect(wrapper.findAll('a').some((item) => item.text().includes('Ver resultado'))).toBe(true);
   });
 

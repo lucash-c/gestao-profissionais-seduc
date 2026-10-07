@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type Router, type RouterHistory } from 
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
+import EventExchangePage from '@/pages/EventExchangePage.vue';
 import EventPreparationPage from '@/pages/EventPreparationPage.vue';
 import EventsPage from '@/pages/EventsPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
@@ -49,6 +50,12 @@ export function createAppRouter(
             meta: { profiles: ['OPERADOR'] },
             name: 'event-operations',
             path: 'eventos/:id/central',
+          },
+          {
+            component: EventExchangePage,
+            meta: { profiles: ['OPERADOR'] },
+            name: 'event-exchange',
+            path: 'eventos/:id/permuta',
           },
           {
             component: EventPreparationPage,
