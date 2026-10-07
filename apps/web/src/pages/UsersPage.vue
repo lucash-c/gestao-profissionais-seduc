@@ -21,6 +21,7 @@ import {
 } from 'quasar';
 import { onMounted, reactive, ref, watch } from 'vue';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { registryApi } from '@/services/registry.service';
 
 const rows = ref<UserRecord[]>([]);
@@ -204,7 +205,9 @@ watch(
       </div>
       <QTable v-else flat :rows="rows" :columns="columns" row-key="id" hide-pagination>
         <template #body-cell-ativo="props">
-          <td class="text-center">{{ props.row.ativo ? 'Ativo' : 'Inativo' }}</td>
+          <td class="text-center">
+            <StatusChip :status="props.row.ativo ? 'ATIVO' : 'INATIVO'" />
+          </td>
         </template>
         <template #body-cell-actions="props">
           <td class="text-right">

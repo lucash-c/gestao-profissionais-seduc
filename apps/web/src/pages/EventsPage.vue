@@ -19,6 +19,7 @@ import {
 import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { eventApi } from '@/services/event.service';
 import { registryApi } from '@/services/registry.service';
 
@@ -144,10 +145,10 @@ onMounted(async () => {
         <template #body="props">
           <QTr :props="props">
             <QTd key="nome" :props="props">{{ props.row.nome }}</QTd>
-            <QTd key="tipo" :props="props">{{ props.row.tipo }}</QTd>
+            <QTd key="tipo" :props="props"><StatusChip :status="props.row.tipo" /></QTd>
             <QTd key="ano" :props="props">{{ props.row.ano }}</QTd>
             <QTd key="cargo" :props="props">{{ props.row.cargoFuncao.nome }}</QTd>
-            <QTd key="status" :props="props">{{ props.row.status }}</QTd>
+            <QTd key="status" :props="props"><StatusChip :status="props.row.status" /></QTd>
             <QTd key="inicio" :props="props">{{
               props.row.dataInicio ? new Date(props.row.dataInicio).toLocaleString('pt-BR') : '—'
             }}</QTd>
@@ -191,6 +192,13 @@ onMounted(async () => {
                 dense
                 label="Ver resultado"
                 :to="{ name: 'public-event-display', params: { id: props.row.id } }"
+              />
+              <QBtn
+                v-if="props.row.status === 'ENCERRADO' && props.row.tipo === 'PERMUTA'"
+                flat
+                dense
+                label="Ver histórico"
+                :to="{ name: 'event-exchange', params: { id: props.row.id } }"
               />
             </QTd>
           </QTr>

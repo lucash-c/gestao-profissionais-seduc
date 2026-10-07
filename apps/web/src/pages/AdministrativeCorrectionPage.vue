@@ -13,6 +13,7 @@ import {
 } from 'quasar';
 import { computed, ref } from 'vue';
 
+import DataComparison from '@/components/DataComparison.vue';
 import { auditApi } from '@/services/audit.service';
 
 const entidade = ref<'PROFISSIONAL' | 'UNIDADE'>('PROFISSIONAL');
@@ -96,7 +97,7 @@ async function apply(): Promise<void> {
         <h1>Correção Administrativa</h1>
       </div>
     </div>
-    <QBanner class="bg-orange-2 text-dark" data-testid="correction-warning">
+    <QBanner class="exception-warning" data-testid="correction-warning" role="alert">
       <strong>ATENÇÃO:</strong> Esta é uma correção administrativa excepcional. Alterações
       realizadas neste módulo não geram auditoria técnica nem movimentação de evento.
     </QBanner>
@@ -124,17 +125,15 @@ async function apply(): Promise<void> {
           @click="review"
         /> </QCardSection
     ></QCard>
-    <p v-if="error" class="text-negative">{{ error }}</p>
+    <QBanner v-if="error" class="bg-red-1 text-negative" role="alert">{{ error }}</QBanner>
     <p v-if="success" class="text-positive">{{ success }}</p>
     <QDialog v-model="dialogOpen" persistent
       ><QCard v-if="preview" class="registry-dialog" data-testid="correction-dialog">
         <QCardSection
           ><h2>Confirmar correção excepcional</h2>
           <p>{{ preview.entidade }} · {{ preview.registroId }}</p>
-          <h3>ANTES</h3>
-          <pre>{{ JSON.stringify(preview.antes, null, 2) }}</pre>
-          <h3>DEPOIS</h3>
-          <pre>{{ JSON.stringify(preview.depois, null, 2) }}</pre>
+          <p>Confira cuidadosamente cada campo antes de confirmar.</p>
+          <DataComparison :antes="preview.antes" :depois="preview.depois" />
         </QCardSection>
         <QCardActions align="right"
           ><QBtn flat label="Cancelar" :disable="submitting" @click="dialogOpen = false" /><QBtn

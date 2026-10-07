@@ -11,6 +11,7 @@ import {
   QCardActions,
   QCardSection,
   QDialog,
+  QIcon,
   QPage,
   QSelect,
   QSpinner,
@@ -18,6 +19,7 @@ import {
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -120,7 +122,11 @@ onMounted(load);
         <div>
           <p class="eyebrow">Operação presencial de Permuta</p>
           <h1>{{ central.evento.nome }}</h1>
-          <p>{{ central.evento.cargoFuncao.nome }} · {{ central.evento.ano }}</p>
+          <div class="row items-center q-gutter-xs q-mt-xs">
+            <StatusChip :status="central.evento.tipo" />
+            <StatusChip :status="central.evento.status" />
+            <span>{{ central.evento.cargoFuncao.nome }} · {{ central.evento.ano }}</span>
+          </div>
         </div>
       </div>
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="exchange-error">
@@ -189,9 +195,14 @@ onMounted(load);
       <QCard flat bordered class="q-mt-md" data-testid="exchange-queue">
         <QCardSection>
           <p class="eyebrow">Fila congelada</p>
-          <p v-for="participant in central.fila" :key="participant.participanteId">
-            {{ participant.posicao }}º · {{ participant.nome }} · {{ participant.status }}
-          </p>
+          <div
+            v-for="participant in central.fila"
+            :key="participant.participanteId"
+            class="queue-row"
+          >
+            <span>{{ participant.posicao }}º · {{ participant.nome }}</span>
+            <StatusChip :status="participant.status" />
+          </div>
         </QCardSection>
       </QCard>
 
@@ -225,24 +236,36 @@ onMounted(load);
         <QCard v-if="simulation" class="registry-dialog" data-testid="exchange-dialog">
           <QCardSection>
             <h2>Confirmar Permuta</h2>
-            <p><strong>ANTES</strong></p>
-            <p>
-              {{ simulation.profissionalA.nome }} →
-              {{ simulation.profissionalA.sedeAtual.unidade.nome }}
-            </p>
-            <p>
-              {{ simulation.profissionalB.nome }} →
-              {{ simulation.profissionalB.sedeAtual.unidade.nome }}
-            </p>
-            <p><strong>DEPOIS</strong></p>
-            <p>
-              {{ simulation.profissionalA.nome }} →
-              {{ simulation.profissionalA.depois.unidade.nome }}
-            </p>
-            <p>
-              {{ simulation.profissionalB.nome }} →
-              {{ simulation.profissionalB.depois.unidade.nome }}
-            </p>
+            <p>Confira os dois profissionais e as sedes antes de confirmar a troca atômica.</p>
+            <div class="exchange-comparison">
+              <section>
+                <h3>ANTES</h3>
+                <p>
+                  <strong class="block">{{ simulation.profissionalA.nome }}</strong>
+                  {{ simulation.profissionalA.sedeAtual.unidade.nome }} ·
+                  {{ simulation.profissionalA.sedeAtual.periodo.nome }}
+                </p>
+                <p>
+                  <strong class="block">{{ simulation.profissionalB.nome }}</strong>
+                  {{ simulation.profissionalB.sedeAtual.unidade.nome }} ·
+                  {{ simulation.profissionalB.sedeAtual.periodo.nome }}
+                </p>
+              </section>
+              <QIcon class="exchange-arrow" name="swap_horiz" size="32px" aria-hidden="true" />
+              <section>
+                <h3>DEPOIS</h3>
+                <p>
+                  <strong class="block">{{ simulation.profissionalA.nome }}</strong>
+                  {{ simulation.profissionalA.depois.unidade.nome }} ·
+                  {{ simulation.profissionalA.depois.periodo.nome }}
+                </p>
+                <p>
+                  <strong class="block">{{ simulation.profissionalB.nome }}</strong>
+                  {{ simulation.profissionalB.depois.unidade.nome }} ·
+                  {{ simulation.profissionalB.depois.periodo.nome }}
+                </p>
+              </section>
+            </div>
             <p>{{ simulation.consequenciaQuadro }}</p>
           </QCardSection>
           <QCardActions align="right">
@@ -274,9 +297,37 @@ onMounted(load);
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.queue-row {
+  align-items: center;
+  border-bottom: 1px solid var(--fluent-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-block: 8px;
+}
+.exchange-comparison {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr auto 1fr;
+}
+.exchange-comparison section {
+  background: var(--fluent-surface-secondary);
+  border: 1px solid var(--fluent-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.exchange-arrow {
+  color: var(--fluent-primary);
+}
 @media (max-width: 800px) {
-  .exchange-grid {
+  .exchange-grid,
+  .exchange-comparison {
     grid-template-columns: 1fr;
+  }
+  .exchange-arrow {
+    justify-self: center;
+    transform: rotate(90deg);
   }
 }
 </style>

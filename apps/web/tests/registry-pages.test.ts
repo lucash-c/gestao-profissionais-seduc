@@ -478,6 +478,9 @@ describe('Etapa 3 Quasar pages', () => {
     expect(admin.find('[data-testid="work-positions-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="audit-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="correction-menu"]').exists()).toBe(true);
+    expect(admin.text()).toContain('Cadastros');
+    expect(admin.text()).toContain('Administração');
+    expect(admin.text()).not.toMatch(/ETAPA \d+/i);
     admin.unmount();
 
     setProfile('OPERADOR');

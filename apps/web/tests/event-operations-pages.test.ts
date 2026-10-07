@@ -305,7 +305,7 @@ describe('Etapa 7 frontend da Central', () => {
     expect(wrapper.get('[data-testid="current-participant"]').text()).toContain('Ana Atual');
     expect(wrapper.get('[data-testid="current-participant"]').text()).toContain('100.00');
     expect(wrapper.get('[data-testid="current-participant"]').text()).toContain('EMEF A');
-    expect(wrapper.get('[data-testid="current-participant"]').text()).toContain('SUBSTITUICAO');
+    expect(wrapper.get('[data-testid="current-participant"]').text()).toContain('Substituição');
     expect(wrapper.get('[data-testid="next-participants"]').text()).toContain('Bruno Próximo');
     expect(wrapper.get('[data-testid="available-positions"]').text()).toContain(
       'SEDE FIXA / COM SEDE',

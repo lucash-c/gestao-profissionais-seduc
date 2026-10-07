@@ -47,8 +47,8 @@ async function submit(): Promise<void> {
       <QPage class="login-page">
         <main class="login-content">
           <section class="login-introduction" aria-labelledby="login-title">
-            <div class="brand-mark login-brand-mark" aria-hidden="true">A</div>
-            <p class="text-overline text-blue-2 q-mb-sm">SEDUC AMERICANA</p>
+            <div class="brand-mark login-brand-mark" aria-hidden="true">S</div>
+            <p class="eyebrow q-mb-sm">SEDUC AMERICANA</p>
             <h1 id="login-title">Gestão de profissionais</h1>
             <p>
               Acesso administrativo ao sistema de remoção, permuta e listão da Secretaria de
@@ -58,7 +58,7 @@ async function submit(): Promise<void> {
 
           <QCard flat bordered class="login-card">
             <QCardSection>
-              <QIcon name="lock" color="primary" size="32px" aria-hidden="true" />
+              <QIcon name="shield" color="primary" size="32px" aria-hidden="true" />
               <h2 class="text-h5 q-mt-md q-mb-xs">Entrar</h2>
               <p class="text-body2 text-grey-7 q-mt-none q-mb-lg">
                 Use seu login administrativo ou e-mail.
@@ -102,6 +102,10 @@ async function submit(): Promise<void> {
                   type="submit"
                   unelevated
                 />
+                <p class="security-note">
+                  <QIcon name="lock" aria-hidden="true" /> Acesso restrito a contas administrativas
+                  autorizadas.
+                </p>
               </QForm>
             </QCardSection>
           </QCard>

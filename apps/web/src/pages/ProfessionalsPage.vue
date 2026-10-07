@@ -24,6 +24,7 @@ import {
 } from 'quasar';
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -318,11 +319,19 @@ onMounted(load);
             ><QTd key="nome" :props="props">{{ props.row.nomeCompleto }}</QTd>
             <QTd key="cargo" :props="props">{{ props.row.cargoFuncao.nome }}</QTd
             ><QTd key="sede" :props="props">
-              {{ props.row.sedeAtual?.unidadeNome ?? 'Sem sede' }}
+              <StatusChip :status="props.row.sedeAtual ? 'COM_SEDE' : 'SEM_SEDE'" />
+              <span class="block text-caption">{{ props.row.sedeAtual?.unidadeNome ?? '—' }}</span>
             </QTd>
             <QTd key="pontuacao" :props="props">{{ props.row.pontuacao }}</QTd
-            ><QTd key="remocao" :props="props">{{ props.row.remocao ? 'Sim' : 'Não' }}</QTd>
-            <QTd key="permuta" :props="props">{{ props.row.permuta ? 'Sim' : 'Não' }}</QTd
+            ><QTd key="remocao" :props="props"
+              ><StatusChip
+                :status="props.row.remocao ? 'REMOCAO' : 'Não habilitada'"
+                :tone="props.row.remocao ? 'info' : 'neutral'"
+            /></QTd>
+            <QTd key="permuta" :props="props"
+              ><StatusChip
+                :status="props.row.permuta ? 'PERMUTA' : 'Não habilitada'"
+                :tone="props.row.permuta ? 'info' : 'neutral'" /></QTd
             ><QTd key="actions" :props="props">
               <QBtn
                 flat

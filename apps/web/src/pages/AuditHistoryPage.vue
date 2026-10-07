@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import type { AuditRecord } from '@seduc/contracts';
-import { QBtn, QCard, QCardSection, QDialog, QInput, QPage, QSelect, QSpinner } from 'quasar';
+import {
+  QBanner,
+  QBtn,
+  QCard,
+  QCardSection,
+  QDialog,
+  QInput,
+  QPage,
+  QSelect,
+  QSpinner,
+} from 'quasar';
 import { onMounted, reactive, ref } from 'vue';
 
+import DataComparison from '@/components/DataComparison.vue';
 import { auditApi } from '@/services/audit.service';
 
 const filters = reactive({
@@ -69,7 +80,7 @@ onMounted(() => load());
       </QCardSection>
     </QCard>
     <div v-if="loading" class="registry-state"><QSpinner /> Carregando histórico…</div>
-    <p v-else-if="error" class="text-negative">{{ error }}</p>
+    <QBanner v-else-if="error" class="bg-red-1 text-negative" role="alert">{{ error }}</QBanner>
     <table v-else class="registry-table" data-testid="audit-table">
       <thead>
         <tr>
@@ -101,10 +112,8 @@ onMounted(() => load());
       <QCard v-if="selected" class="registry-dialog" data-testid="audit-details">
         <QCardSection
           ><h2>Detalhes da alteração</h2>
-          <h3>ANTES</h3>
-          <pre>{{ JSON.stringify(selected.dadosAnteriores, null, 2) }}</pre>
-          <h3>DEPOIS</h3>
-          <pre>{{ JSON.stringify(selected.dadosNovos, null, 2) }}</pre>
+          <p>Campos alterados e respectivos valores antes e depois.</p>
+          <DataComparison :antes="selected.dadosAnteriores" :depois="selected.dadosNovos" />
         </QCardSection>
       </QCard>
     </QDialog>
@@ -123,9 +132,5 @@ onMounted(() => load());
   align-items: center;
   gap: 12px;
   margin-top: 16px;
-}
-pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 </style>

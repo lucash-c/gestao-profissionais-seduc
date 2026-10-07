@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import FoundationPage from '@/pages/FoundationPage.vue';
 
 describe('FoundationPage', () => {
-  it('explicita o limite funcional da Etapa 2 e exibe a prontidão', async () => {
+  it('exibe a área administrativa sem badges de desenvolvimento e informa a prontidão', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -37,9 +37,8 @@ describe('FoundationPage', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('Área autenticada');
-    expect(wrapper.text()).toContain(
-      'Os módulos funcionais do negócio permanecem fora desta etapa',
-    );
+    expect(wrapper.text()).toContain('módulos operacionais estão protegidos conforme o perfil');
     expect(wrapper.text()).toContain('API e PostgreSQL disponíveis');
+    expect(wrapper.text()).not.toMatch(/ETAPA \d+/i);
   });
 });

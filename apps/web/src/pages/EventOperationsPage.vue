@@ -12,7 +12,6 @@ import {
   QCard,
   QCardActions,
   QCardSection,
-  QChip,
   QDialog,
   QPage,
   QPagination,
@@ -22,6 +21,7 @@ import {
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -172,10 +172,11 @@ onMounted(load);
         <div>
           <p class="eyebrow">Central de Operações</p>
           <h1>{{ central.evento.nome }}</h1>
-          <p>
-            {{ central.evento.tipo }} · {{ central.evento.cargoFuncao.nome }} ·
-            {{ central.evento.ano }} · {{ central.evento.status }}
-          </p>
+          <div class="row items-center q-gutter-xs q-mt-xs">
+            <StatusChip :status="central.evento.tipo" />
+            <StatusChip :status="central.evento.status" />
+            <span>{{ central.evento.cargoFuncao.nome }} · {{ central.evento.ano }}</span>
+          </div>
         </div>
         <QBtn
           v-if="central.evento.status === 'ATIVO'"
@@ -197,6 +198,7 @@ onMounted(load);
         class="bg-orange-1 text-dark"
         data-testid="period-rule-warning"
       >
+        <StatusChip status="BLOCKED" />
         {{ central.regraPeriodo.message }} As escolhas estão bloqueadas até existir uma origem de
         período inequívoca.
       </QBanner>
@@ -205,6 +207,7 @@ onMounted(load);
         class="bg-blue-1 text-primary"
         data-testid="any-period-info"
       >
+        <StatusChip status="ANY" />
         {{ central.regraPeriodo.message }}
       </QBanner>
       <QBanner v-if="central.evento.status === 'ENCERRADO'" class="bg-blue-1 text-primary">
@@ -229,11 +232,12 @@ onMounted(load);
               <p>
                 Sede atual:
                 {{ central.situacaoAtual?.sedeAtual?.unidade.nome ?? 'Sem sede oficial' }}
+                <StatusChip :status="central.situacaoAtual?.sedeAtual ? 'COM_SEDE' : 'SEM_SEDE'" />
               </p>
               <ul v-if="central.situacaoAtual?.exerciciosAtuais.length">
                 <li v-for="exercise in central.situacaoAtual.exerciciosAtuais" :key="exercise.id">
                   Exercício: {{ exercise.unidade.nome }} · {{ exercise.periodo.nome }} ·
-                  {{ exercise.tipo }}
+                  <StatusChip :status="exercise.tipo" />
                 </li>
               </ul>
               <p v-else>Sem exercício ativo.</p>
@@ -298,7 +302,10 @@ onMounted(load);
               <QCardSection>
                 <h3>{{ position.unidade.nome }}</h3>
                 <p>{{ position.periodo.nome }} · Posto {{ position.codigo ?? 'sem código' }}</p>
-                <QChip>{{ destinationLabel(position) }}</QChip>
+                <StatusChip
+                  :status="position.disponibilidade === 'DISPONIVEL_COM_SEDE' ? 'SEDE' : 'SEM_SEDE'"
+                />
+                <span class="block text-caption text-grey-7">{{ destinationLabel(position) }}</span>
                 <p v-if="position.titularAtual">
                   Titular: {{ position.titularAtual.nomeCompleto }}
                 </p>

@@ -1,7 +1,7 @@
-import '@fontsource-variable/roboto-flex';
 import '@quasar/extras/material-icons/material-icons.css';
 import 'quasar/src/css/index.sass';
 import './css/app.scss';
+import './css/fluent.scss';
 
 import { Quasar } from 'quasar';
 import { createApp } from 'vue';

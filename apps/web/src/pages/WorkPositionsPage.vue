@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import type {
-  LookupRecord,
-  WorkPositionReleaseReason,
-  WorkPositionRecord,
-  WorkPositionStructuralState,
-} from '@seduc/contracts';
+import type { LookupRecord, WorkPositionReleaseReason, WorkPositionRecord } from '@seduc/contracts';
 import {
   QBanner,
   QBtn,
   QCard,
   QCardActions,
   QCardSection,
-  QChip,
   QDialog,
   QInput,
   QPage,
@@ -24,6 +18,7 @@ import {
 } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -55,12 +50,6 @@ const columns = [
   { align: 'left' as const, field: 'ativo', label: 'Status', name: 'ativo' },
   { align: 'right' as const, field: 'id', label: 'Ações', name: 'actions' },
 ];
-const stateLabels = {
-  DISPONIVEL_COM_SEDE: 'Com sede: disponível',
-  DISPONIVEL_SEM_SEDE: 'Sem sede: disponível',
-  INDISPONIVEL: 'Indisponível',
-  INATIVO: 'Inativo',
-} as const;
 const releaseReasonLabels: Record<WorkPositionReleaseReason, string> = {
   AFASTAMENTO: 'titular afastado',
   EXERCICIO_OUTRO_POSTO: 'titular em exercício em outro posto',
@@ -98,10 +87,6 @@ async function loadOptions(): Promise<void> {
   } catch (loadError) {
     error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar os domínios.';
   }
-}
-
-function stateLabel(state: WorkPositionStructuralState): string {
-  return stateLabels[state];
 }
 
 function releaseReasons(row: WorkPositionRecord): string {
@@ -231,12 +216,14 @@ onMounted(async () => {
               </small>
             </QTd>
             <QTd key="estado" :props="props"
-              ><QChip dense>{{ stateLabel(props.row.disponibilidade) }}</QChip>
+              ><StatusChip :status="props.row.disponibilidade" />
               <small v-if="props.row.motivosLiberacao.length" class="block">
                 {{ releaseReasons(props.row) }}
               </small></QTd
             >
-            <QTd key="ativo" :props="props">{{ props.row.ativo ? 'Ativo' : 'Inativo' }}</QTd>
+            <QTd key="ativo" :props="props"
+              ><StatusChip :status="props.row.ativo ? 'ATIVO' : 'INATIVO'"
+            /></QTd>
             <QTd key="actions" :props="props"
               ><QBtn
                 v-if="canManage"

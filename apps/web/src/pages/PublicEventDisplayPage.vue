@@ -1,19 +1,10 @@
 <script setup lang="ts">
 import type { PublicEventChoice, PublicEventDisplay } from '@seduc/contracts';
-import {
-  QBanner,
-  QBtn,
-  QCard,
-  QCardSection,
-  QChip,
-  QDialog,
-  QPage,
-  QPagination,
-  QSpinner,
-} from 'quasar';
+import { QBanner, QBtn, QCard, QCardSection, QDialog, QPage, QPagination, QSpinner } from 'quasar';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -57,16 +48,20 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <QPage class="public-display" data-testid="public-event-display">
+  <QPage class="public-display" data-testid="public-event-display" aria-live="polite">
     <div v-if="loading" class="public-state"><QSpinner size="48px" /> Carregando sessão…</div>
     <template v-else-if="display">
       <header>
         <p class="eyebrow">SEDUC Americana · Sessão pública</p>
         <h1>{{ display.evento.nome }}</h1>
-        <p>{{ display.evento.tipo }} · {{ display.evento.ano }}</p>
-        <QChip>{{
-          display.evento.status === 'ENCERRADO' ? 'EVENTO ENCERRADO' : 'EM ANDAMENTO'
-        }}</QChip>
+        <div class="row items-center q-gutter-sm">
+          <StatusChip :status="display.evento.tipo" />
+          <StatusChip
+            :status="display.evento.status === 'ENCERRADO' ? 'EVENTO ENCERRADO' : 'EM ANDAMENTO'"
+            :tone="display.evento.status === 'ENCERRADO' ? 'neutral' : 'positive'"
+          />
+          <span>{{ display.evento.ano }}</span>
+        </div>
       </header>
       <QBanner v-if="error" class="bg-red-1 text-negative">{{ error }}</QBanner>
 
@@ -102,9 +97,10 @@ onBeforeUnmount(() => {
           <QCardSection>
             <h3>{{ vacancy.unidade }}</h3>
             <p>{{ vacancy.periodo }}</p>
-            <QChip>{{
-              vacancy.tipo === 'SEDE' ? 'SEDE FIXA / COM SEDE' : 'SEM SEDE / SUBSTITUIÇÃO'
-            }}</QChip>
+            <StatusChip
+              :status="vacancy.tipo === 'SEDE' ? 'SEDE FIXA / COM SEDE' : 'SEM SEDE / SUBSTITUIÇÃO'"
+              tone="info"
+            />
             <strong>{{ vacancy.quantidade }} vaga(s)</strong>
           </QCardSection>
         </QCard>
@@ -147,7 +143,7 @@ onBeforeUnmount(() => {
 .public-display {
   min-height: 100vh;
   padding: clamp(20px, 4vw, 56px);
-  background: #f4f7fb;
+  background: var(--fluent-background);
 }
 .public-display header {
   margin-bottom: 24px;

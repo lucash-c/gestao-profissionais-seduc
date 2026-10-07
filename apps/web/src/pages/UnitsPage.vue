@@ -18,6 +18,7 @@ import {
 } from 'quasar';
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -243,7 +244,9 @@ onMounted(load);
             <QTd key="nome" :props="props">{{ props.row.nome }}</QTd>
             <QTd key="tipo" :props="props">{{ props.row.tipoUnidade.nome }}</QTd>
             <QTd key="cidade" :props="props">{{ props.row.cidade || '—' }}</QTd>
-            <QTd key="ativo" :props="props">{{ props.row.ativo ? 'Ativa' : 'Inativa' }}</QTd>
+            <QTd key="ativo" :props="props"
+              ><StatusChip :status="props.row.ativo ? 'ATIVO' : 'INATIVO'"
+            /></QTd>
             <QTd key="actions" :props="props">
               <QBtn
                 v-if="canEdit"

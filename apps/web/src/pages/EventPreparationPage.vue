@@ -7,7 +7,6 @@ import {
   QCardActions,
   QCardSection,
   QCheckbox,
-  QChip,
   QDialog,
   QInput,
   QPage,
@@ -19,6 +18,7 @@ import {
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
+import StatusChip from '@/components/StatusChip.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -127,7 +127,10 @@ onMounted(load);
     <template v-else-if="preparation">
       <div class="registry-heading">
         <div>
-          <p class="eyebrow">{{ preparation.evento.tipo }} · {{ preparation.evento.status }}</p>
+          <div class="row items-center q-gutter-xs q-mb-xs">
+            <StatusChip :status="preparation.evento.tipo" />
+            <StatusChip :status="preparation.evento.status" />
+          </div>
           <h1>Preparação da fila</h1>
           <p>
             {{ preparation.evento.nome }} · {{ preparation.evento.ano }} ·
@@ -226,25 +229,27 @@ onMounted(load);
               <QTd key="matricula" :props="props">{{ props.row.matricula }}</QTd>
               <QTd key="nome" :props="props">{{ props.row.nome }}</QTd>
               <QTd key="sede" :props="props"
-                ><QChip dense :color="props.row.possuiSedeAtual ? 'blue-2' : 'orange-2'">{{
-                  props.row.possuiSedeAtual ? 'COM SEDE' : 'SEM SEDE'
-                }}</QChip></QTd
-              >
+                ><StatusChip :status="props.row.possuiSedeAtual ? 'COM_SEDE' : 'SEM_SEDE'"
+              /></QTd>
               <QTd key="pontuacao" :props="props">{{ props.row.pontuacao ?? '—' }}</QTd>
               <QTd key="admissao" :props="props">{{ props.row.dataEntradaPrefeitura }}</QTd>
               <QTd key="nascimento" :props="props">{{ props.row.dataNascimento }}</QTd>
               <QTd key="filhos" :props="props">{{ props.row.numeroFilhos }}</QTd>
               <QTd key="remocao" :props="props"
-                ><QChip dense>{{ props.row.remocao ? 'Sim' : 'Não' }}</QChip></QTd
-              >
+                ><StatusChip
+                  :status="props.row.remocao ? 'REMOCAO' : 'Não habilitada'"
+                  :tone="props.row.remocao ? 'info' : 'neutral'"
+              /></QTd>
               <QTd key="permuta" :props="props"
-                ><QChip dense>{{ props.row.permuta ? 'Sim' : 'Não' }}</QChip></QTd
-              >
+                ><StatusChip
+                  :status="props.row.permuta ? 'PERMUTA' : 'Não habilitada'"
+                  :tone="props.row.permuta ? 'info' : 'neutral'"
+              /></QTd>
               <QTd key="elegibilidade" :props="props"
-                ><QChip dense :color="props.row.elegivel ? 'green-2' : 'red-2'">{{
-                  props.row.elegivel ? 'Elegível' : props.row.motivoInelegibilidade
-                }}</QChip></QTd
-              >
+                ><StatusChip
+                  :status="props.row.elegivel ? 'Elegível' : props.row.motivoInelegibilidade"
+                  :tone="props.row.elegivel ? 'positive' : 'negative'"
+              /></QTd>
             </QTr>
           </template>
         </QTable>
@@ -345,7 +350,7 @@ onMounted(load);
   min-width: 260px;
 }
 .event-search-match {
-  background: #fff4cc;
+  background: var(--fluent-warning-surface);
 }
 @media (max-width: 800px) {
   .event-totals {

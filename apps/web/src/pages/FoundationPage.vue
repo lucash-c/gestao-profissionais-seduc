@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   QAvatar,
-  QBadge,
   QBtn,
   QCard,
   QCardSection,
@@ -58,7 +57,7 @@ async function logout(): Promise<void> {
   <QLayout view="hHh lpR fFf" class="foundation-layout">
     <QHeader class="institutional-header">
       <QToolbar class="foundation-toolbar">
-        <div class="brand-mark" aria-hidden="true">A</div>
+        <div class="brand-mark" aria-hidden="true">S</div>
         <QToolbarTitle>
           <span class="brand-title">SEDUC AMERICANA</span>
           <span class="brand-subtitle">Gestão de Remoção e Vagas</span>
@@ -72,7 +71,6 @@ async function logout(): Promise<void> {
             </span>
           </small>
         </div>
-        <QBadge color="blue-2" text-color="blue-10" label="ETAPA 2" />
         <QBtn
           v-if="authenticatedUser"
           aria-label="Sair do sistema"
@@ -95,10 +93,10 @@ async function logout(): Promise<void> {
               <QAvatar color="primary" text-color="white" icon="foundation" size="52px" />
               <div>
                 <div class="text-overline text-primary">Área autenticada</div>
-                <h1 class="text-h5 q-my-xs">Estrutura administrativa protegida</h1>
+                <h1 class="text-h5 q-my-xs">Sistema administrativo disponível</h1>
                 <p class="text-body2 text-grey-8 q-mb-none">
-                  Autenticação e controle de acesso estão ativos. Os módulos funcionais do negócio
-                  permanecem fora desta etapa.
+                  Autenticação, controle de acesso e módulos operacionais estão protegidos conforme
+                  o perfil da conta.
                 </p>
               </div>
             </QCardSection>
