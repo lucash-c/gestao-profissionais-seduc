@@ -39,13 +39,13 @@ Não existem endpoints de alteração ou exclusão de auditoria.
 
 O módulo usa router, service, schemas e páginas próprios em `/correcao-administrativa`. Somente `ADMINISTRADOR` possui acesso global. Não existe `skipAudit`, `ignoreHistory` nem outro bypass nos endpoints normais.
 
-O fluxo é explícito: informar entidade, registro, campo permitido e novo valor; solicitar a prévia; conferir `ANTES` e `DEPOIS`; confirmar em diálogo. O botão bloqueia submissão duplicada. Um aviso permanente esclarece que a exceção se limita às tabelas de negócio.
+O fluxo é explícito: informar entidade, registro, campo permitido e novo valor; solicitar a prévia; conferir `ANTES` e `DEPOIS`; confirmar em diálogo. O payload submetido à prévia fica congelado para a confirmação, junto com uma versão criptográfica do estado conferido. O botão bloqueia submissão duplicada. Um aviso permanente esclarece que a exceção se limita às tabelas de negócio.
 
 As correções permitidas são uma lista fechada:
 
 - unidade: nome, código INEP e estado ativo;
 - profissional: nome, matrícula, CPF, datas civis de nascimento e ingresso, número de filhos, flags Remoção/Permuta e estado ativo.
 
-A transação bloqueia o registro e mantém todas as constraints do PostgreSQL. Correções não geram `auditoria`, `movimentacao` ou `movimentacao_item`, mas também não removem históricos legítimos existentes.
+A transação bloqueia o registro e, depois do bloqueio, confere se a versão permanece igual à da prévia. Uma alteração concorrente invalida a confirmação com `409` e obriga nova prévia, sem escrita parcial. Todas as constraints do PostgreSQL permanecem ativas. Correções não geram `auditoria`, `movimentacao` ou `movimentacao_item`, mas também não removem históricos legítimos existentes.
 
 Não é permitido pelo módulo: SQL arbitrário; campos inesperados; exclusão física de históricos; alteração de filas, snapshots, posições ou movimentações; criação de sede/exercício incompatível; desativação de constraints. Correções de lotação, exercício ou outro vínculo histórico que demandem regras adicionais permanecem bloqueadas até decisão administrativa formal.

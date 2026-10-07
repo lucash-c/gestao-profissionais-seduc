@@ -4,9 +4,10 @@ import type {
   PaginatedResponse,
 } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
+import { createHash } from 'node:crypto';
 
 import { HttpError } from '../../http/http-error.js';
-import type { AuditQuery, CorrectionInput } from './audit.schemas.js';
+import type { AuditQuery, CorrectionApplyInput, CorrectionInput } from './audit.schemas.js';
 
 const forbiddenKeys =
   /(?:senha|password|token|cookie|secret|credential|credencial|connection|string|hash)/i;
@@ -61,7 +62,7 @@ export async function writeAudit(
 
 export interface AuditServices {
   corrections: {
-    apply(input: CorrectionInput): Promise<AdministrativeCorrectionPreview>;
+    apply(input: CorrectionApplyInput): Promise<AdministrativeCorrectionPreview>;
     preview(input: CorrectionInput): Promise<AdministrativeCorrectionPreview>;
   };
   history: {
@@ -92,6 +93,32 @@ function correctionValues(value: object): Record<string, unknown> {
   );
 }
 
+function correctionVersion(value: Record<string, unknown>, input: CorrectionInput): string {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        entidade: input.entidade,
+        registroId: input.registroId,
+        valores: input.valores,
+        versaoRegistro: value,
+      }),
+    )
+    .digest('hex');
+}
+
+function assertCorrectionVersion(
+  current: Record<string, unknown>,
+  input: CorrectionApplyInput,
+): void {
+  if (correctionVersion(current, input) !== input.versaoEsperada) {
+    throw new HttpError(
+      409,
+      'CORRECTION_PREVIEW_STALE',
+      'O registro ou os valores mudaram desde a prévia. Gere uma nova prévia antes de confirmar.',
+    );
+  }
+}
+
 type AuditPayload = Prisma.AuditoriaGetPayload<{
   include: { usuario: { select: { id: true; login: true; nome: true } } };
 }>;
@@ -116,6 +143,7 @@ export function createPrismaAuditServices(database: DatabaseConnection): AuditSe
         depois: { ...antes, ...input.valores },
         entidade: input.entidade,
         registroId: input.registroId,
+        versao: correctionVersion(antes, input),
       };
     }
     const current = await client.profissional.findUnique({
@@ -129,6 +157,7 @@ export function createPrismaAuditServices(database: DatabaseConnection): AuditSe
       depois: { ...antes, ...input.valores },
       entidade: input.entidade,
       registroId: input.registroId,
+      versao: correctionVersion(antes, input),
     };
   }
 
@@ -146,6 +175,8 @@ export function createPrismaAuditServices(database: DatabaseConnection): AuditSe
                 where: { id: input.registroId },
               });
               if (!before) throw new HttpError(404, 'NOT_FOUND', 'Unidade não encontrada.');
+              const beforeValues = correctionValues(before);
+              assertCorrectionVersion(beforeValues, input);
               const after = await transaction.unidade.update({
                 data: Object.fromEntries(
                   Object.entries(input.valores).filter(([, value]) => value !== undefined),
@@ -154,10 +185,11 @@ export function createPrismaAuditServices(database: DatabaseConnection): AuditSe
                 where: { id: input.registroId },
               });
               return {
-                antes: correctionValues(before),
+                antes: beforeValues,
                 depois: correctionValues(after),
                 entidade: input.entidade,
                 registroId: input.registroId,
+                versao: correctionVersion(correctionValues(after), input),
               };
             }
             await transaction.$queryRaw(
@@ -168,6 +200,8 @@ export function createPrismaAuditServices(database: DatabaseConnection): AuditSe
               where: { id: input.registroId },
             });
             if (!before) throw new HttpError(404, 'NOT_FOUND', 'Profissional não encontrado.');
+            const beforeValues = correctionValues(before);
+            assertCorrectionVersion(beforeValues, input);
             const data = {
               ...Object.fromEntries(
                 Object.entries(input.valores).filter(
@@ -194,10 +228,11 @@ export function createPrismaAuditServices(database: DatabaseConnection): AuditSe
               where: { id: input.registroId },
             });
             return {
-              antes: correctionValues(before),
+              antes: beforeValues,
               depois: correctionValues(after),
               entidade: input.entidade,
               registroId: input.registroId,
+              versao: correctionVersion(correctionValues(after), input),
             };
           });
         } catch (error) {

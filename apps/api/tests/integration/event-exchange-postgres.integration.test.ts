@@ -276,13 +276,31 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
     for (const login of [logins.admin, logins.director, logins.secretary]) {
       await (await authenticated(login)).get(`/eventos/${active.eventId}/permuta`).expect(403);
     }
-    for (const status of ['RASCUNHO', 'ENCERRADO', 'CANCELADO'] as const) {
+    for (const status of ['RASCUNHO', 'CANCELADO'] as const) {
       const event = await exchangeEvent({
         participants: [{ id: pair.first.id }, { id: pair.second.id }],
         status,
       });
       await operator.get(`/eventos/${event.eventId}/permuta`).expect(409);
     }
+    const closed = await exchangeEvent({
+      participants: [
+        { id: pair.first.id, status: 'ATENDIDO' },
+        { id: pair.second.id, status: 'ATENDIDO' },
+      ],
+      status: 'ENCERRADO',
+    });
+    const history = await operator.get(`/eventos/${closed.eventId}/permuta`).expect(200);
+    expect(history.body).toMatchObject({
+      evento: { status: 'ENCERRADO', tipo: 'PERMUTA' },
+      participanteAtual: null,
+      totais: { aguardando: 0, atendidos: 2 },
+    });
+    await operator
+      .get(
+        `/eventos/${closed.eventId}/simular-permuta?segundoParticipanteId=${closed.participantIds[1]}`,
+      )
+      .expect(409);
     for (const type of ['REMOCAO', 'LISTAO'] as const) {
       const event = await exchangeEvent({
         participants: [{ id: pair.first.id }, { id: pair.second.id }],
@@ -290,6 +308,60 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
       });
       const response = await operator.get(`/eventos/${event.eventId}/permuta`).expect(409);
       expect(response.body.error).toBe('EVENT_TYPE_NOT_SUPPORTED_FOR_EXCHANGE');
+    }
+  });
+
+  it('encerra Permuta atendida com auditoria, sem movimento novo, e preserva regressão de tipos', async () => {
+    const pair = await validPair('Encerramento');
+    const pendingEvent = await exchangeEvent({
+      participants: [{ id: pair.first.id }, { id: pair.second.id }],
+    });
+    const operator = await authenticated();
+    const pending = await operator.post(`/eventos/${pendingEvent.eventId}/encerrar`).expect(409);
+    expect(pending.body.error).toBe('EVENT_HAS_PENDING_PARTICIPANTS');
+
+    const closable = await exchangeEvent({
+      participants: [
+        { id: pair.first.id, status: 'ATENDIDO' },
+        { id: pair.second.id, status: 'ATENDIDO' },
+      ],
+    });
+    for (const login of [logins.admin, logins.director, logins.secretary]) {
+      await (await authenticated(login)).post(`/eventos/${closable.eventId}/encerrar`).expect(403);
+    }
+    const movementsBefore = await database.client.movimentacao.count({
+      where: { eventoId: closable.eventId },
+    });
+    const closed = await operator.post(`/eventos/${closable.eventId}/encerrar`).expect(200);
+    expect(closed.body).toMatchObject({ status: 'ENCERRADO', tipo: 'PERMUTA' });
+    expect(new Date(closed.body.dataFim).getTime()).toBeGreaterThanOrEqual(baseTime.getTime());
+    expect(
+      await database.client.movimentacao.count({ where: { eventoId: closable.eventId } }),
+    ).toBe(movementsBefore);
+    const audit = await database.client.auditoria.findFirstOrThrow({
+      where: { acao: 'UPDATE', entidade: 'EVENTO', registroId: closable.eventId },
+    });
+    expect(audit.dadosAnteriores).toMatchObject({ status: 'ATIVO' });
+    expect(audit.dadosNovos).toMatchObject({ status: 'ENCERRADO' });
+    await operator.post(`/eventos/${closable.eventId}/encerrar`).expect(409);
+    await operator.get(`/eventos/${closable.eventId}/permuta`).expect(200);
+    await operator
+      .post(`/eventos/${closable.eventId}/confirmar-permuta`)
+      .send({
+        participanteEsperadoId: closable.participantIds[0],
+        postoOrigemAtualEsperadoId: pair.firstPosition.id,
+        postoOrigemSegundoEsperadoId: pair.secondPosition.id,
+        segundoParticipanteId: closable.participantIds[1],
+      })
+      .expect(409);
+
+    for (const type of ['REMOCAO', 'LISTAO'] as const) {
+      const regression = await exchangeEvent({
+        participants: [{ id: pair.first.id, status: 'ATENDIDO' }],
+        type,
+      });
+      const response = await operator.post(`/eventos/${regression.eventId}/encerrar`).expect(200);
+      expect(response.body).toMatchObject({ status: 'ENCERRADO', tipo: type });
     }
   });
 
@@ -588,6 +660,42 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
         where: { id: event.participantIds[2]! },
       }),
     ).toMatchObject({ status: 'AGUARDANDO' });
+  });
+
+  it('serializa encerramento concorrente com a confirmação da última permuta', async () => {
+    const pair = await validPair('Concorrência encerramento');
+    const event = await exchangeEvent({
+      participants: [{ id: pair.first.id }, { id: pair.second.id }],
+    });
+    const operator = await authenticated();
+    const payload = await simulationAndPayload(operator, event.eventId, event.participantIds[1]!);
+    const [closeResponse, confirmationResponse] = await Promise.all([
+      operator.post(`/eventos/${event.eventId}/encerrar`),
+      operator.post(`/eventos/${event.eventId}/confirmar-permuta`).send(payload),
+    ]);
+
+    expect(confirmationResponse.status).toBe(200);
+    expect([200, 409]).toContain(closeResponse.status);
+    if (closeResponse.status === 409) {
+      expect(closeResponse.body.error).toBe('EVENT_HAS_PENDING_PARTICIPANTS');
+      await operator.post(`/eventos/${event.eventId}/encerrar`).expect(200);
+    }
+    expect(
+      await database.client.evento.findUniqueOrThrow({ where: { id: event.eventId } }),
+    ).toMatchObject({ status: 'ENCERRADO', dataFim: expect.any(Date) });
+    expect(
+      await database.client.eventoParticipante.count({
+        where: { eventoId: event.eventId, status: 'AGUARDANDO' },
+      }),
+    ).toBe(0);
+    expect(await database.client.movimentacao.count({ where: { eventoId: event.eventId } })).toBe(
+      1,
+    );
+    expect(
+      await database.client.auditoria.count({
+        where: { acao: 'UPDATE', entidade: 'EVENTO', registroId: event.eventId },
+      }),
+    ).toBe(1);
   });
 
   it('permite um único vencedor quando dois eventos disputam as mesmas sedes', async () => {

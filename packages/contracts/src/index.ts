@@ -483,6 +483,7 @@ export interface AdministrativeCorrectionPreview {
   registroId: string;
   antes: Record<string, unknown>;
   depois: Record<string, unknown>;
+  versao: string;
 }
 
 export interface PublicEventChoice {

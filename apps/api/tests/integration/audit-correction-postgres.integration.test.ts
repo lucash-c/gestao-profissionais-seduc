@@ -219,6 +219,11 @@ describeWithPostgres('Etapa 9 audit and administrative correction on PostgreSQL'
       .set('Origin', 'http://localhost:9000')
       .send(payload)
       .expect(403);
+    await operator
+      .post('/correcao-administrativa/aplicar')
+      .set('Origin', 'http://localhost:9000')
+      .send({ ...payload, versaoEsperada: 'a'.repeat(64) })
+      .expect(403);
     const preview = await admin
       .post('/correcao-administrativa/previsualizar')
       .set('Origin', 'http://localhost:9000')
@@ -226,39 +231,103 @@ describeWithPostgres('Etapa 9 audit and administrative correction on PostgreSQL'
       .expect(200);
     expect(preview.body.antes.nome).toBe(unit.nome);
     expect(preview.body.depois.nome).toBe(`Corrigida ${suffix}`);
+    const changedPayload = await admin
+      .post('/correcao-administrativa/aplicar')
+      .set('Origin', 'http://localhost:9000')
+      .send({
+        ...payload,
+        valores: { nome: `Não revisada ${suffix}` },
+        versaoEsperada: preview.body.versao,
+      })
+      .expect(409);
+    expect(changedPayload.body.error).toBe('CORRECTION_PREVIEW_STALE');
     await admin
       .post('/correcao-administrativa/aplicar')
       .set('Origin', 'http://localhost:9000')
-      .send(payload)
+      .send({ ...payload, versaoEsperada: preview.body.versao })
       .expect(200);
     expect(await database.client.auditoria.count()).toBe(beforeAudit);
     expect(await database.client.movimentacao.count()).toBe(beforeMovements);
     await admin
       .post('/correcao-administrativa/aplicar')
       .set('Origin', 'http://localhost:9000')
-      .send({ ...payload, valores: { posicao: 99 } })
+      .send({ ...payload, valores: { posicao: 99 }, versaoEsperada: preview.body.versao })
       .expect(400);
     await admin.delete('/auditoria/qualquer').set('Origin', 'http://localhost:9000').expect(404);
   });
 
-  it('serializes concurrent corrections and preserves a complete committed value', async () => {
+  it('invalidates a preview after a concurrent audited update without correction writes', async () => {
+    const admin = await authenticated(login.admin);
+    const unit = await createUnit(admin, `Prévia obsoleta ${suffix}`);
+    const payload = {
+      entidade: 'UNIDADE',
+      registroId: unit.id,
+      valores: { nome: `Correção obsoleta ${suffix}` },
+    };
+    const preview = await admin
+      .post('/correcao-administrativa/previsualizar')
+      .set('Origin', 'http://localhost:9000')
+      .send(payload)
+      .expect(200);
+    const beforeAudit = await database.client.auditoria.count();
+    const beforeMovements = await database.client.movimentacao.count();
+    const concurrentName = `Atualização concorrente ${suffix}`;
+    await admin
+      .patch(`/unidades/${unit.id}`)
+      .set('Origin', 'http://localhost:9000')
+      .send({ nome: concurrentName })
+      .expect(200);
+
+    const stale = await admin
+      .post('/correcao-administrativa/aplicar')
+      .set('Origin', 'http://localhost:9000')
+      .send({ ...payload, versaoEsperada: preview.body.versao })
+      .expect(409);
+    expect(stale.body.error).toBe('CORRECTION_PREVIEW_STALE');
+    expect(
+      await database.client.unidade.findUniqueOrThrow({ where: { id: unit.id } }),
+    ).toMatchObject({ nome: concurrentName });
+    expect(await database.client.auditoria.count()).toBe(beforeAudit + 1);
+    expect(await database.client.movimentacao.count()).toBe(beforeMovements);
+  });
+
+  it('serializes concurrent corrections and accepts only the preview that remains current', async () => {
     const admin = await authenticated(login.admin);
     const unit = await createUnit(admin, `Concorrência ${suffix}`);
+    const firstPayload = {
+      entidade: 'UNIDADE',
+      registroId: unit.id,
+      valores: { nome: `Primeira ${suffix}` },
+    };
+    const secondPayload = {
+      entidade: 'UNIDADE',
+      registroId: unit.id,
+      valores: { nome: `Segunda ${suffix}` },
+    };
+    const [firstPreview, secondPreview] = await Promise.all([
+      admin
+        .post('/correcao-administrativa/previsualizar')
+        .set('Origin', 'http://localhost:9000')
+        .send(firstPayload),
+      admin
+        .post('/correcao-administrativa/previsualizar')
+        .set('Origin', 'http://localhost:9000')
+        .send(secondPayload),
+    ]);
+    expect(firstPreview.status).toBe(200);
+    expect(secondPreview.status).toBe(200);
     const results = await Promise.all([
       admin
         .post('/correcao-administrativa/aplicar')
         .set('Origin', 'http://localhost:9000')
-        .send({
-          entidade: 'UNIDADE',
-          registroId: unit.id,
-          valores: { nome: `Primeira ${suffix}` },
-        }),
+        .send({ ...firstPayload, versaoEsperada: firstPreview.body.versao }),
       admin
         .post('/correcao-administrativa/aplicar')
         .set('Origin', 'http://localhost:9000')
-        .send({ entidade: 'UNIDADE', registroId: unit.id, valores: { nome: `Segunda ${suffix}` } }),
+        .send({ ...secondPayload, versaoEsperada: secondPreview.body.versao }),
     ]);
-    expect(results.map(({ status }) => status)).toEqual([200, 200]);
+    expect(results.map(({ status }) => status).sort()).toEqual([200, 409]);
+    expect(results.map(({ body }) => body.error)).toContain('CORRECTION_PREVIEW_STALE');
     const current = await database.client.unidade.findUniqueOrThrow({ where: { id: unit.id } });
     expect([`Primeira ${suffix}`, `Segunda ${suffix}`]).toContain(current.nome);
   });

@@ -227,6 +227,10 @@ function assertSupportedType(event: EventPayload): void {
 
 function assertActiveEvent(event: EventPayload): void {
   assertSupportedType(event);
+  assertClosableActiveEvent(event);
+}
+
+function assertClosableActiveEvent(event: EventPayload): void {
   if (event.status === 'RASCUNHO') {
     throw new HttpError(409, 'EVENT_NOT_ACTIVE', 'O evento ainda não foi iniciado.');
   }
@@ -746,7 +750,7 @@ export function createPrismaEventOperationServices(
         return await client.$transaction(async (transaction) => {
           await lockEvent(transaction, id);
           const event = await loadEvent(transaction, id);
-          assertActiveEvent(event);
+          assertClosableActiveEvent(event);
           const pending = await transaction.eventoParticipante.count({
             where: { eventoId: id, status: 'AGUARDANDO' },
           });

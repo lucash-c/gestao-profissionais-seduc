@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EventExchangePage from '@/pages/EventExchangePage.vue';
 
 const mocks = vi.hoisted(() => ({
+  close: vi.fn(),
   confirmExchange: vi.fn(),
   exchangeCentral: vi.fn(),
   simulateExchange: vi.fn(),
@@ -180,6 +181,11 @@ beforeEach(() => {
   mocks.exchangeCentral.mockResolvedValue(structuredClone(central));
   mocks.simulateExchange.mockResolvedValue(structuredClone(simulation));
   mocks.confirmExchange.mockResolvedValue(structuredClone(confirmationResult));
+  mocks.close.mockResolvedValue({
+    ...structuredClone(central.evento),
+    dataFim: '2026-10-08T12:00:00.000Z',
+    status: 'ENCERRADO',
+  });
 });
 
 afterEach(() => {
@@ -198,6 +204,7 @@ describe('Etapa 8 frontend da Permuta', () => {
     expect(wrapper.get('[data-testid="exchange-history"]').text()).toContain(
       'Nenhuma permuta registrada',
     );
+    expect(wrapper.get('[data-testid="close-exchange"]').attributes('disabled')).toBeDefined();
     wrapper.unmount();
   });
 
@@ -238,6 +245,13 @@ describe('Etapa 8 frontend da Permuta', () => {
       'Nenhum participante aguardando',
     );
     expect(wrapper.get('[data-testid="exchange-history"]').text()).toContain('Ana Atual');
+    const close = wrapper.get('[data-testid="close-exchange"]');
+    expect(close.attributes('disabled')).toBeUndefined();
+    await close.trigger('click');
+    await flushPromises();
+    expect(mocks.close).toHaveBeenCalledWith(EVENT_ID);
+    expect(wrapper.text()).toContain('Evento encerrado');
+    expect(wrapper.findComponent(QSelect).props('disable')).toBe(true);
     wrapper.unmount();
   });
 

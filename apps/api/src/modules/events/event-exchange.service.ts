@@ -154,7 +154,7 @@ function mapMovement(movement: ExchangeMovementPayload): EventExchangeMovement {
   };
 }
 
-function assertExchangeEvent(event: EventPayload): void {
+function assertExchangeType(event: EventPayload): void {
   if (event.tipo !== 'PERMUTA') {
     throw new HttpError(
       409,
@@ -162,6 +162,10 @@ function assertExchangeEvent(event: EventPayload): void {
       'Este fluxo opera somente eventos de Permuta.',
     );
   }
+}
+
+function assertExchangeEvent(event: EventPayload): void {
+  assertExchangeType(event);
   if (event.status === 'RASCUNHO') {
     throw new HttpError(409, 'EVENT_NOT_ACTIVE', 'O evento ainda não foi iniciado.');
   }
@@ -380,7 +384,13 @@ async function buildCentral(
   id: string,
 ): Promise<EventExchangeCentralRecord> {
   const event = await loadEvent(transaction, id);
-  assertExchangeEvent(event);
+  assertExchangeType(event);
+  if (event.status === 'RASCUNHO') {
+    throw new HttpError(409, 'EVENT_NOT_ACTIVE', 'O evento ainda não foi iniciado.');
+  }
+  if (event.status === 'CANCELADO') {
+    throw new HttpError(409, 'EVENT_CANCELLED', 'O evento está cancelado.');
+  }
   const queue = await loadQueue(transaction, id);
   const mapped = queue.map((participant) => mapParticipant(participant, event.cargoFuncao.nome));
   const currentPayload = queue.find(({ status }) => status === 'AGUARDANDO') ?? null;

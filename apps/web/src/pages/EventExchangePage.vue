@@ -28,6 +28,7 @@ const simulation = ref<EventExchangeSimulation | null>(null);
 const loading = ref(true);
 const simulating = ref(false);
 const confirming = ref(false);
+const closing = ref(false);
 const error = ref('');
 const dialogOpen = ref(false);
 
@@ -94,6 +95,20 @@ async function confirm(): Promise<void> {
   }
 }
 
+async function closeEvent(): Promise<void> {
+  if (!central.value || closing.value || central.value.totais.aguardando > 0) return;
+  closing.value = true;
+  error.value = '';
+  try {
+    const event = await eventApi.close(eventId.value);
+    central.value = { ...central.value, evento: event };
+  } catch (closeError) {
+    error.value = closeError instanceof Error ? closeError.message : 'Não foi possível encerrar.';
+  } finally {
+    closing.value = false;
+  }
+}
+
 onMounted(load);
 </script>
 
@@ -110,6 +125,13 @@ onMounted(load);
       </div>
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="exchange-error">
         {{ error }}
+      </QBanner>
+      <QBanner
+        v-if="central.evento.status === 'ENCERRADO'"
+        class="bg-blue-1 text-primary"
+        data-testid="exchange-readonly"
+      >
+        Evento encerrado. O histórico da Permuta está disponível somente para consulta.
       </QBanner>
 
       <section class="exchange-grid">
@@ -139,6 +161,7 @@ onMounted(load);
               map-options
               label="Selecionar participante da fila"
               :options="candidateOptions"
+              :disable="central.evento.status !== 'ATIVO'"
             />
             <p v-if="selected">
               Sede B: {{ selected.sedeAtual?.unidade.nome ?? 'Sem sede ativa' }} ·
@@ -149,7 +172,13 @@ onMounted(load);
             <QBtn
               color="primary"
               label="Simular Permuta"
-              :disable="!selected || simulating || confirming"
+              :disable="
+                central.evento.status !== 'ATIVO' ||
+                !selected ||
+                simulating ||
+                confirming ||
+                closing
+              "
               :loading="simulating"
               @click="simulate"
             />
@@ -178,6 +207,19 @@ onMounted(load);
           <p v-if="central.ultimasPermutas.length === 0">Nenhuma permuta registrada.</p>
         </QCardSection>
       </QCard>
+
+      <div class="q-mt-md row justify-end">
+        <QBtn
+          data-testid="close-exchange"
+          color="negative"
+          label="Encerrar Permuta"
+          :disable="
+            central.evento.status !== 'ATIVO' || central.totais.aguardando > 0 || confirming
+          "
+          :loading="closing"
+          @click="closeEvent"
+        />
+      </div>
 
       <QDialog v-model="dialogOpen" persistent>
         <QCard v-if="simulation" class="registry-dialog" data-testid="exchange-dialog">
@@ -209,7 +251,12 @@ onMounted(load);
               data-testid="confirm-exchange"
               color="primary"
               label="Confirmar Permuta"
-              :disable="confirming || simulation.impedimentos.length > 0"
+              :disable="
+                central.evento.status !== 'ATIVO' ||
+                confirming ||
+                closing ||
+                simulation.impedimentos.length > 0
+              "
               :loading="confirming"
               @click="confirm"
             />

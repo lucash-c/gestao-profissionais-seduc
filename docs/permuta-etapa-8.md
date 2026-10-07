@@ -37,3 +37,5 @@ Qualquer falha desfaz a operação inteira. Reenvios, confirmações simultânea
 ## Histórico
 
 As lotações anteriores são preservadas com data de encerramento. A movimentação registra usuário e data/hora no servidor, as duas origens e os dois destinos. A central exibe a fila congelada e as últimas Permutas concluídas.
+
+Quando não resta participante `AGUARDANDO`, o `OPERADOR` pode encerrar a Permuta pelo mesmo endpoint de encerramento dos demais eventos. A transação bloqueia o evento, confere novamente a fila, define `ENCERRADO` e a data final do servidor e registra a mudança na auditoria técnica. O encerramento não cria movimentação. Eventos encerrados permanecem consultáveis na central de Permuta em modo somente leitura e não aceitam novas confirmações.

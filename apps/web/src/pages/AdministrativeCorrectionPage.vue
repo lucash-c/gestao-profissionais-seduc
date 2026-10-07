@@ -20,6 +20,7 @@ const registroId = ref('');
 const field = ref('nomeCompleto');
 const value = ref('');
 const preview = ref<AdministrativeCorrectionPreview | null>(null);
+const reviewedPayload = ref<(ReturnType<typeof payload> & { versaoEsperada: string }) | null>(null);
 const dialogOpen = ref(false);
 const submitting = ref(false);
 const error = ref('');
@@ -56,21 +57,30 @@ async function review(): Promise<void> {
   error.value = '';
   success.value = '';
   try {
-    preview.value = await auditApi.previewCorrection(payload());
+    const request = payload();
+    preview.value = await auditApi.previewCorrection(request);
+    reviewedPayload.value = structuredClone({
+      ...request,
+      versaoEsperada: preview.value.versao,
+    });
     dialogOpen.value = true;
   } catch (reviewError) {
     error.value = reviewError instanceof Error ? reviewError.message : 'Falha ao validar correção.';
   }
 }
 async function apply(): Promise<void> {
-  if (submitting.value) return;
+  if (submitting.value || !reviewedPayload.value) return;
   submitting.value = true;
   error.value = '';
   try {
-    preview.value = await auditApi.applyCorrection(payload());
+    preview.value = await auditApi.applyCorrection(reviewedPayload.value);
+    reviewedPayload.value = null;
     dialogOpen.value = false;
     success.value = 'Correção administrativa aplicada.';
   } catch (applyError) {
+    dialogOpen.value = false;
+    preview.value = null;
+    reviewedPayload.value = null;
     error.value = applyError instanceof Error ? applyError.message : 'Falha ao aplicar correção.';
   } finally {
     submitting.value = false;

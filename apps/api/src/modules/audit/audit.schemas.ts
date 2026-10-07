@@ -45,22 +45,32 @@ const professionalCorrectionFields = z
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'Informe ao menos um campo.');
 
-export const correctionSchema = z.discriminatedUnion('entidade', [
-  z
-    .object({
-      entidade: z.literal('UNIDADE'),
-      registroId: z.string().uuid(),
-      valores: unitCorrectionFields,
-    })
-    .strict(),
-  z
-    .object({
-      entidade: z.literal('PROFISSIONAL'),
-      registroId: z.string().uuid(),
-      valores: professionalCorrectionFields,
-    })
+const unitCorrectionSchema = z
+  .object({
+    entidade: z.literal('UNIDADE'),
+    registroId: z.string().uuid(),
+    valores: unitCorrectionFields,
+  })
+  .strict();
+const professionalCorrectionSchema = z
+  .object({
+    entidade: z.literal('PROFISSIONAL'),
+    registroId: z.string().uuid(),
+    valores: professionalCorrectionFields,
+  })
+  .strict();
+
+export const correctionPreviewSchema = z.discriminatedUnion('entidade', [
+  unitCorrectionSchema,
+  professionalCorrectionSchema,
+]);
+export const correctionApplySchema = z.discriminatedUnion('entidade', [
+  unitCorrectionSchema.extend({ versaoEsperada: z.string().regex(/^[a-f0-9]{64}$/) }).strict(),
+  professionalCorrectionSchema
+    .extend({ versaoEsperada: z.string().regex(/^[a-f0-9]{64}$/) })
     .strict(),
 ]);
 
 export type AuditQuery = z.infer<typeof auditQuerySchema>;
-export type CorrectionInput = z.infer<typeof correctionSchema>;
+export type CorrectionInput = z.infer<typeof correctionPreviewSchema>;
+export type CorrectionApplyInput = z.infer<typeof correctionApplySchema>;

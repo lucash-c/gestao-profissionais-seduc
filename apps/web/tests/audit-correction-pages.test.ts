@@ -19,6 +19,7 @@ const preview = {
   depois: { id: RECORD_ID, nomeCompleto: 'Nome corrigido' },
   entidade: 'PROFISSIONAL' as const,
   registroId: RECORD_ID,
+  versao: 'a'.repeat(64),
 };
 const audit = {
   acao: 'UPDATE' as const,
@@ -115,6 +116,26 @@ describe('Etapa 9 frontend administrativo', () => {
     finish(preview);
     await flushPromises();
     expect(wrapper.text()).toContain('Correção administrativa aplicada');
+    wrapper.unmount();
+  });
+
+  it('confirma exatamente o payload congelado na prévia, mesmo após alteração do formulário', async () => {
+    const wrapper = await mountPage(AdministrativeCorrectionPage);
+    await wrapper.get('[data-testid="correction-record"]').setValue(RECORD_ID);
+    await wrapper.get('[data-testid="correction-value"]').setValue('Nome corrigido');
+    await wrapper.get('[data-testid="review-correction"]').trigger('click');
+    await flushPromises();
+
+    await wrapper.get('[data-testid="correction-value"]').setValue('Valor posterior');
+    await wrapper.get('[data-testid="confirm-correction"]').trigger('click');
+    await flushPromises();
+
+    expect(mocks.applyCorrection).toHaveBeenCalledWith({
+      entidade: 'PROFISSIONAL',
+      registroId: RECORD_ID,
+      valores: { nomeCompleto: 'Nome corrigido' },
+      versaoEsperada: preview.versao,
+    });
     wrapper.unmount();
   });
 });
