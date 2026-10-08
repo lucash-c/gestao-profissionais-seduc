@@ -33,6 +33,7 @@ const cargos = ref<LookupRecord[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
+const catalogError = ref('');
 const page = ref(1);
 const totalPages = ref(1);
 const dialogOpen = ref(false);
@@ -148,12 +149,12 @@ async function confirmDelete(password: string): Promise<void> {
 }
 
 onMounted(async () => {
-  try {
-    cargos.value = await registryApi.listCargos();
-  } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar cargos.';
+  const [cargoResult] = await Promise.allSettled([registryApi.listCargos(), load()]);
+  if (cargoResult.status === 'fulfilled') {
+    cargos.value = cargoResult.value;
+  } else {
+    catalogError.value = 'Não foi possível carregar os cargos para criar ou editar eventos.';
   }
-  await load();
 });
 </script>
 
@@ -163,6 +164,9 @@ onMounted(async () => {
       <div>
         <p class="eyebrow">Sessões</p>
         <h1>Eventos</h1>
+        <p v-if="!isOperator" class="heading-note">
+          A criação e a edição de eventos são realizadas por usuários com perfil Operador.
+        </p>
       </div>
       <QBtn
         v-if="isOperator"
@@ -176,6 +180,13 @@ onMounted(async () => {
     <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="events-error">{{
       error
     }}</QBanner>
+    <QBanner
+      v-if="catalogError"
+      class="bg-amber-1 text-warning q-mb-md"
+      data-testid="events-catalog-error"
+    >
+      {{ catalogError }} Atualize a página para tentar novamente.
+    </QBanner>
     <QCard flat bordered>
       <div v-if="loading" class="registry-state" data-testid="events-loading">
         <QSpinner color="primary" size="36px" /> Carregando eventos…
@@ -286,6 +297,9 @@ onMounted(async () => {
             data-testid="event-dialog-error"
             >{{ dialogError }}</QBanner
           >
+          <QBanner v-if="catalogError" class="bg-amber-1 text-warning full-span">
+            {{ catalogError }}
+          </QBanner>
           <QInput
             v-model="form.nome"
             outlined
@@ -320,6 +334,7 @@ onMounted(async () => {
             option-value="id"
             :options="cargos"
             label="Cargo/função *"
+            :disable="Boolean(catalogError)"
             :error="Boolean(issue('cargoFuncaoId'))"
             :error-message="issue('cargoFuncaoId')"
           />

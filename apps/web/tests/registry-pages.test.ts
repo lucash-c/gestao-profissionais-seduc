@@ -427,8 +427,9 @@ describe('Etapa 3 Quasar pages', () => {
     await flushPromises();
     const history = document.body.querySelector('[data-testid="readonly-placement"]');
     expect(history?.textContent).toContain('não podem ser alterados');
-    expect(history?.textContent).toContain('EMEF Teste (SEDE)');
-    expect(history?.textContent).toContain('EMEF Segunda (SEDE)');
+    expect(history?.textContent).toContain('Exercícios temporários atuais');
+    expect(history?.textContent).toContain('Nenhum. A atividade atual ocorre na própria sede.');
+    expect(history?.textContent).not.toContain('Sem exercício');
     expect(history?.textContent).toContain('Licença médica');
     expect(history?.textContent).toContain('Consultar históricos');
     expect(history?.querySelector('input')).toBeNull();
@@ -463,6 +464,7 @@ describe('Etapa 3 Quasar pages', () => {
     await users.get('button[aria-label="Redefinir senha"]').trigger('click');
     await flushPromises();
     const dialog = document.body.querySelector('[data-testid="password-dialog"]')!;
+    expect(dialog.textContent).toContain('Use uma senha entre 12 e 72 caracteres');
     const inputs = dialog.querySelectorAll('input');
     inputs[0]!.value = 'a'.repeat(11);
     inputs[0]!.dispatchEvent(new Event('input'));
@@ -494,6 +496,29 @@ describe('Etapa 3 Quasar pages', () => {
     await flushPromises();
     expect(mocks.resetPassword).toHaveBeenCalledWith(RECORD_ID, 'a'.repeat(12));
     users.unmount();
+  });
+
+  it('mantém o erro específico de redefinição de senha dentro do modal', async () => {
+    mocks.resetPassword.mockRejectedValueOnce(new Error('A senha não pode repetir a anterior.'));
+    const users = mountPage(UsersPage);
+    await flushPromises();
+    await users.get('button[aria-label="Redefinir senha"]').trigger('click');
+    await flushPromises();
+    const inputs = document.body
+      .querySelector('[data-testid="password-dialog"]')!
+      .querySelectorAll('input');
+    for (const input of inputs) {
+      input.value = 'uma-senha-segura';
+      input.dispatchEvent(new Event('input'));
+    }
+    await flushPromises();
+    (document.body.querySelector('[data-testid="save-password"]') as HTMLElement).click();
+    await flushPromises();
+
+    expect(document.body.querySelector('[data-testid="password-error"]')?.textContent).toContain(
+      'A senha não pode repetir a anterior.',
+    );
+    expect(users.find('[data-testid="users-error"]').exists()).toBe(false);
   });
 
   it('pagina Pontuações usando a resposta paginada da API', async () => {
@@ -704,6 +729,11 @@ describe('Etapa 4 Quasar pages', () => {
     await flushPromises();
     expect(admin.text()).toContain('Vaga sem sede');
     expect(admin.text()).toContain('titular afastado');
+    expect(admin.text()).toContain('Sem ocupante no momento');
+    expect(admin.get('[data-testid="positions-summary"]').text()).toContain('1 posto encontrado');
+    expect(mocks.listWorkPositions).toHaveBeenCalledWith(
+      expect.not.objectContaining({ ativo: true }),
+    );
     await admin.get('[data-testid="position-status-action"]').trigger('click');
     await flushPromises();
     expect(document.body.querySelector('[data-testid="position-status-dialog"]')).not.toBeNull();

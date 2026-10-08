@@ -58,6 +58,7 @@ const form = reactive({
 });
 const profileOptions = USER_PROFILES.map((value) => ({ label: value, value }));
 const resetPasswordValidation = computed(() => {
+  if (!resetPassword.value) return '';
   if (resetPassword.value.length < 12) return 'A senha deve possuir ao menos 12 caracteres.';
   if (resetPassword.value.length > 72) return 'A senha deve possuir no máximo 72 caracteres.';
   return '';
@@ -435,8 +436,20 @@ watch(
         <ModalHeader title="Redefinir senha" :close-disabled="saving" @close="closeReset" />
         <QCardSection class="modal-scroll-body">
           <p>{{ resetTarget?.nome }}</p>
+          <QBanner class="password-guidance q-mb-md">
+            Use uma senha entre 12 e 72 caracteres. Ao confirmar, as sessões ativas deste usuário
+            serão revogadas.
+          </QBanner>
+          <QBanner
+            v-if="resetError"
+            class="bg-red-1 text-negative q-mb-md"
+            data-testid="password-error"
+          >
+            {{ resetError }}
+          </QBanner>
           <QInput
             v-model="resetPassword"
+            autocomplete="new-password"
             outlined
             :type="showResetPassword ? 'text' : 'password'"
             label="Nova senha"
@@ -455,6 +468,7 @@ watch(
           </QInput>
           <QInput
             v-model="resetPasswordConfirmation"
+            autocomplete="new-password"
             outlined
             :type="showResetPassword ? 'text' : 'password'"
             label="Confirmar nova senha"
@@ -462,12 +476,6 @@ watch(
             :error-message="resetConfirmationValidation"
           /> </QCardSection
         ><QCardActions align="right">
-          <QBanner
-            v-if="resetError"
-            class="bg-red-1 text-negative full-width"
-            data-testid="password-error"
-            >{{ resetError }}</QBanner
-          >
           <QBtn flat label="Cancelar" :disable="saving" @click="closeReset" /><QBtn
             data-testid="save-password"
             color="primary"

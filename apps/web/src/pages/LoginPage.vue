@@ -1,15 +1,5 @@
 <script setup lang="ts">
-import {
-  QBtn,
-  QCard,
-  QCardSection,
-  QForm,
-  QIcon,
-  QInput,
-  QLayout,
-  QPage,
-  QPageContainer,
-} from 'quasar';
+import { QBtn, QCard, QCardSection, QForm, QInput, QLayout, QPage, QPageContainer } from 'quasar';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -91,8 +81,7 @@ async function submit(): Promise<void> {
 
           <QCard flat bordered class="login-card">
             <QCardSection>
-              <QIcon name="shield" color="primary" size="32px" aria-hidden="true" />
-              <h2 class="text-h5 q-mt-md q-mb-xs">Entrar</h2>
+              <h2 class="text-h5 q-mt-none q-mb-xs">Entrar</h2>
               <p class="text-body2 text-grey-7 q-mt-none q-mb-lg">
                 Use seu login administrativo ou e-mail.
               </p>
@@ -122,7 +111,8 @@ async function submit(): Promise<void> {
                   data-testid="login-countdown"
                   role="status"
                 >
-                  Tente novamente em {{ retryTime }}
+                  Muitas tentativas. Por segurança, aguarde {{ retryTime }} antes de tentar
+                  novamente.
                 </p>
 
                 <p
@@ -145,10 +135,7 @@ async function submit(): Promise<void> {
                   type="submit"
                   unelevated
                 />
-                <p class="security-note">
-                  <QIcon name="lock" aria-hidden="true" /> Acesso restrito a contas administrativas
-                  autorizadas.
-                </p>
+                <p class="security-note">Acesso restrito a contas administrativas autorizadas.</p>
               </QForm>
             </QCardSection>
           </QCard>

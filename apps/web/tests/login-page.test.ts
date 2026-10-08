@@ -83,6 +83,7 @@ describe('LoginPage', () => {
     await wrapper.get('[data-testid="login-form"]').trigger('submit');
     await flushPromises();
     expect(wrapper.get('[data-testid="login-countdown"]').text()).toContain('00:02');
+    expect(wrapper.get('[data-testid="login-countdown"]').text()).toContain('Por segurança');
     expect(wrapper.get('[data-testid="login-submit"]').attributes('disabled')).toBeDefined();
     expect(wrapper.get('[data-testid="login-identifier"]').attributes('disabled')).toBeUndefined();
     await vi.advanceTimersByTimeAsync(2_000);

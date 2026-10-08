@@ -47,6 +47,7 @@ const editing = ref<ProfessionalRecord | null>(null);
 const deleting = ref<ProfessionalRecord | null>(null);
 const deleteError = ref('');
 const dialogError = ref('');
+const relationshipsError = ref('');
 const saveFailure = ref<unknown>(null);
 const relationships = ref<ProfessionalRelationshipsRecord | null>(null);
 const absenceCreateOpen = ref(false);
@@ -69,6 +70,18 @@ const canEdit = computed(() =>
   ['ADMINISTRADOR', 'DIRETOR', 'SECRETARIO'].includes(profile.value ?? ''),
 );
 const canManageAbsences = canEdit;
+const currentExercises = computed(
+  () => relationships.value?.exerciciosAtuais ?? editing.value?.exerciciosAtuais ?? [],
+);
+const functionalSituation = computed(() => {
+  if (relationships.value?.afastamentosAtivos.length) return 'Afastado';
+  return editing.value?.situacaoFuncional.descricao ?? '—';
+});
+const currentExerciseEmptyMessage = computed(() =>
+  editing.value?.situacaoFuncional.tipo === 'PROPRIA_SEDE'
+    ? 'Nenhum. A atividade atual ocorre na própria sede.'
+    : 'Nenhum exercício temporário ativo.',
+);
 const formValid = computed(() =>
   Boolean(
     form.matricula.trim() &&
@@ -185,6 +198,7 @@ function resetForm(): void {
 
 function openCreate(): void {
   dialogError.value = '';
+  relationshipsError.value = '';
   saveFailure.value = null;
   editing.value = null;
   relationships.value = null;
@@ -193,6 +207,7 @@ function openCreate(): void {
 }
 async function openEdit(row: ProfessionalRecord): Promise<void> {
   dialogError.value = '';
+  relationshipsError.value = '';
   saveFailure.value = null;
   editing.value = row;
   relationships.value = null;
@@ -222,7 +237,10 @@ async function openEdit(row: ProfessionalRecord): Promise<void> {
   try {
     relationships.value = await registryApi.getProfessionalRelationships(row.id);
   } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar vínculos.';
+    relationshipsError.value =
+      loadError instanceof Error
+        ? loadError.message
+        : 'Falha ao carregar vínculos do profissional.';
   }
 }
 
@@ -505,209 +523,220 @@ onMounted(load);
           :close-disabled="saving"
           @close="dialogOpen = false"
         />
-        <QCardSection class="modal-scroll-body">
-          <div v-if="editing" class="readonly-history" data-testid="readonly-placement">
-            <p><strong>Situação funcional:</strong> {{ editing.situacaoFuncional.descricao }}</p>
-            <span
-              ><strong>Sede atual:</strong> {{ editing.sedeAtual?.unidadeNome ?? 'Sem sede' }}</span
-            >
-            <div>
-              <strong>Exercícios atuais:</strong>
-              <span v-if="editing.exerciciosAtuais.length === 0"> Sem exercício</span>
-              <ul v-else class="q-my-xs">
-                <li v-for="exercise in editing.exerciciosAtuais" :key="exercise.postoId">
-                  {{ exercise.unidadeNome }} ({{ exercise.tipo }})
-                </li>
-              </ul>
-            </div>
-            <div>
-              <div class="row items-center justify-between">
-                <strong>Afastamentos ativos:</strong>
-                <QBtn
-                  v-if="canManageAbsences"
-                  flat
-                  dense
-                  icon="add"
-                  label="Registrar afastamento"
-                  data-testid="register-absence"
-                  @click="openAbsenceCreate"
-                />
+        <div class="modal-scroll-content">
+          <QCardSection>
+            <div v-if="editing" class="readonly-history" data-testid="readonly-placement">
+              <p><strong>Situação funcional:</strong> {{ functionalSituation }}</p>
+              <span
+                ><strong>Sede atual:</strong>
+                {{ editing.sedeAtual?.unidadeNome ?? 'Sem sede' }}</span
+              >
+              <div>
+                <strong>Exercícios temporários atuais:</strong>
+                <span v-if="currentExercises.length === 0" class="relationship-inline-value">
+                  {{ currentExerciseEmptyMessage }}
+                </span>
+                <ul v-else class="q-my-xs">
+                  <li v-for="exercise in currentExercises" :key="exercise.postoId">
+                    {{ exercise.unidadeNome }} ({{ exercise.tipo }})
+                  </li>
+                </ul>
               </div>
-              <span v-if="!relationships?.afastamentosAtivos.length"> Nenhum</span>
-              <ul v-else class="q-my-xs">
-                <li v-for="absence in relationships.afastamentosAtivos" :key="absence.id">
-                  {{ absence.tipo }} — desde {{ new Date(absence.dataInicio).toLocaleDateString() }}
-                  <span v-if="absence.observacoes"> — {{ absence.observacoes }}</span>
+              <QBanner v-if="relationshipsError" class="bg-amber-1 text-warning q-mt-md">
+                {{ relationshipsError }} Os dados cadastrais continuam disponíveis para edição.
+              </QBanner>
+              <div>
+                <div class="row items-center justify-between">
+                  <strong>Afastamentos ativos:</strong>
                   <QBtn
                     v-if="canManageAbsences"
                     flat
                     dense
-                    color="primary"
-                    label="Encerrar"
-                    data-testid="end-absence"
-                    @click="openAbsenceEnd(absence)"
+                    icon="add"
+                    label="Registrar afastamento"
+                    data-testid="register-absence"
+                    @click="openAbsenceCreate"
                   />
-                </li>
-              </ul>
+                </div>
+                <span v-if="!relationships?.afastamentosAtivos.length"> Nenhum</span>
+                <ul v-else class="q-my-xs">
+                  <li v-for="absence in relationships.afastamentosAtivos" :key="absence.id">
+                    {{ absence.tipo }} — desde
+                    {{ new Date(absence.dataInicio).toLocaleDateString() }}
+                    <span v-if="absence.observacoes"> — {{ absence.observacoes }}</span>
+                    <QBtn
+                      v-if="canManageAbsences"
+                      flat
+                      dense
+                      color="primary"
+                      label="Encerrar"
+                      data-testid="end-absence"
+                      @click="openAbsenceEnd(absence)"
+                    />
+                  </li>
+                </ul>
+              </div>
+              <details v-if="relationships" data-testid="professional-history">
+                <summary>Consultar históricos</summary>
+                <p><strong>Histórico de sede</strong></p>
+                <ul>
+                  <li v-for="placement in relationships.historicoSedes" :key="placement.id">
+                    {{ placement.unidadeNome }} —
+                    {{ new Date(placement.dataInicio).toLocaleDateString() }}
+                    até
+                    {{
+                      placement.dataFim ? new Date(placement.dataFim).toLocaleDateString() : 'atual'
+                    }}
+                  </li>
+                </ul>
+                <p><strong>Histórico de exercícios</strong></p>
+                <ul>
+                  <li v-for="exercise in relationships.historicoExercicios" :key="exercise.id">
+                    {{ exercise.unidadeNome }} ({{ exercise.tipo }}) —
+                    {{ new Date(exercise.dataInicio).toLocaleDateString() }} até
+                    {{
+                      exercise.dataFim ? new Date(exercise.dataFim).toLocaleDateString() : 'atual'
+                    }}
+                  </li>
+                </ul>
+                <p><strong>Histórico de afastamentos</strong></p>
+                <ul>
+                  <li v-for="absence in relationships.afastamentos" :key="absence.id">
+                    {{ absence.tipo }} — {{ new Date(absence.dataInicio).toLocaleDateString() }} até
+                    {{ absence.dataFim ? new Date(absence.dataFim).toLocaleDateString() : 'atual' }}
+                  </li>
+                </ul>
+              </details>
+              <small
+                >Sede e exercício são históricos oficiais e não podem ser alterados neste
+                cadastro.</small
+              >
             </div>
-            <details v-if="relationships" data-testid="professional-history">
-              <summary>Consultar históricos</summary>
-              <p><strong>Histórico de sede</strong></p>
-              <ul>
-                <li v-for="placement in relationships.historicoSedes" :key="placement.id">
-                  {{ placement.unidadeNome }} —
-                  {{ new Date(placement.dataInicio).toLocaleDateString() }}
-                  até
-                  {{
-                    placement.dataFim ? new Date(placement.dataFim).toLocaleDateString() : 'atual'
-                  }}
-                </li>
-              </ul>
-              <p><strong>Histórico de exercícios</strong></p>
-              <ul>
-                <li v-for="exercise in relationships.historicoExercicios" :key="exercise.id">
-                  {{ exercise.unidadeNome }} ({{ exercise.tipo }}) —
-                  {{ new Date(exercise.dataInicio).toLocaleDateString() }} até
-                  {{ exercise.dataFim ? new Date(exercise.dataFim).toLocaleDateString() : 'atual' }}
-                </li>
-              </ul>
-              <p><strong>Histórico de afastamentos</strong></p>
-              <ul>
-                <li v-for="absence in relationships.afastamentos" :key="absence.id">
-                  {{ absence.tipo }} — {{ new Date(absence.dataInicio).toLocaleDateString() }} até
-                  {{ absence.dataFim ? new Date(absence.dataFim).toLocaleDateString() : 'atual' }}
-                </li>
-              </ul>
-            </details>
-            <small
-              >Sede e exercício são históricos oficiais e não podem ser alterados neste
-              cadastro.</small
+          </QCardSection>
+          <QCardSection v-if="canEdit" class="form-grid">
+            <QBanner
+              v-if="dialogError"
+              class="bg-red-1 text-negative full-span"
+              data-testid="professional-dialog-error"
+              >{{ dialogError }}</QBanner
             >
-          </div>
-        </QCardSection>
-        <QCardSection v-if="canEdit" class="form-grid">
-          <QBanner
-            v-if="dialogError"
-            class="bg-red-1 text-negative full-span"
-            data-testid="professional-dialog-error"
-            >{{ dialogError }}</QBanner
-          >
-          <QInput
-            v-model="form.matricula"
-            outlined
-            label="Matrícula *"
-            :error="Boolean(issue('matricula'))"
-            :error-message="issue('matricula')"
-          /><QInput
-            v-model="form.nomeCompleto"
-            outlined
-            label="Nome completo *"
-            :error="Boolean(issue('nomeCompleto'))"
-            :error-message="issue('nomeCompleto')"
-          />
-          <QInput
-            v-model="form.cpf"
-            outlined
-            label="CPF *"
-            :error="Boolean(issue('cpf'))"
-            :error-message="issue('cpf')"
-          /><QSelect
-            v-model="form.cargoFuncaoId"
-            outlined
-            emit-value
-            map-options
-            option-label="nome"
-            option-value="id"
-            :options="cargos"
-            label="Cargo/função *"
-          />
-          <QInput
-            v-model="form.dataEntradaPrefeitura"
-            outlined
-            type="date"
-            label="Entrada na Prefeitura *"
-            stack-label
-          /><QInput
-            v-model="form.dataNascimento"
-            outlined
-            type="date"
-            label="Nascimento *"
-            stack-label
-          />
-          <QInput v-model="form.email" outlined type="email" label="E-mail" /><QInput
-            v-model="form.dataDesligamento"
-            outlined
-            type="date"
-            label="Data de desligamento"
-            stack-label
-            clearable
-          />
-          <QInput
-            v-model.number="form.numeroFilhos"
-            outlined
-            type="number"
-            min="0"
-            label="Número de filhos"
-          /><QSelect
-            v-model="form.ativo"
-            outlined
-            emit-value
-            map-options
-            :options="[
-              { label: 'Ativo', value: true },
-              { label: 'Inativo', value: false },
-            ]"
-            label="Status"
-          />
-          <QInput v-model="form.endereco" outlined label="Endereço" /><QInput
-            v-model="form.numero"
-            outlined
-            label="Número"
-          /><QInput v-model="form.complemento" outlined label="Complemento" />
-          <QInput v-model="form.bairro" outlined label="Bairro" /><QInput
-            v-model="form.cidade"
-            outlined
-            label="Cidade"
-          /><QInput v-model="form.cep" outlined label="CEP" />
-          <div class="manifestations full-span">
-            <QCheckbox v-model="form.remocao" label="Manifestação prévia de Remoção" /><QCheckbox
-              v-model="form.permuta"
-              label="Manifestação prévia de Permuta"
+            <QInput
+              v-model="form.matricula"
+              outlined
+              label="Matrícula *"
+              :error="Boolean(issue('matricula'))"
+              :error-message="issue('matricula')"
+            /><QInput
+              v-model="form.nomeCompleto"
+              outlined
+              label="Nome completo *"
+              :error="Boolean(issue('nomeCompleto'))"
+              :error-message="issue('nomeCompleto')"
             />
-          </div>
-          <QInput
-            v-model="form.observacoes"
-            outlined
-            type="textarea"
-            label="Observações"
-            class="full-span"
-          />
-          <div class="full-span">
-            <div class="row items-center justify-between">
-              <strong>Telefones</strong
-              ><QBtn flat dense icon="add" label="Adicionar" @click="addPhone" />
-            </div>
-            <div
-              v-for="(phone, index) in form.telefones"
-              :key="phone.id ?? index"
-              class="phone-row"
-            >
-              <QInput v-model="phone.tipo" dense outlined label="Tipo" /><QInput
-                v-model="phone.numero"
-                dense
-                outlined
-                label="Número"
-              /><QBtn
-                flat
-                round
-                color="negative"
-                icon="delete"
-                aria-label="Remover telefone"
-                @click="form.telefones.splice(index, 1)"
+            <QInput
+              v-model="form.cpf"
+              outlined
+              label="CPF *"
+              :error="Boolean(issue('cpf'))"
+              :error-message="issue('cpf')"
+            /><QSelect
+              v-model="form.cargoFuncaoId"
+              outlined
+              emit-value
+              map-options
+              option-label="nome"
+              option-value="id"
+              :options="cargos"
+              label="Cargo/função *"
+            />
+            <QInput
+              v-model="form.dataEntradaPrefeitura"
+              outlined
+              type="date"
+              label="Entrada na Prefeitura *"
+              stack-label
+            /><QInput
+              v-model="form.dataNascimento"
+              outlined
+              type="date"
+              label="Nascimento *"
+              stack-label
+            />
+            <QInput v-model="form.email" outlined type="email" label="E-mail" /><QInput
+              v-model="form.dataDesligamento"
+              outlined
+              type="date"
+              label="Data de desligamento"
+              stack-label
+              clearable
+            />
+            <QInput
+              v-model.number="form.numeroFilhos"
+              outlined
+              type="number"
+              min="0"
+              label="Número de filhos"
+            /><QSelect
+              v-model="form.ativo"
+              outlined
+              emit-value
+              map-options
+              :options="[
+                { label: 'Ativo', value: true },
+                { label: 'Inativo', value: false },
+              ]"
+              label="Status"
+            />
+            <QInput v-model="form.endereco" outlined label="Endereço" /><QInput
+              v-model="form.numero"
+              outlined
+              label="Número"
+            /><QInput v-model="form.complemento" outlined label="Complemento" />
+            <QInput v-model="form.bairro" outlined label="Bairro" /><QInput
+              v-model="form.cidade"
+              outlined
+              label="Cidade"
+            /><QInput v-model="form.cep" outlined label="CEP" />
+            <div class="manifestations full-span">
+              <QCheckbox v-model="form.remocao" label="Manifestação prévia de Remoção" /><QCheckbox
+                v-model="form.permuta"
+                label="Manifestação prévia de Permuta"
               />
             </div>
-          </div>
-        </QCardSection>
+            <QInput
+              v-model="form.observacoes"
+              outlined
+              type="textarea"
+              label="Observações"
+              class="full-span"
+            />
+            <div class="full-span">
+              <div class="row items-center justify-between">
+                <strong>Telefones</strong
+                ><QBtn flat dense icon="add" label="Adicionar" @click="addPhone" />
+              </div>
+              <div
+                v-for="(phone, index) in form.telefones"
+                :key="phone.id ?? index"
+                class="phone-row"
+              >
+                <QInput v-model="phone.tipo" dense outlined label="Tipo" /><QInput
+                  v-model="phone.numero"
+                  dense
+                  outlined
+                  label="Número"
+                /><QBtn
+                  flat
+                  round
+                  color="negative"
+                  icon="delete"
+                  aria-label="Remover telefone"
+                  @click="form.telefones.splice(index, 1)"
+                />
+              </div>
+            </div>
+          </QCardSection>
+        </div>
         <QCardActions align="right">
           <QBtn v-close-popup flat :label="canEdit ? 'Cancelar' : 'Fechar'" /><QBtn
             v-if="canEdit"

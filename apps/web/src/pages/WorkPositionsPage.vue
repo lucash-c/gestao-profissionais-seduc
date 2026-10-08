@@ -7,6 +7,7 @@ import {
   QCardActions,
   QCardSection,
   QDialog,
+  QIcon,
   QInput,
   QPage,
   QPagination,
@@ -34,11 +35,12 @@ const saving = ref(false);
 const error = ref('');
 const page = ref(1);
 const totalPages = ref(1);
+const total = ref(0);
 const unitFilter = ref<string | null>(null);
 const yearFilter = ref<number | null>(null);
 const cargoFilter = ref<string | null>(null);
 const periodFilter = ref<string | null>(null);
-const statusFilter = ref<'active' | 'inactive' | 'all'>('active');
+const statusFilter = ref<'active' | 'inactive' | 'all'>('all');
 const selected = ref<WorkPositionRecord | null>(null);
 const deleting = ref<WorkPositionRecord | null>(null);
 const deleteError = ref('');
@@ -75,6 +77,7 @@ async function load(): Promise<void> {
       ...(unitFilter.value ? { unidadeId: unitFilter.value } : {}),
     });
     rows.value = result.items;
+    total.value = result.total;
     totalPages.value = Math.max(result.totalPages, 1);
   } catch (loadError) {
     error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar os postos.';
@@ -104,6 +107,16 @@ function availabilityLabel(row: WorkPositionRecord): string {
   if (row.disponibilidade === 'DISPONIVEL_COM_SEDE') return 'Vaga com sede';
   if (row.disponibilidade === 'DISPONIVEL_SEM_SEDE') return 'Vaga sem sede';
   return 'Ocupado/Indisponível';
+}
+
+function clearFilters(): void {
+  unitFilter.value = null;
+  yearFilter.value = null;
+  cargoFilter.value = null;
+  periodFilter.value = null;
+  statusFilter.value = 'all';
+  page.value = 1;
+  void load();
 }
 
 async function confirmStatus(): Promise<void> {
@@ -214,6 +227,19 @@ onMounted(async () => {
             load();
           "
         />
+        <QBtn
+          flat
+          color="primary"
+          label="Limpar filtros"
+          :disable="
+            !unitFilter &&
+            yearFilter === null &&
+            !cargoFilter &&
+            !periodFilter &&
+            statusFilter === 'all'
+          "
+          @click="clearFilters"
+        />
       </QCardSection>
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="work-positions-error">{{
         error
@@ -244,7 +270,18 @@ onMounted(async () => {
               props.row.titularAtual?.nomeCompleto || 'Sem titular'
             }}</QTd>
             <QTd key="ocupante" :props="props">
-              <div>{{ props.row.ocupanteAtual?.nomeCompleto || 'Sem ocupante' }}</div>
+              <div
+                class="occupant-state"
+                :class="
+                  props.row.ocupanteAtual ? 'occupant-state--assigned' : 'occupant-state--vacant'
+                "
+              >
+                <QIcon
+                  :name="props.row.ocupanteAtual ? 'person' : 'person_off'"
+                  aria-hidden="true"
+                />
+                {{ props.row.ocupanteAtual?.nomeCompleto || 'Sem ocupante no momento' }}
+              </div>
               <small v-if="props.row.exercicioAtual?.substituiProfissional">
                 substitui {{ props.row.exercicioAtual.substituiProfissional.nomeCompleto }}
               </small>
@@ -282,6 +319,10 @@ onMounted(async () => {
           </QTr>
         </template>
       </QTable>
+      <p v-if="!loading && rows.length" class="list-summary" data-testid="positions-summary">
+        {{ total }} {{ total === 1 ? 'posto encontrado' : 'postos encontrados' }} · Página
+        {{ page }} de {{ totalPages }}
+      </p>
       <QCardActions v-if="!loading && rows.length" align="center"
         ><QPagination
           v-model="page"

@@ -36,28 +36,23 @@ const normalized = computed(() => props.status.trim().toUpperCase());
 const label = computed(() => labels[normalized.value] ?? props.status);
 const resolvedTone = computed(() => {
   if (props.tone) return props.tone;
-  if (['ATIVO', 'ATENDIDO', 'DISPONIVEL_COM_SEDE'].includes(normalized.value)) return 'positive';
+  if (['ATIVO', 'ATENDIDO', 'COM_SEDE', 'DISPONIVEL_COM_SEDE'].includes(normalized.value)) {
+    return 'positive';
+  }
   if (['CANCELADO', 'INATIVO', 'INDISPONIVEL', 'BLOCKED'].includes(normalized.value)) {
     return 'negative';
   }
   if (
-    ['AGUARDANDO', 'EMPATE_PENDENTE', 'RASCUNHO', 'DISPONIVEL_SEM_SEDE'].includes(normalized.value)
+    ['AGUARDANDO', 'EMPATE_PENDENTE', 'RASCUNHO', 'SEM_SEDE', 'DISPONIVEL_SEM_SEDE'].includes(
+      normalized.value,
+    )
   ) {
     return 'warning';
   }
   if (
-    [
-      'ANY',
-      'COM_SEDE',
-      'FIXED',
-      'LISTAO',
-      'ATRIBUICAO',
-      'PERMUTA',
-      'REMOCAO',
-      'SEDE',
-      'SEM_SEDE',
-      'SUBSTITUICAO',
-    ].includes(normalized.value)
+    ['ANY', 'FIXED', 'LISTAO', 'ATRIBUICAO', 'PERMUTA', 'REMOCAO', 'SEDE', 'SUBSTITUICAO'].includes(
+      normalized.value,
+    )
   ) {
     return 'info';
   }

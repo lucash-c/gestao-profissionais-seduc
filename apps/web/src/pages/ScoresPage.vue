@@ -25,6 +25,7 @@ const cargos = ref<LookupRecord[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
+const catalogError = ref('');
 const search = ref('');
 const registrationSearch = ref('');
 const cargoFilter = ref<string | null>(null);
@@ -70,6 +71,14 @@ async function searchScores(): Promise<void> {
   page.value = 1;
   await load();
 }
+async function loadCargos(): Promise<void> {
+  try {
+    cargos.value = await registryApi.listCargos();
+  } catch {
+    catalogError.value =
+      'Não foi possível carregar o filtro de cargo. Atualize a página para tentar novamente.';
+  }
+}
 function open(row: ProfessionalRecord): void {
   dialogError.value = '';
   selected.value = row;
@@ -95,8 +104,8 @@ function formatScore(value: string): string {
     minimumFractionDigits: 2,
   }).format(Number(value));
 }
-onMounted(async () => {
-  await Promise.all([load(), registryApi.listCargos().then((result) => (cargos.value = result))]);
+onMounted(() => {
+  void Promise.all([load(), loadCargos()]);
 });
 </script>
 
@@ -145,6 +154,9 @@ onMounted(async () => {
       </QCardSection>
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="scores-error">
         {{ error }}
+      </QBanner>
+      <QBanner v-if="catalogError" class="bg-amber-1 text-warning">
+        {{ catalogError }}
       </QBanner>
       <div v-if="loading" class="registry-state" data-testid="scores-loading">
         <QSpinner color="primary" size="36px" /> Carregando pontuações…

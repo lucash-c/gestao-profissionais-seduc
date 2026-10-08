@@ -259,6 +259,7 @@ describe('Etapa 6 frontend de eventos', () => {
     setProfile('ADMINISTRADOR');
     const { wrapper } = await mountPage(EventsPage, '/eventos');
     expect(wrapper.find('[data-testid="new-event"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('usuários com perfil Operador');
     expect(wrapper.find('button[aria-label="Excluir evento"]').exists()).toBe(true);
     expect(wrapper.text()).not.toContain('Preparar fila');
     await wrapper.get('button[aria-label="Excluir evento"]').trigger('click');
@@ -276,6 +277,17 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Cargo/função *');
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Tipo *');
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Ano *');
+  });
+
+  it('mantém a listagem disponível e informa inline quando o catálogo de cargos falha', async () => {
+    mocks.listCargos.mockRejectedValueOnce(new Error('Catálogo indisponível'));
+    const { wrapper } = await mountPage(EventsPage, '/eventos');
+
+    expect(wrapper.text()).toContain('Remoção 2026');
+    expect(wrapper.get('[data-testid="events-catalog-error"]').text()).toContain(
+      'Não foi possível carregar os cargos',
+    );
+    expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(false);
   });
 
   it('oferece a operação adequada para cada evento ATIVO', async () => {
