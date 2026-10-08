@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { databaseIdSchema } from '../../validation/database-id.js';
+
 const activeQuery = z
   .enum(['true', 'false'])
   .transform((value) => value === 'true')
@@ -16,18 +18,18 @@ const nullableText = z
 
 const scopeFields = {
   anoLetivo: z.number().int().positive(),
-  cargoFuncaoId: z.string().uuid(),
-  periodoId: z.string().uuid(),
-  segmentoEnsinoId: z.union([z.string().uuid(), z.null()]),
-  unidadeId: z.string().uuid(),
+  cargoFuncaoId: databaseIdSchema,
+  periodoId: databaseIdSchema,
+  segmentoEnsinoId: z.union([databaseIdSchema, z.null()]),
+  unidadeId: databaseIdSchema,
 };
 
 export const staffingPlanQuerySchema = paginationSchema.extend({
   anoLetivo: z.coerce.number().int().positive().optional(),
-  cargoFuncaoId: z.string().uuid().optional(),
-  periodoId: z.string().uuid().optional(),
-  segmentoEnsinoId: z.string().uuid().optional(),
-  unidadeId: z.string().uuid().optional(),
+  cargoFuncaoId: databaseIdSchema.optional(),
+  periodoId: databaseIdSchema.optional(),
+  segmentoEnsinoId: databaseIdSchema.optional(),
+  unidadeId: databaseIdSchema.optional(),
 });
 
 export const staffingPlanCreateSchema = z
@@ -54,9 +56,9 @@ export const staffingPlanUpdateSchema = z
 export const workPositionQuerySchema = paginationSchema.extend({
   anoLetivo: z.coerce.number().int().positive().optional(),
   ativo: activeQuery,
-  cargoFuncaoId: z.string().uuid().optional(),
-  periodoId: z.string().uuid().optional(),
-  unidadeId: z.string().uuid().optional(),
+  cargoFuncaoId: databaseIdSchema.optional(),
+  periodoId: databaseIdSchema.optional(),
+  unidadeId: databaseIdSchema.optional(),
 });
 
 export const workPositionStatusSchema = z.object({ ativo: z.boolean() }).strict();

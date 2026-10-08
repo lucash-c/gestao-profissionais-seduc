@@ -2,6 +2,7 @@
 import type {
   LookupRecord,
   PhoneRecord,
+  ProfessionalAbsenceRecord,
   ProfessionalRecord,
   ProfessionalRelationshipsRecord,
 } from '@seduc/contracts';
@@ -25,6 +26,9 @@ import {
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import StatusChip from '@/components/StatusChip.vue';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
+import { fieldError, formError } from '@/services/form-errors';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -40,7 +44,16 @@ const saving = ref(false);
 const error = ref('');
 const dialogOpen = ref(false);
 const editing = ref<ProfessionalRecord | null>(null);
+const deleting = ref<ProfessionalRecord | null>(null);
+const deleteError = ref('');
+const dialogError = ref('');
+const saveFailure = ref<unknown>(null);
 const relationships = ref<ProfessionalRelationshipsRecord | null>(null);
+const absenceCreateOpen = ref(false);
+const absenceEndTarget = ref<ProfessionalAbsenceRecord | null>(null);
+const absenceError = ref('');
+const absenceForm = reactive({ dataInicio: '', observacoes: '', tipo: '' });
+const absenceEndDate = ref('');
 const page = ref(1);
 const totalPages = ref(1);
 const nameFilter = ref('');
@@ -51,8 +64,20 @@ const removalFilter = ref<'all' | 'yes' | 'no'>('all');
 const exchangeFilter = ref<'all' | 'yes' | 'no'>('all');
 const profile = computed(() => sessionStore.state.user?.perfil);
 const canCreate = computed(() => profile.value === 'ADMINISTRADOR');
+const canDelete = canCreate;
 const canEdit = computed(() =>
   ['ADMINISTRADOR', 'DIRETOR', 'SECRETARIO'].includes(profile.value ?? ''),
+);
+const canManageAbsences = canEdit;
+const formValid = computed(() =>
+  Boolean(
+    form.matricula.trim() &&
+    form.nomeCompleto.trim() &&
+    form.cpf.replace(/\D/g, '').length === 11 &&
+    form.cargoFuncaoId &&
+    form.dataEntradaPrefeitura &&
+    form.dataNascimento,
+  ),
 );
 
 const form = reactive({
@@ -92,6 +117,12 @@ const columns = [
     field: (row: ProfessionalRecord) => row.sedeAtual?.unidadeNome ?? 'Sem sede',
     label: 'Sede',
     name: 'sede',
+  },
+  {
+    align: 'left' as const,
+    field: (row: ProfessionalRecord) => row.situacaoFuncional.descricao,
+    label: 'Situação funcional',
+    name: 'situacao',
   },
   { align: 'center' as const, field: 'pontuacao', label: 'Pontuação', name: 'pontuacao' },
   { align: 'center' as const, field: 'remocao', label: 'Remoção', name: 'remocao' },
@@ -153,12 +184,16 @@ function resetForm(): void {
 }
 
 function openCreate(): void {
+  dialogError.value = '';
+  saveFailure.value = null;
   editing.value = null;
   relationships.value = null;
   resetForm();
   dialogOpen.value = true;
 }
 async function openEdit(row: ProfessionalRecord): Promise<void> {
+  dialogError.value = '';
+  saveFailure.value = null;
   editing.value = row;
   relationships.value = null;
   Object.assign(form, {
@@ -190,6 +225,70 @@ async function openEdit(row: ProfessionalRecord): Promise<void> {
     error.value = loadError instanceof Error ? loadError.message : 'Falha ao carregar vínculos.';
   }
 }
+
+function dateAsTimestamp(value: string): string {
+  return new Date(`${value}T12:00:00-03:00`).toISOString();
+}
+
+async function refreshRelationships(): Promise<void> {
+  if (!editing.value) return;
+  relationships.value = await registryApi.getProfessionalRelationships(editing.value.id);
+}
+
+function openAbsenceCreate(): void {
+  const today = new Date();
+  absenceError.value = '';
+  Object.assign(absenceForm, {
+    dataInicio: today.toISOString().slice(0, 10),
+    observacoes: '',
+    tipo: '',
+  });
+  absenceCreateOpen.value = true;
+}
+
+async function createAbsence(): Promise<void> {
+  if (!editing.value || saving.value || !absenceForm.tipo.trim() || !absenceForm.dataInicio) return;
+  saving.value = true;
+  absenceError.value = '';
+  try {
+    await registryApi.createProfessionalAbsence(editing.value.id, {
+      dataInicio: dateAsTimestamp(absenceForm.dataInicio),
+      observacoes: absenceForm.observacoes.trim() || null,
+      tipo: absenceForm.tipo.trim(),
+    });
+    absenceCreateOpen.value = false;
+    await Promise.all([refreshRelationships(), load()]);
+  } catch (failure) {
+    absenceError.value = formError(failure, 'Falha ao registrar afastamento.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+function openAbsenceEnd(absence: ProfessionalAbsenceRecord): void {
+  absenceError.value = '';
+  absenceEndDate.value = new Date().toISOString().slice(0, 10);
+  absenceEndTarget.value = absence;
+}
+
+async function endAbsence(): Promise<void> {
+  if (!editing.value || !absenceEndTarget.value || !absenceEndDate.value || saving.value) return;
+  saving.value = true;
+  absenceError.value = '';
+  try {
+    await registryApi.endProfessionalAbsence(
+      editing.value.id,
+      absenceEndTarget.value.id,
+      dateAsTimestamp(absenceEndDate.value),
+    );
+    absenceEndTarget.value = null;
+    await Promise.all([refreshRelationships(), load()]);
+  } catch (failure) {
+    absenceError.value = formError(failure, 'Falha ao encerrar afastamento.');
+  } finally {
+    saving.value = false;
+  }
+}
 function addPhone(): void {
   form.telefones.push({ numero: '', tipo: 'CELULAR' });
 }
@@ -197,7 +296,8 @@ function addPhone(): void {
 async function save(): Promise<void> {
   if (saving.value) return;
   saving.value = true;
-  error.value = '';
+  dialogError.value = '';
+  saveFailure.value = null;
   try {
     if (!editing.value) {
       await registryApi.createProfessional(form);
@@ -207,10 +307,30 @@ async function save(): Promise<void> {
     dialogOpen.value = false;
     await load();
   } catch (saveError) {
-    error.value = saveError instanceof Error ? saveError.message : 'Falha ao salvar profissional.';
+    saveFailure.value = saveError;
+    dialogError.value = formError(saveError, 'Falha ao salvar profissional.');
   } finally {
     saving.value = false;
   }
+}
+
+async function confirmDelete(password: string): Promise<void> {
+  if (!deleting.value || saving.value) return;
+  saving.value = true;
+  deleteError.value = '';
+  try {
+    await registryApi.deleteProfessional(deleting.value.id, password);
+    deleting.value = null;
+    await load();
+  } catch (deleteFailure) {
+    deleteError.value = formError(deleteFailure, 'Falha ao excluir profissional.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+function issue(path: string): string | undefined {
+  return fieldError(saveFailure.value, path);
 }
 
 onMounted(load);
@@ -312,7 +432,15 @@ onMounted(load);
       <div v-else-if="rows.length === 0" class="registry-state" data-testid="professionals-empty">
         Nenhum profissional encontrado.
       </div>
-      <QTable v-else flat :rows="rows" :columns="columns" row-key="id" hide-pagination>
+      <QTable
+        v-else
+        flat
+        :rows="rows"
+        :columns="columns"
+        row-key="id"
+        hide-pagination
+        :pagination="{ rowsPerPage: 0 }"
+      >
         <template #body="props">
           <QTr :props="props">
             <QTd key="matricula" :props="props">{{ props.row.matricula }}</QTd
@@ -320,8 +448,11 @@ onMounted(load);
             <QTd key="cargo" :props="props">{{ props.row.cargoFuncao.nome }}</QTd
             ><QTd key="sede" :props="props">
               <StatusChip :status="props.row.sedeAtual ? 'COM_SEDE' : 'SEM_SEDE'" />
-              <span class="block text-caption">{{ props.row.sedeAtual?.unidadeNome ?? '—' }}</span>
+              <span class="block text-caption">{{
+                props.row.sedeAtual?.unidadeNome ?? 'Sem sede definida'
+              }}</span>
             </QTd>
+            <QTd key="situacao" :props="props">{{ props.row.situacaoFuncional.descricao }}</QTd>
             <QTd key="pontuacao" :props="props">{{ props.row.pontuacao }}</QTd
             ><QTd key="remocao" :props="props"
               ><StatusChip
@@ -339,6 +470,18 @@ onMounted(load);
                 color="primary"
                 :label="canEdit ? 'Editar' : 'Detalhes'"
                 @click="openEdit(props.row)"
+              /><QBtn
+                v-if="canDelete"
+                flat
+                round
+                dense
+                color="negative"
+                icon="delete"
+                aria-label="Excluir profissional"
+                @click="
+                  deleting = props.row;
+                  deleteError = '';
+                "
               />
             </QTd>
           </QTr>
@@ -351,17 +494,20 @@ onMounted(load);
 
     <QDialog v-model="dialogOpen" persistent>
       <QCard class="registry-dialog wide" data-testid="professional-dialog">
-        <QCardSection>
-          <h2>
-            {{
-              editing
-                ? canEdit
-                  ? 'Editar profissional'
-                  : 'Detalhes do profissional'
-                : 'Novo profissional'
-            }}
-          </h2>
+        <ModalHeader
+          :title="
+            editing
+              ? canEdit
+                ? 'Editar profissional'
+                : 'Detalhes do profissional'
+              : 'Novo profissional'
+          "
+          :close-disabled="saving"
+          @close="dialogOpen = false"
+        />
+        <QCardSection class="modal-scroll-body">
           <div v-if="editing" class="readonly-history" data-testid="readonly-placement">
+            <p><strong>Situação funcional:</strong> {{ editing.situacaoFuncional.descricao }}</p>
             <span
               ><strong>Sede atual:</strong> {{ editing.sedeAtual?.unidadeNome ?? 'Sem sede' }}</span
             >
@@ -375,11 +521,32 @@ onMounted(load);
               </ul>
             </div>
             <div>
-              <strong>Afastamentos ativos:</strong>
+              <div class="row items-center justify-between">
+                <strong>Afastamentos ativos:</strong>
+                <QBtn
+                  v-if="canManageAbsences"
+                  flat
+                  dense
+                  icon="add"
+                  label="Registrar afastamento"
+                  data-testid="register-absence"
+                  @click="openAbsenceCreate"
+                />
+              </div>
               <span v-if="!relationships?.afastamentosAtivos.length"> Nenhum</span>
               <ul v-else class="q-my-xs">
                 <li v-for="absence in relationships.afastamentosAtivos" :key="absence.id">
                   {{ absence.tipo }} — desde {{ new Date(absence.dataInicio).toLocaleDateString() }}
+                  <span v-if="absence.observacoes"> — {{ absence.observacoes }}</span>
+                  <QBtn
+                    v-if="canManageAbsences"
+                    flat
+                    dense
+                    color="primary"
+                    label="Encerrar"
+                    data-testid="end-absence"
+                    @click="openAbsenceEnd(absence)"
+                  />
                 </li>
               </ul>
             </div>
@@ -419,12 +586,32 @@ onMounted(load);
           </div>
         </QCardSection>
         <QCardSection v-if="canEdit" class="form-grid">
-          <QInput v-model="form.matricula" outlined label="Matrícula *" /><QInput
+          <QBanner
+            v-if="dialogError"
+            class="bg-red-1 text-negative full-span"
+            data-testid="professional-dialog-error"
+            >{{ dialogError }}</QBanner
+          >
+          <QInput
+            v-model="form.matricula"
+            outlined
+            label="Matrícula *"
+            :error="Boolean(issue('matricula'))"
+            :error-message="issue('matricula')"
+          /><QInput
             v-model="form.nomeCompleto"
             outlined
             label="Nome completo *"
+            :error="Boolean(issue('nomeCompleto'))"
+            :error-message="issue('nomeCompleto')"
           />
-          <QInput v-model="form.cpf" outlined label="CPF *" /><QSelect
+          <QInput
+            v-model="form.cpf"
+            outlined
+            label="CPF *"
+            :error="Boolean(issue('cpf'))"
+            :error-message="issue('cpf')"
+          /><QSelect
             v-model="form.cargoFuncaoId"
             outlined
             emit-value
@@ -528,11 +715,91 @@ onMounted(load);
             color="primary"
             label="Salvar"
             :loading="saving"
-            :disable="saving"
+            :disable="saving || !formValid"
             @click="save"
           />
         </QCardActions>
       </QCard>
     </QDialog>
+    <QDialog v-model="absenceCreateOpen" persistent>
+      <QCard class="registry-dialog compact" data-testid="absence-create-dialog">
+        <ModalHeader
+          title="Registrar afastamento"
+          :close-disabled="saving"
+          @close="absenceCreateOpen = false"
+        />
+        <QCardSection class="modal-scroll-body form-grid">
+          <QInput v-model="absenceForm.tipo" outlined label="Tipo *" maxlength="120" />
+          <QInput
+            v-model="absenceForm.dataInicio"
+            outlined
+            type="date"
+            label="Data de início *"
+            stack-label
+          />
+          <QInput
+            v-model="absenceForm.observacoes"
+            outlined
+            type="textarea"
+            label="Observações"
+            class="full-span"
+          />
+          <QBanner v-if="absenceError" class="bg-red-1 text-negative full-span">{{
+            absenceError
+          }}</QBanner>
+        </QCardSection>
+        <QCardActions align="right">
+          <QBtn flat label="Cancelar" @click="absenceCreateOpen = false" />
+          <QBtn
+            color="primary"
+            label="Registrar"
+            :loading="saving"
+            :disable="saving || !absenceForm.tipo.trim() || !absenceForm.dataInicio"
+            @click="createAbsence"
+          />
+        </QCardActions>
+      </QCard>
+    </QDialog>
+    <QDialog :model-value="Boolean(absenceEndTarget)" persistent>
+      <QCard class="registry-dialog compact" data-testid="absence-end-dialog">
+        <ModalHeader
+          title="Encerrar afastamento"
+          :close-disabled="saving"
+          @close="absenceEndTarget = null"
+        />
+        <QCardSection class="modal-scroll-body">
+          <p>{{ absenceEndTarget?.tipo }}</p>
+          <QInput
+            v-model="absenceEndDate"
+            outlined
+            type="date"
+            label="Data de término *"
+            stack-label
+          />
+          <QBanner v-if="absenceError" class="bg-red-1 text-negative q-mt-md">{{
+            absenceError
+          }}</QBanner>
+        </QCardSection>
+        <QCardActions align="right">
+          <QBtn flat label="Cancelar" @click="absenceEndTarget = null" />
+          <QBtn
+            color="primary"
+            label="Encerrar afastamento"
+            :loading="saving"
+            :disable="saving || !absenceEndDate"
+            @click="endAbsence"
+          />
+        </QCardActions>
+      </QCard>
+    </QDialog>
+    <DeleteConfirmationDialog
+      :open="Boolean(deleting)"
+      title="Excluir profissional"
+      :description="`Confirme a exclusão de ${deleting?.nomeCompleto ?? 'este profissional'} com sua senha atual.`"
+      :error="deleteError"
+      :loading="saving"
+      @cancel="deleting = null"
+      @confirm="confirmDelete"
+    />
   </QPage>
 </template>

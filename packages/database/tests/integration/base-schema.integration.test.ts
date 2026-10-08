@@ -1397,9 +1397,16 @@ describeDatabase('Etapa 1 database schema', () => {
     await expectConstraint(
       pool.query(
         `INSERT INTO "posto_trabalho"
-          ("id", "quadro_necessidade_id", "unidade_id", "cargo_funcao_id", "periodo_id", "ano_letivo")
-         VALUES ($1, $2, $3, $4, $5, 2027)`,
-        [randomUUID(), graph.quadroId, randomUUID(), graph.cargoId, graph.periodoId],
+          ("id", "quadro_necessidade_id", "unidade_id", "cargo_funcao_id", "periodo_id", "ano_letivo", "codigo")
+         VALUES ($1, $2, $3, $4, $5, 2027, $6)`,
+        [
+          randomUUID(),
+          graph.quadroId,
+          randomUUID(),
+          graph.cargoId,
+          graph.periodoId,
+          `INVALID-FK-${randomUUID()}`,
+        ],
       ),
       'posto_trabalho_quadro_necessidade_id_unidade_id_cargo_func_fkey',
       '23503',

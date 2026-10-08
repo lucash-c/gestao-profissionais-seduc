@@ -81,6 +81,62 @@ body {
   border-radius: 12px;
 }
 
+.registry-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: min(88vh, 900px);
+  overflow: hidden;
+}
+
+.registry-dialog > .modal-header {
+  align-items: center;
+  background: var(--fluent-surface);
+  border-bottom: 1px solid var(--fluent-border);
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.registry-dialog > .modal-header h2 {
+  margin: 0;
+}
+
+.registry-dialog > .modal-scroll-body,
+.registry-dialog > .form-grid {
+  overflow-y: auto;
+}
+
+.registry-dialog > .modal-footer,
+.registry-dialog > .q-card__actions:last-child {
+  background: var(--fluent-surface);
+  border-top: 1px solid var(--fluent-border);
+  flex: 0 0 auto;
+}
+
+.header-logo {
+  height: 42px;
+  margin-right: 12px;
+  object-fit: contain;
+  width: 104px;
+}
+
+.login-logo {
+  display: block;
+  height: auto;
+  margin-bottom: 28px;
+  max-width: 300px;
+  width: min(100%, 300px);
+}
+
+.login-rate-limit {
+  color: var(--fluent-error);
+  font-weight: 600;
+  margin: 0;
+}
+
 .q-dialog__backdrop {
   background: rgb(0 0 0 / 32%);
   backdrop-filter: blur(2px);

@@ -42,6 +42,7 @@ const positionLinkInclude = {
 } as const;
 
 const professionalSituationInclude = {
+  afastamentos: { select: { id: true }, where: { dataFim: null } },
   cargoFuncao: { select: { permiteMultiplosExercicios: true } },
   exercicios: {
     include: {
@@ -189,7 +190,7 @@ function mapMovement(movement: MovementPayload): EventOperationalMovement {
     throw new HttpError(
       409,
       'EVENT_MOVEMENT_INVALID',
-      'A movimentação da Etapa 7 deve possuir exatamente um item.',
+      'A movimentação do evento deve possuir exatamente um item.',
     );
   }
   return {
@@ -411,6 +412,13 @@ async function analyzeChoice(
       'O profissional atual está inativo ou não pertence mais ao cargo do evento.',
     );
   }
+  if (event.tipo === 'ATRIBUICAO' && professional.lotacoesSede.length > 0) {
+    throw new HttpError(
+      409,
+      'EVENT_PARTICIPANT_NO_LONGER_ELIGIBLE',
+      'O profissional adquiriu sede e não é mais elegível para Atribuição.',
+    );
+  }
   const situation = mapSituation(professional);
   const allowedPeriodRule = requireAllowedPeriodRule(situation);
   const destination = await loadPosition(transaction, postoTrabalhoId);
@@ -455,7 +463,24 @@ async function analyzeChoice(
       );
     }
   }
+  if (destinationType === 'SEDE' && event.tipo === 'ATRIBUICAO') {
+    if (professional.exercicios.length > 1) {
+      throw new HttpError(
+        409,
+        'AMBIGUOUS_ACTIVE_EXERCISES',
+        'Há múltiplos exercícios ativos e não é possível concluir a atribuição.',
+      );
+    }
+    oldExercise = professional.exercicios[0] ?? null;
+  }
   if (destinationType === 'SEM_SEDE') {
+    if (professional.afastamentos.length > 0) {
+      throw new HttpError(
+        409,
+        'PROFESSIONAL_ON_ACTIVE_ABSENCE',
+        'Profissional afastado não pode receber exercício temporário.',
+      );
+    }
     if (professional.exercicios.length > 1) {
       throw new HttpError(
         409,
@@ -680,6 +705,13 @@ export function createPrismaEventOperationServices(
                 where: { id: analysis.oldPlacement.id },
               });
             }
+            if (analysis.oldExercise) {
+              originId ??= analysis.oldExercise.postoTrabalhoId;
+              await transaction.exercicioProfissional.update({
+                data: { dataFim: now },
+                where: { id: analysis.oldExercise.id },
+              });
+            }
             await transaction.lotacaoSede.create({
               data: {
                 dataInicio: now,
@@ -876,7 +908,7 @@ export function createPrismaEventOperationServices(
             ano: event.ano,
             nome: event.nome,
             status: event.status as 'ATIVO' | 'ENCERRADO',
-            tipo: event.tipo as 'REMOCAO' | 'LISTAO',
+            tipo: event.tipo as 'REMOCAO' | 'LISTAO' | 'ATRIBUICAO',
           },
           participanteAtual: current
             ? { nome: current.profissional.nomeCompleto, posicao: current.posicao! }

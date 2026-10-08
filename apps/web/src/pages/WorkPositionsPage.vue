@@ -19,6 +19,9 @@ import {
 import { computed, onMounted, ref } from 'vue';
 
 import StatusChip from '@/components/StatusChip.vue';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
+import { formError } from '@/services/form-errors';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -37,6 +40,9 @@ const cargoFilter = ref<string | null>(null);
 const periodFilter = ref<string | null>(null);
 const statusFilter = ref<'active' | 'inactive' | 'all'>('active');
 const selected = ref<WorkPositionRecord | null>(null);
+const deleting = ref<WorkPositionRecord | null>(null);
+const deleteError = ref('');
+const dialogError = ref('');
 const canManage = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
 const columns = [
   { align: 'left' as const, field: 'id', label: 'Posto', name: 'posto' },
@@ -93,16 +99,38 @@ function releaseReasons(row: WorkPositionRecord): string {
   return row.motivosLiberacao.map((reason) => releaseReasonLabels[reason]).join(' e ');
 }
 
+function availabilityLabel(row: WorkPositionRecord): string {
+  if (!row.ativo || row.disponibilidade === 'INATIVO') return 'Inativo';
+  if (row.disponibilidade === 'DISPONIVEL_COM_SEDE') return 'Vaga com sede';
+  if (row.disponibilidade === 'DISPONIVEL_SEM_SEDE') return 'Vaga sem sede';
+  return 'Ocupado/Indisponível';
+}
+
 async function confirmStatus(): Promise<void> {
   if (!selected.value || saving.value) return;
   saving.value = true;
-  error.value = '';
+  dialogError.value = '';
   try {
     await registryApi.updateWorkPositionStatus(selected.value.id, !selected.value.ativo);
     selected.value = null;
     await load();
   } catch (saveError) {
-    error.value = saveError instanceof Error ? saveError.message : 'Falha ao alterar o posto.';
+    dialogError.value = formError(saveError, 'Falha ao alterar o posto.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function confirmDelete(password: string): Promise<void> {
+  if (!deleting.value || saving.value) return;
+  saving.value = true;
+  deleteError.value = '';
+  try {
+    await registryApi.deleteWorkPosition(deleting.value.id, password);
+    deleting.value = null;
+    await load();
+  } catch (deleteFailure) {
+    deleteError.value = formError(deleteFailure, 'Falha ao excluir o posto.');
   } finally {
     saving.value = false;
   }
@@ -196,12 +224,18 @@ onMounted(async () => {
       <div v-else-if="rows.length === 0" class="registry-state" data-testid="work-positions-empty">
         Nenhum posto encontrado.
       </div>
-      <QTable v-else flat :rows="rows" :columns="columns" row-key="id" hide-pagination>
+      <QTable
+        v-else
+        flat
+        :rows="rows"
+        :columns="columns"
+        row-key="id"
+        hide-pagination
+        :pagination="{ rowsPerPage: 0 }"
+      >
         <template #body="props">
           <QTr :props="props">
-            <QTd key="posto" :props="props">{{
-              props.row.codigo || `Posto ${props.row.id.slice(0, 8)}`
-            }}</QTd>
+            <QTd key="posto" :props="props">{{ props.row.codigo }}</QTd>
             <QTd key="unidade" :props="props">{{ props.row.unidade.nome }}</QTd>
             <QTd key="cargo" :props="props">{{ props.row.cargoFuncao.nome }}</QTd>
             <QTd key="periodo" :props="props">{{ props.row.periodo.nome }}</QTd>
@@ -216,7 +250,7 @@ onMounted(async () => {
               </small>
             </QTd>
             <QTd key="estado" :props="props"
-              ><StatusChip :status="props.row.disponibilidade" />
+              ><StatusChip :status="availabilityLabel(props.row)" />
               <small v-if="props.row.motivosLiberacao.length" class="block">
                 {{ releaseReasons(props.row) }}
               </small></QTd
@@ -232,7 +266,18 @@ onMounted(async () => {
                 dense
                 color="primary"
                 :label="props.row.ativo ? 'Inativar' : 'Reativar'"
-                @click="selected = props.row"
+                @click="selected = props.row" /><QBtn
+                v-if="canManage"
+                flat
+                round
+                dense
+                color="negative"
+                icon="delete"
+                aria-label="Excluir posto"
+                @click="
+                  deleting = props.row;
+                  deleteError = '';
+                "
             /></QTd>
           </QTr>
         </template>
@@ -255,15 +300,22 @@ onMounted(async () => {
       "
     >
       <QCard class="registry-dialog compact" data-testid="position-status-dialog">
-        <QCardSection
-          ><h2>{{ selected?.ativo ? 'Inativar posto' : 'Reativar posto' }}</h2>
+        <ModalHeader
+          :title="selected?.ativo ? 'Inativar posto' : 'Reativar posto'"
+          :close-disabled="saving"
+          @close="selected = null"
+        />
+        <QCardSection class="modal-scroll-body">
           <p>
             {{
               selected?.ativo
                 ? 'A inativação só será concluída se o posto estiver livre.'
                 : 'A reativação também ajustará a quantidade do quadro.'
             }}
-          </p></QCardSection
+          </p>
+          <QBanner v-if="dialogError" class="bg-red-1 text-negative">{{
+            dialogError
+          }}</QBanner></QCardSection
         >
         <QCardActions align="right"
           ><QBtn flat label="Cancelar" @click="selected = null" /><QBtn
@@ -276,5 +328,14 @@ onMounted(async () => {
         /></QCardActions>
       </QCard>
     </QDialog>
+    <DeleteConfirmationDialog
+      :open="Boolean(deleting)"
+      title="Excluir posto"
+      :description="`Confirme a exclusão de ${deleting?.codigo || 'este posto'} com sua senha atual.`"
+      :error="deleteError"
+      :loading="saving"
+      @cancel="deleting = null"
+      @confirm="confirmDelete"
+    />
   </QPage>
 </template>

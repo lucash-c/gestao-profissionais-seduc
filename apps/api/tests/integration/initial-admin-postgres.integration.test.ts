@@ -32,11 +32,20 @@ describeWithPostgres('administrador inicial SEDUC no PostgreSQL', () => {
     await database.disconnect();
   });
 
+  it('não consulta nem cria usuário pelo bootstrap conhecido em produção', async () => {
+    const repository = createPrismaInitialAdminRepository(database);
+
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, hashPassword, 'production'),
+    ).resolves.toBe('disabled');
+    expect(await database.client.usuario.count()).toBe(0);
+  });
+
   it('cria uma conta administrativa utilizável, sem unidade e com bcrypt', async () => {
     const repository = createPrismaInitialAdminRepository(database);
-    await expect(bootstrapInitialSeducAdministrator(repository, hashPassword)).resolves.toBe(
-      'created',
-    );
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, hashPassword, 'test'),
+    ).resolves.toBe('created');
 
     const user = await database.client.usuario.findUniqueOrThrow({
       include: { unidades: true },
@@ -67,9 +76,9 @@ describeWithPostgres('administrador inicial SEDUC no PostgreSQL', () => {
       unidades: [],
     });
 
-    await expect(bootstrapInitialSeducAdministrator(repository, hashPassword)).resolves.toBe(
-      'unchanged',
-    );
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, hashPassword, 'test'),
+    ).resolves.toBe('unchanged');
     expect(await database.client.usuario.count()).toBe(1);
   });
 
@@ -87,6 +96,7 @@ describeWithPostgres('administrador inicial SEDUC no PostgreSQL', () => {
       bootstrapInitialSeducAdministrator(
         createPrismaInitialAdminRepository(database),
         hashPassword,
+        'test',
       ),
     ).resolves.toBe('unchanged');
     expect(await database.client.usuario.count()).toBe(1);
@@ -99,7 +109,7 @@ describeWithPostgres('administrador inicial SEDUC no PostgreSQL', () => {
 
   it('não recria SEDUC após existir outro administrador e a conta inicial ser removida', async () => {
     const repository = createPrismaInitialAdminRepository(database);
-    await bootstrapInitialSeducAdministrator(repository, hashPassword);
+    await bootstrapInitialSeducAdministrator(repository, hashPassword, 'test');
     await database.client.usuario.create({
       data: {
         login: 'administrador.definitivo',
@@ -112,9 +122,9 @@ describeWithPostgres('administrador inicial SEDUC no PostgreSQL', () => {
       where: { login: INITIAL_SEDUC_ADMINISTRATOR.login },
     });
 
-    await expect(bootstrapInitialSeducAdministrator(repository, hashPassword)).resolves.toBe(
-      'unchanged',
-    );
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, hashPassword, 'test'),
+    ).resolves.toBe('unchanged');
     expect(await database.client.usuario.count()).toBe(1);
     expect(
       await database.client.usuario.findUnique({
@@ -128,10 +138,12 @@ describeWithPostgres('administrador inicial SEDUC no PostgreSQL', () => {
       bootstrapInitialSeducAdministrator(
         createPrismaInitialAdminRepository(database),
         hashPassword,
+        'test',
       ),
       bootstrapInitialSeducAdministrator(
         createPrismaInitialAdminRepository(database),
         hashPassword,
+        'test',
       ),
     ]);
 

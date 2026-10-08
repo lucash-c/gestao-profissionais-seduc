@@ -27,10 +27,14 @@ describe('central authorization policy', () => {
       ACTION.EDIT_PROFESSIONAL,
       ACTION.EDIT_PROFESSIONAL_PARTICIPATION,
       ACTION.EDIT_PROFESSIONAL_SCORE,
-      ACTION.ACCESS_ADMIN_CORRECTION,
+      ACTION.READ_AUDIT,
+      ACTION.READ_EVENTS,
+      ACTION.DELETE_RECORD,
       ACTION.MANAGE_USERS,
       ACTION.MANAGE_STAFFING,
+      ACTION.MANAGE_MANUAL_ASSIGNMENT_CONFIG,
       ACTION.READ_STAFFING,
+      ACTION.USE_MANUAL_ASSIGNMENT,
     ]) {
       expect(isAuthorized({ action, resourceUnitIds: ['qualquer-unidade'], user })).toBe(true);
       expect(isAuthorized({ action, resourceUnitIds: [], user })).toBe(true);
@@ -54,6 +58,20 @@ describe('central authorization policy', () => {
         user,
       }),
     ).toBe(false);
+    expect(
+      isAuthorized({
+        action: ACTION.USE_MANUAL_ASSIGNMENT,
+        resourceUnitIds: ['unidade-b'],
+        user,
+      }),
+    ).toBe(true);
+    expect(
+      isAuthorized({
+        action: ACTION.USE_MANUAL_ASSIGNMENT,
+        resourceUnitIds: ['unidade-c'],
+        user,
+      }),
+    ).toBe(false);
   });
 
   it('nega ao ADMINISTRADOR a operação normal de evento', () => {
@@ -69,6 +87,7 @@ describe('central authorization policy', () => {
     expect(isAuthorized({ action: ACTION.MANAGE_EVENT, user })).toBe(true);
     expect(isAuthorized({ action: ACTION.OPERATE_EVENT, user })).toBe(true);
     expect(isAuthorized({ action: ACTION.READ_STAFFING, user })).toBe(true);
+    expect(isAuthorized({ action: ACTION.READ_EVENTS, user })).toBe(true);
     expect(isAuthorized({ action: ACTION.MANAGE_STAFFING, user })).toBe(false);
   });
 
@@ -112,19 +131,21 @@ describe('central authorization policy', () => {
       expect(isAuthorized({ action: ACTION.OPERATE_EVENT, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.READ_STAFFING, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.MANAGE_STAFFING, user })).toBe(false);
+      expect(isAuthorized({ action: ACTION.USE_MANUAL_ASSIGNMENT, user })).toBe(false);
     },
   );
 
-  it('reserva Correção Administrativa e gerenciamento de usuários ao ADMINISTRADOR', () => {
+  it('reserva auditoria, exclusão e gerenciamento de usuários ao ADMINISTRADOR', () => {
     for (const perfil of ['OPERADOR', 'DIRETOR', 'SECRETARIO'] as const) {
       const user = createUser(perfil, perfil === 'OPERADOR' ? [] : ['unidade-a']);
-      expect(isAuthorized({ action: ACTION.ACCESS_ADMIN_CORRECTION, user })).toBe(false);
+      expect(isAuthorized({ action: ACTION.READ_AUDIT, user })).toBe(false);
+      expect(isAuthorized({ action: ACTION.DELETE_RECORD, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.MANAGE_USERS, user })).toBe(false);
     }
 
-    expect(
-      isAuthorized({ action: ACTION.ACCESS_ADMIN_CORRECTION, user: createUser('ADMINISTRADOR') }),
-    ).toBe(true);
+    expect(isAuthorized({ action: ACTION.READ_AUDIT, user: createUser('ADMINISTRADOR') })).toBe(
+      true,
+    );
     expect(isAuthorized({ action: ACTION.MANAGE_USERS, user: createUser('ADMINISTRADOR') })).toBe(
       true,
     );

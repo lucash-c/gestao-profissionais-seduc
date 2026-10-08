@@ -20,6 +20,7 @@ function position(options: {
   exerciseElsewhere?: boolean;
   holder?: boolean;
   occupant?: boolean;
+  occupantAbsent?: boolean;
 }) {
   const professional = {
     ativo: true,
@@ -29,11 +30,18 @@ function position(options: {
     matricula: 'M-1',
     nomeCompleto: 'Titular',
   };
+  const occupant = {
+    afastamentos: options.occupantAbsent ? [{ id: OTHER_UNIT_ID }] : [],
+    ativo: true,
+    id: OTHER_UNIT_ID,
+    matricula: 'M-2',
+    nomeCompleto: 'Substituta',
+  };
   return {
     anoLetivo: 2026,
     ativo: options.active ?? true,
     cargoFuncaoId: ID,
-    codigo: null,
+    codigo: 'PEB1-0000000001',
     criadoEm: new Date(),
     atualizadoEm: new Date(),
     exercicios: options.occupant
@@ -45,7 +53,7 @@ function position(options: {
             id: OTHER_UNIT_ID,
             observacoes: null,
             postoTrabalhoId: ID,
-            profissional: professional,
+            profissional: occupant,
             profissionalId: OTHER_UNIT_ID,
             substituiProfissional: professional,
             substituiProfissionalId: ID,
@@ -97,6 +105,7 @@ describe('motor de disponibilidade da Etapa 5', () => {
     [{ absence: true, holder: true }, 'DISPONIVEL_SEM_SEDE'],
     [{ exerciseElsewhere: true, holder: true }, 'DISPONIVEL_SEM_SEDE'],
     [{ absence: true, holder: true, occupant: true }, 'INDISPONIVEL'],
+    [{ absence: true, holder: true, occupant: true, occupantAbsent: true }, 'DISPONIVEL_SEM_SEDE'],
   ] as const)('calcula %j como %s', (options, expected) => {
     expect(mapWorkPosition(position(options))).toMatchObject({ disponibilidade: expected });
   });
@@ -106,12 +115,12 @@ describe('motor de disponibilidade da Etapa 5', () => {
       mapWorkPosition(position({ absence: true, holder: true, occupant: true })),
     ).toMatchObject({
       exercicioAtual: {
-        profissional: { nomeCompleto: 'Titular' },
+        profissional: { nomeCompleto: 'Substituta' },
         substituiProfissional: { nomeCompleto: 'Titular' },
         tipo: 'SEM_SEDE',
       },
       motivosLiberacao: ['AFASTAMENTO'],
-      ocupanteAtual: { nomeCompleto: 'Titular' },
+      ocupanteAtual: { nomeCompleto: 'Substituta' },
       titularAtual: { nomeCompleto: 'Titular' },
     });
   });

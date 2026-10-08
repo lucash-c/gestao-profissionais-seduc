@@ -15,6 +15,7 @@ import EventsPage from '@/pages/EventsPage.vue';
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
+  delete: vi.fn(),
   getPreparation: vi.fn(),
   list: vi.fn(),
   listCargos: vi.fn(),
@@ -30,6 +31,7 @@ const sessionMock = vi.hoisted(() => ({
 vi.mock('@/services/event.service', () => ({
   eventApi: {
     create: mocks.create,
+    delete: mocks.delete,
     getPreparation: mocks.getPreparation,
     list: mocks.list,
     savePreparation: mocks.savePreparation,
@@ -237,19 +239,33 @@ beforeEach(() => {
     evento: { ...event, dataInicio: '2026-10-06T15:30:00.000Z', status: 'ATIVO' },
   });
   mocks.create.mockResolvedValue(event);
+  mocks.delete.mockResolvedValue(undefined);
   mocks.update.mockResolvedValue(event);
 });
 
 describe('Etapa 6 frontend de eventos', () => {
-  it('mostra menu somente ao OPERADOR', async () => {
+  it('mostra o menu ao Operador e ao Administrador', async () => {
     const operator = await mountPage(AdminLayout, '/eventos');
     expect(operator.wrapper.find('[data-testid="events-menu"]').exists()).toBe(true);
     operator.wrapper.unmount();
 
     setProfile('ADMINISTRADOR');
     const admin = await mountPage(AdminLayout, '/unidades');
-    expect(admin.wrapper.find('[data-testid="events-menu"]').exists()).toBe(false);
+    expect(admin.wrapper.find('[data-testid="events-menu"]').exists()).toBe(true);
     admin.wrapper.unmount();
+  });
+
+  it('permite ao Administrador excluir rascunho sem exibir ações operacionais', async () => {
+    setProfile('ADMINISTRADOR');
+    const { wrapper } = await mountPage(EventsPage, '/eventos');
+    expect(wrapper.find('[data-testid="new-event"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="Excluir evento"]').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('Preparar fila');
+    await wrapper.get('button[aria-label="Excluir evento"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="delete-confirmation-dialog"]').text()).toContain(
+      'senha atual',
+    );
   });
 
   it('lista eventos e abre formulário obrigatório de criação', async () => {

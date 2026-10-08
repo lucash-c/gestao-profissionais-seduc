@@ -10,7 +10,8 @@ import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
 import { hashPassword } from '../auth/auth.crypto.js';
-import { writeAudit } from '../audit/audit.service.js';
+import { writeCrudAudit as writeAudit } from '../audit/audit.service.js';
+import { assertAdministratorPassword } from '../authorization/admin-deletion.js';
 import { assertUserIdentifiersAvailable } from '../users/user-identifier.service.js';
 import type {
   PhoneCollectionInput,
@@ -37,6 +38,7 @@ export interface RegistryServices {
   professionals: {
     addPhone(id: string, input: PhoneInput, user: AuthenticatedUser): Promise<ProfessionalRecord>;
     create(input: ProfessionalCreateInput, user: AuthenticatedUser): Promise<ProfessionalRecord>;
+    delete(id: string, password: string, user: AuthenticatedUser): Promise<void>;
     deletePhone(id: string, phoneId: string, user: AuthenticatedUser): Promise<void>;
     get(id: string, user: AuthenticatedUser): Promise<ProfessionalRecord>;
     list(
@@ -60,6 +62,7 @@ export interface RegistryServices {
   units: {
     addPhone(id: string, input: PhoneInput, user: AuthenticatedUser): Promise<UnitRecord>;
     create(input: UnitCreateInput, user: AuthenticatedUser): Promise<UnitRecord>;
+    delete(id: string, password: string, user: AuthenticatedUser): Promise<void>;
     deletePhone(id: string, phoneId: string, user: AuthenticatedUser): Promise<void>;
     get(id: string, user: AuthenticatedUser): Promise<UnitRecord>;
     list(query: UnitQuery, user: AuthenticatedUser): Promise<PaginatedResponse<UnitRecord>>;
@@ -73,6 +76,7 @@ export interface RegistryServices {
   };
   users: {
     create(input: UserCreateInput, actor: AuthenticatedUser): Promise<UserRecord>;
+    delete(id: string, password: string, actor: AuthenticatedUser): Promise<void>;
     list(query: UserQuery): Promise<PaginatedResponse<UserRecord>>;
     resetPassword(id: string, password: string, actor: AuthenticatedUser): Promise<void>;
     update(id: string, input: UserUpdateInput, actor: AuthenticatedUser): Promise<UserRecord>;
@@ -85,6 +89,11 @@ const unitInclude = {
 } as const;
 
 const professionalInclude = {
+  afastamentos: {
+    orderBy: { dataInicio: 'desc' as const },
+    take: 1,
+    where: { dataFim: null },
+  },
   cargoFuncao: {
     select: {
       ativo: true,
@@ -151,6 +160,18 @@ function mapProfessional(
 ): ProfessionalRecord {
   const activePlacement = professional.lotacoesSede[0];
   const placementUnit = activePlacement?.postoTrabalho.quadroNecessidade.unidade;
+  const activeAbsence = professional.afastamentos?.[0];
+  const currentExercise = professional.exercicios[0];
+  const situacaoFuncional = activeAbsence
+    ? { descricao: `Afastado — ${activeAbsence.tipo}`, tipo: 'AFASTADO' as const }
+    : currentExercise
+      ? {
+          descricao: `Em exercício em ${currentExercise.postoTrabalho.quadroNecessidade.unidade.nome}`,
+          tipo: 'EXERCICIO_EXTERNO' as const,
+        }
+      : activePlacement
+        ? { descricao: 'Trabalhando na própria sede', tipo: 'PROPRIA_SEDE' as const }
+        : { descricao: 'Sem exercício registrado', tipo: 'SEM_EXERCICIO' as const };
 
   return {
     ativo: professional.ativo,
@@ -194,6 +215,7 @@ function mapProfessional(
             unidadeNome: placementUnit.nome,
           }
         : null,
+    situacaoFuncional,
     telefones: professional.telefones,
   };
 }
@@ -533,6 +555,37 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
           handleDatabaseError(error);
         }
       },
+      async delete(id, password, user) {
+        await client.$transaction(async (transaction) => {
+          await assertAdministratorPassword(transaction, user, password);
+          const locked = await transaction.$queryRaw<{ id: string }[]>(Prisma.sql`
+            SELECT "id" FROM "profissional" WHERE "id" = ${id}::uuid FOR UPDATE
+          `);
+          if (locked.length === 0) {
+            throw new HttpError(404, 'NOT_FOUND', 'Profissional não encontrado.');
+          }
+          const [placements, exercises, absences, participants, movementItems] = await Promise.all([
+            transaction.lotacaoSede.count({ where: { profissionalId: id } }),
+            transaction.exercicioProfissional.count({
+              where: { OR: [{ profissionalId: id }, { substituiProfissionalId: id }] },
+            }),
+            transaction.afastamentoProfissional.count({ where: { profissionalId: id } }),
+            transaction.eventoParticipante.count({ where: { profissionalId: id } }),
+            transaction.movimentacaoItem.count({
+              where: { OR: [{ profissionalId: id }, { substituiProfissionalId: id }] },
+            }),
+          ]);
+          if (placements + exercises + absences + participants + movementItems > 0) {
+            throw new HttpError(
+              409,
+              'PROTECTED_HISTORY',
+              'O profissional possui histórico de vínculos ou eventos e não pode ser excluído.',
+            );
+          }
+          await transaction.profissionalTelefone.deleteMany({ where: { profissionalId: id } });
+          await transaction.profissional.delete({ where: { id } });
+        });
+      },
       async deletePhone(id, phoneId, user) {
         await getProfessional(id, user);
         const found = await client.$transaction(async (transaction) => {
@@ -744,6 +797,28 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
           handleDatabaseError(error);
         }
       },
+      async delete(id, password, user) {
+        await client.$transaction(async (transaction) => {
+          await assertAdministratorPassword(transaction, user, password);
+          const locked = await transaction.$queryRaw<{ id: string }[]>(Prisma.sql`
+            SELECT "id" FROM "unidade" WHERE "id" = ${id}::uuid FOR UPDATE
+          `);
+          if (locked.length === 0) throw new HttpError(404, 'NOT_FOUND', 'Unidade não encontrada.');
+          const [plans, linkedUsers] = await Promise.all([
+            transaction.quadroNecessidade.count({ where: { unidadeId: id } }),
+            transaction.usuarioUnidade.count({ where: { unidadeId: id } }),
+          ]);
+          if (plans + linkedUsers > 0) {
+            throw new HttpError(
+              409,
+              'PROTECTED_HISTORY',
+              'A unidade possui quadro ou usuários vinculados e não pode ser excluída.',
+            );
+          }
+          await transaction.unidadeTelefone.deleteMany({ where: { unidadeId: id } });
+          await transaction.unidade.delete({ where: { id } });
+        });
+      },
       async deletePhone(id, phoneId, user) {
         await getUnit(id, user);
         const found = await client.$transaction(async (transaction) => {
@@ -877,6 +952,47 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         } catch (error) {
           handleDatabaseError(error);
         }
+      },
+      async delete(id, password, actor) {
+        if (id === actor.id) {
+          throw new HttpError(
+            409,
+            'CANNOT_DELETE_CURRENT_USER',
+            'Não é possível excluir a própria conta em uso.',
+          );
+        }
+        await client.$transaction(async (transaction) => {
+          await assertAdministratorPassword(transaction, actor, password);
+          await transaction.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(79211001)`);
+          const target = await transaction.usuario.findUnique({ where: { id } });
+          if (!target) throw new HttpError(404, 'NOT_FOUND', 'Usuário não encontrado.');
+          if (target.ativo && target.perfil === 'ADMINISTRADOR') {
+            const activeAdministrators = await transaction.usuario.count({
+              where: { ativo: true, perfil: 'ADMINISTRADOR' },
+            });
+            if (activeAdministrators <= 1) {
+              throw new HttpError(
+                409,
+                'LAST_ACTIVE_ADMINISTRATOR',
+                'O último administrador ativo não pode ser excluído.',
+              );
+            }
+          }
+          const [events, movements, audits] = await Promise.all([
+            transaction.evento.count({ where: { iniciadoPorUsuarioId: id } }),
+            transaction.movimentacao.count({ where: { usuarioId: id } }),
+            transaction.auditoria.count({ where: { usuarioId: id } }),
+          ]);
+          if (events + movements + audits > 0) {
+            throw new HttpError(
+              409,
+              'PROTECTED_HISTORY',
+              'O usuário possui histórico operacional e não pode ser excluído.',
+            );
+          }
+          await transaction.sessaoUsuario.deleteMany({ where: { usuarioId: id } });
+          await transaction.usuario.delete({ where: { id } });
+        });
       },
       async list(query) {
         const where: Prisma.UsuarioWhereInput = {

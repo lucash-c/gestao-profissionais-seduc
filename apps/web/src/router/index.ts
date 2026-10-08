@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory, type Router, type RouterHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import AdministrativeCorrectionPage from '@/pages/AdministrativeCorrectionPage.vue';
 import AuditHistoryPage from '@/pages/AuditHistoryPage.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import EventExchangePage from '@/pages/EventExchangePage.vue';
 import EventPreparationPage from '@/pages/EventPreparationPage.vue';
 import EventsPage from '@/pages/EventsPage.vue';
 import LoginPage from '@/pages/LoginPage.vue';
+import ManualAssignmentPage from '@/pages/ManualAssignmentPage.vue';
 import ProfessionalsPage from '@/pages/ProfessionalsPage.vue';
 import PublicEventDisplayPage from '@/pages/PublicEventDisplayPage.vue';
 import ScoresPage from '@/pages/ScoresPage.vue';
@@ -43,7 +43,7 @@ export function createAppRouter(
           { component: ProfessionalsPage, name: 'professionals', path: 'profissionais' },
           {
             component: EventsPage,
-            meta: { profiles: ['OPERADOR'] },
+            meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },
             name: 'events',
             path: 'eventos',
           },
@@ -78,6 +78,12 @@ export function createAppRouter(
             path: 'postos',
           },
           {
+            component: ManualAssignmentPage,
+            meta: { profiles: ['ADMINISTRADOR', 'DIRETOR'] },
+            name: 'manual-assignment',
+            path: 'atribuicao-manual',
+          },
+          {
             component: ScoresPage,
             meta: { profiles: ['ADMINISTRADOR'] },
             name: 'scores',
@@ -94,12 +100,6 @@ export function createAppRouter(
             meta: { profiles: ['ADMINISTRADOR'] },
             name: 'audit-history',
             path: 'auditoria',
-          },
-          {
-            component: AdministrativeCorrectionPage,
-            meta: { profiles: ['ADMINISTRADOR'] },
-            name: 'administrative-correction',
-            path: 'correcao-administrativa',
           },
         ],
         component: AdminLayout,

@@ -46,9 +46,18 @@ export function createAuthRouter({ authService, environment }: AuthRouterDepende
     identifier: 'auth-login',
     legacyHeaders: false,
     limit: 5,
-    message: {
-      error: 'TOO_MANY_REQUESTS',
-      message: 'Muitas tentativas de autenticação. Tente novamente mais tarde.',
+    handler(request, response) {
+      const rateLimitState = (
+        request as typeof request & { rateLimit: { resetTime?: Date | undefined } }
+      ).rateLimit;
+      const resetAt = rateLimitState.resetTime?.getTime() ?? Date.now() + 15 * 60 * 1000;
+      const retryAfterSeconds = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+      response.setHeader('Retry-After', String(retryAfterSeconds));
+      response.status(429).json({
+        error: 'TOO_MANY_REQUESTS',
+        message: 'Muitas tentativas de autenticação. Tente novamente mais tarde.',
+        retryAfterSeconds,
+      });
     },
     skipSuccessfulRequests: true,
     standardHeaders: 'draft-8',

@@ -211,6 +211,7 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       data: {
         anoLetivo: year,
         cargoFuncaoId,
+        codigo: `TEST-${randomUUID()}`,
         periodoId: ids.period,
         quadroNecessidadeId: quadroId,
         unidadeId: unitId,

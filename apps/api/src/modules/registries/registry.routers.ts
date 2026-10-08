@@ -1,8 +1,9 @@
 import type { AuthenticatedUser } from '@seduc/contracts';
 import { Router, type Request } from 'express';
-import { z } from 'zod';
 
 import { HttpError } from '../../http/http-error.js';
+import { databaseIdSchema } from '../../validation/database-id.js';
+import { adminDeletionSchema } from '../authorization/admin-deletion.js';
 import { assertAuthorized, AUTHORIZATION_ACTIONS } from '../authorization/authorization.policy.js';
 import {
   passwordResetSchema,
@@ -20,7 +21,7 @@ import {
 } from './registry.schemas.js';
 import type { RegistryServices } from './registry.service.js';
 
-const idSchema = z.string().uuid();
+const idSchema = databaseIdSchema;
 
 function currentUser(request: Request): AuthenticatedUser {
   if (!request.authenticatedUser) {
@@ -67,6 +68,14 @@ export function createUnitRouter(service: RegistryServices['units']): Router {
     const id = routeId(request);
     assertAuthorized({ action: AUTHORIZATION_ACTIONS.EDIT_UNIT, resourceUnitIds: [id], user });
     response.json(await service.update(id, unitUpdateSchema.parse(request.body), user));
+  });
+
+  router.delete('/:id', async (request, response) => {
+    const user = currentUser(request);
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.DELETE_RECORD, user });
+    const input = adminDeletionSchema.parse(request.body);
+    await service.delete(routeId(request), input.senhaAtual, user);
+    response.status(204).send();
   });
 
   router.post('/:id/telefones', async (request, response) => {
@@ -152,6 +161,14 @@ export function createProfessionalRouter(service: RegistryServices['professional
     response.json(await service.update(id, professionalUpdateSchema.parse(request.body), user));
   });
 
+  router.delete('/:id', async (request, response) => {
+    const user = currentUser(request);
+    assertAuthorized({ action: AUTHORIZATION_ACTIONS.DELETE_RECORD, user });
+    const input = adminDeletionSchema.parse(request.body);
+    await service.delete(routeId(request), input.senhaAtual, user);
+    response.status(204).send();
+  });
+
   router.post('/:id/telefones', async (request, response) => {
     const user = currentUser(request);
     const id = routeId(request);
@@ -226,6 +243,11 @@ export function createUserRouter(service: RegistryServices['users']): Router {
   router.patch('/:id/senha', async (request, response) => {
     const input = passwordResetSchema.parse(request.body);
     await service.resetPassword(routeId(request), input.senha, currentUser(request));
+    response.status(204).send();
+  });
+  router.delete('/:id', async (request, response) => {
+    const input = adminDeletionSchema.parse(request.body);
+    await service.delete(routeId(request), input.senhaAtual, currentUser(request));
     response.status(204).send();
   });
 

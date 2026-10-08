@@ -1,6 +1,8 @@
 import type { DatabaseConnection } from '@seduc/database';
 import { Router } from 'express';
 
+import { safeErrorContext } from '../../observability/logging.js';
+
 export interface HealthRouterDependencies {
   clock?: () => Date;
   database: DatabaseConnection;
@@ -30,7 +32,10 @@ export function createHealthRouter({
         timestamp: clock().toISOString(),
       });
     } catch (error) {
-      request.log.warn({ error }, 'PostgreSQL indisponível no healthcheck de prontidão');
+      request.log.warn(
+        safeErrorContext(error),
+        'PostgreSQL indisponível no healthcheck de prontidão',
+      );
       response.status(503).json({
         checks: { database: 'down' },
         service: 'seduc-api',

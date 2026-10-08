@@ -11,6 +11,7 @@ import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
 import { writeAudit } from '../audit/audit.service.js';
+import { assertAdministratorPassword } from '../authorization/admin-deletion.js';
 import type { EventCreateInput, EventQuery, EventUpdateInput } from './event.schemas.js';
 
 export interface RankingCandidate {
@@ -30,6 +31,7 @@ export interface RankedCandidate extends RankingCandidate {
 
 export interface EventServices {
   create(input: EventCreateInput, user?: AuthenticatedUser): Promise<EventRecord>;
+  delete(id: string, password: string, user: AuthenticatedUser): Promise<void>;
   get(id: string): Promise<EventRecord>;
   list(query: EventQuery): Promise<PaginatedResponse<EventRecord>>;
   preparation(id: string): Promise<EventPreparationRecord>;
@@ -139,7 +141,7 @@ export function mapEvent(event: EventPayload): EventRecord {
 
 function eligibility(
   tipo: EventType,
-  professional: { permuta: boolean; remocao: boolean },
+  professional: { lotacoesSede?: readonly unknown[]; permuta: boolean; remocao: boolean },
 ): {
   elegivel: boolean;
   motivo: string | null;
@@ -149,6 +151,9 @@ function eligibility(
   }
   if (tipo === 'PERMUTA' && !professional.permuta) {
     return { elegivel: false, motivo: 'Profissional não habilitado para Permuta.' };
+  }
+  if (tipo === 'ATRIBUICAO' && (professional.lotacoesSede?.length ?? 0) > 0) {
+    return { elegivel: false, motivo: 'Profissional já possui sede oficial ativa.' };
   }
   return { elegivel: true, motivo: null };
 }
@@ -339,6 +344,32 @@ export function createPrismaEventServices(
         handleDatabaseError(error);
       }
     },
+    async delete(id, password, user) {
+      await client.$transaction(async (transaction) => {
+        await assertAdministratorPassword(transaction, user, password);
+        await lockEvent(transaction, id);
+        const event = await transaction.evento.findUnique({
+          include: { _count: { select: { movimentacoes: true, participantes: true } } },
+          where: { id },
+        });
+        if (!event) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
+        if (event.status !== 'RASCUNHO') {
+          throw new HttpError(
+            409,
+            'PROTECTED_HISTORY',
+            'Somente um evento em rascunho pode ser excluído.',
+          );
+        }
+        if (event._count.participantes > 0 || event._count.movimentacoes > 0) {
+          throw new HttpError(
+            409,
+            'EVENT_HAS_DEPENDENCIES',
+            'O evento possui preparação ou movimentações e não pode ser excluído.',
+          );
+        }
+        await transaction.evento.delete({ where: { id } });
+      });
+    },
     get: getEvent,
     async list(query) {
       const where: Prisma.EventoWhereInput = {
@@ -387,7 +418,14 @@ export function createPrismaEventServices(
             );
           }
           const professionals = await transaction.profissional.findMany({
-            select: { ativo: true, cargoFuncaoId: true, id: true, permuta: true, remocao: true },
+            select: {
+              ativo: true,
+              cargoFuncaoId: true,
+              id: true,
+              lotacoesSede: { select: { id: true }, take: 1, where: { dataFim: null } },
+              permuta: true,
+              remocao: true,
+            },
             where: { id: { in: uniqueIds } },
           });
           if (

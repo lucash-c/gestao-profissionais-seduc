@@ -185,6 +185,7 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
         anoLetivo: plan.anoLetivo,
         ativo,
         cargoFuncaoId,
+        codigo: `TEST-${randomUUID()}`,
         periodoId: ids.periodo,
         quadroNecessidadeId: plan.id,
         unidadeId,
@@ -219,12 +220,16 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
 
     await expect(staffing.workPositions.get(free.id)).resolves.toMatchObject({
       disponibilidade: 'DISPONIVEL_COM_SEDE',
+      ocupanteAtual: null,
+      titularAtual: null,
     });
     await expect(staffing.workPositions.get(inactive.id)).resolves.toMatchObject({
       disponibilidade: 'INATIVO',
     });
     await expect(staffing.workPositions.get(occupied.id)).resolves.toMatchObject({
       disponibilidade: 'INDISPONIVEL',
+      ocupanteAtual: { id: holder.id },
+      titularAtual: { id: holder.id },
     });
 
     await assignments.absences.create(holder.id, {
@@ -235,6 +240,8 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     await expect(staffing.workPositions.get(occupied.id)).resolves.toMatchObject({
       disponibilidade: 'DISPONIVEL_SEM_SEDE',
       motivosLiberacao: ['AFASTAMENTO'],
+      ocupanteAtual: null,
+      titularAtual: { id: holder.id },
     });
 
     const substitute = await createProfessional();
@@ -274,6 +281,13 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     await expect(staffing.workPositions.get(postoA.id)).resolves.toMatchObject({
       disponibilidade: 'DISPONIVEL_SEM_SEDE',
       motivosLiberacao: ['EXERCICIO_OUTRO_POSTO'],
+      ocupanteAtual: null,
+      titularAtual: { id: joao.id },
+    });
+    await expect(staffing.workPositions.get(postoB.id)).resolves.toMatchObject({
+      disponibilidade: 'INDISPONIVEL',
+      ocupanteAtual: { id: joao.id },
+      titularAtual: { id: maria.id },
     });
 
     const carlosExercise = await assignments.exercises.startTemporary({
@@ -303,6 +317,8 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     await assignments.exercises.end(joaoExercise.id);
     await expect(staffing.workPositions.get(postoA.id)).resolves.toMatchObject({
       disponibilidade: 'INDISPONIVEL',
+      ocupanteAtual: { id: joao.id },
+      titularAtual: { id: joao.id },
     });
 
     expect(await database.client.lotacaoSede.count({ where: { profissionalId: joao.id } })).toBe(1);
@@ -585,6 +601,10 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     const operator = await authenticated(credentials.operator);
 
     await admin.get(`/profissionais/${professional.id}/vinculos`).expect(200);
+    const functionalSituation = await admin.get(`/profissionais/${professional.id}`).expect(200);
+    expect(functionalSituation.body.situacaoFuncional).toMatchObject({
+      tipo: 'EXERCICIO_EXTERNO',
+    });
     await operator.get(`/profissionais/${professional.id}/afastamentos`).expect(200);
     await operator
       .post(`/profissionais/${professional.id}/afastamentos`)
@@ -595,13 +615,23 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     const created = await director
       .post(`/profissionais/${professional.id}/afastamentos`)
       .send({
-        dataInicio: new Date(Date.now() - 60_000).toISOString(),
+        dataInicio: new Date().toISOString(),
         tipo: 'Licença multiunidade',
       })
       .expect(201);
+    const absentSituation = await admin.get(`/profissionais/${professional.id}`).expect(200);
+    expect(absentSituation.body.situacaoFuncional).toMatchObject({
+      descricao: 'Afastado — Licença multiunidade',
+      tipo: 'AFASTADO',
+    });
+    expect(
+      await database.client.exercicioProfissional.count({
+        where: { dataFim: null, profissionalId: professional.id },
+      }),
+    ).toBe(0);
     await director
       .patch(`/profissionais/${professional.id}/afastamentos/${created.body.id}/encerrar`)
-      .send({})
+      .send({ dataFim: new Date(Date.now() + 1_000).toISOString() })
       .expect(200);
     const history = await director
       .get(`/profissionais/${professional.id}/afastamentos`)
@@ -609,5 +639,172 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     expect(history.body).toEqual(
       expect.arrayContaining([expect.objectContaining({ ativo: false, id: created.body.id })]),
     );
+  });
+
+  it('aplica toggle e RBAC da Atribuição manual sem criar evento ou movimentação', async () => {
+    const admin = await authenticated(credentials.admin);
+    const director = await authenticated(credentials.director);
+    const operator = await authenticated(credentials.operator);
+    const secretary = await authenticated(credentials.secretary);
+
+    await admin.get('/atribuicao-manual/configuracao').expect(200, { habilitada: true });
+    await director.get('/atribuicao-manual/configuracao').expect(200, { habilitada: true });
+    await operator.get('/atribuicao-manual/configuracao').expect(403);
+    await secretary.get('/atribuicao-manual/configuracao').expect(403);
+    await director.patch('/atribuicao-manual/configuracao').send({ habilitada: false }).expect(403);
+    await admin
+      .patch('/atribuicao-manual/configuracao')
+      .send({ habilitada: false })
+      .expect(200, { habilitada: false });
+    await director.get('/atribuicao-manual/profissionais').expect(403);
+    await admin.get('/atribuicao-manual/profissionais').expect(200);
+    await admin
+      .post('/atribuicao-manual/confirmar')
+      .send({
+        postoTrabalhoId: randomUUID(),
+        profissionalId: randomUUID(),
+        tipoDestino: 'COM_SEDE',
+      })
+      .expect(409);
+    await admin
+      .patch('/atribuicao-manual/configuracao')
+      .send({ habilitada: true })
+      .expect(200, { habilitada: true });
+  });
+
+  it('confirma COM_SEDE/SEM_SEDE, respeita afastamento, escopo e concorrência manual', async () => {
+    const admin = await authenticated(credentials.admin);
+    const director = await authenticated(credentials.director);
+
+    const noSeat = await createProfessional(ids.cargoComum, `Manual sem sede ${suffix}`);
+    const officialSeat = await createPosition(ids.unidadeA);
+    const withSeat = await director
+      .post('/atribuicao-manual/confirmar')
+      .send({
+        postoTrabalhoId: officialSeat.id,
+        profissionalId: noSeat.id,
+        tipoDestino: 'COM_SEDE',
+      })
+      .expect(200);
+    expect(withSeat.body).toMatchObject({ tipoDestino: 'COM_SEDE' });
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, profissionalId: noSeat.id },
+      }),
+    ).toMatchObject({ postoTrabalhoId: officialSeat.id });
+
+    const awayWithoutSeat = await createProfessional();
+    await assignments.absences.create(awayWithoutSeat.id, {
+      dataInicio: new Date(Date.now() - 60_000),
+      observacoes: null,
+      tipo: 'Licença manual',
+    });
+    const awaySeat = await createPosition(ids.unidadeB);
+    await director
+      .post('/atribuicao-manual/confirmar')
+      .send({
+        postoTrabalhoId: awaySeat.id,
+        profissionalId: awayWithoutSeat.id,
+        tipoDestino: 'COM_SEDE',
+      })
+      .expect(200);
+    await expect(staffing.workPositions.get(awaySeat.id)).resolves.toMatchObject({
+      disponibilidade: 'DISPONIVEL_SEM_SEDE',
+      ocupanteAtual: null,
+      titularAtual: { id: awayWithoutSeat.id },
+    });
+
+    const temporary = await makeTemporaryPosition();
+    const substitute = await createProfessional();
+    await director
+      .post('/atribuicao-manual/confirmar')
+      .send({
+        postoTrabalhoId: temporary.position.id,
+        profissionalId: substitute.id,
+        tipoDestino: 'SEM_SEDE',
+      })
+      .expect(200);
+    await expect(staffing.workPositions.get(temporary.position.id)).resolves.toMatchObject({
+      ocupanteAtual: { id: substitute.id },
+    });
+    await assignments.absences.create(substitute.id, {
+      dataInicio: new Date(Date.now() + 1_000),
+      observacoes: null,
+      tipo: 'Licença do substituto',
+    });
+    await expect(staffing.workPositions.get(temporary.position.id)).resolves.toMatchObject({
+      disponibilidade: 'DISPONIVEL_SEM_SEDE',
+      ocupanteAtual: null,
+    });
+    expect(
+      await database.client.exercicioProfissional.findFirst({
+        where: { profissionalId: substitute.id },
+        orderBy: { dataInicio: 'desc' },
+      }),
+    ).toMatchObject({ dataFim: expect.any(Date) });
+
+    const blockedTemporary = await makeTemporaryPosition();
+    await admin
+      .post('/atribuicao-manual/confirmar')
+      .send({
+        postoTrabalhoId: blockedTemporary.position.id,
+        profissionalId: awayWithoutSeat.id,
+        tipoDestino: 'SEM_SEDE',
+      })
+      .expect(409);
+
+    const outsideScope = await createPosition(ids.unidadeC);
+    await director
+      .post('/atribuicao-manual/simular')
+      .send({
+        postoTrabalhoId: outsideScope.id,
+        profissionalId: await createProfessional().then(({ id }) => id),
+        tipoDestino: 'COM_SEDE',
+      })
+      .expect(403);
+
+    const concurrentSeat = await createPosition(ids.unidadeA);
+    const candidateA = await createProfessional();
+    const candidateB = await createProfessional();
+    const concurrent = await Promise.all([
+      admin.post('/atribuicao-manual/confirmar').send({
+        postoTrabalhoId: concurrentSeat.id,
+        profissionalId: candidateA.id,
+        tipoDestino: 'COM_SEDE',
+      }),
+      director.post('/atribuicao-manual/confirmar').send({
+        postoTrabalhoId: concurrentSeat.id,
+        profissionalId: candidateB.id,
+        tipoDestino: 'COM_SEDE',
+      }),
+    ]);
+    expect(concurrent.map(({ status }) => status).sort()).toEqual([200, 409]);
+    expect(
+      await database.client.lotacaoSede.count({
+        where: { dataFim: null, postoTrabalhoId: concurrentSeat.id },
+      }),
+    ).toBe(1);
+    const manuallyAssignedIds = [
+      noSeat.id,
+      awayWithoutSeat.id,
+      substitute.id,
+      candidateA.id,
+      candidateB.id,
+    ];
+    expect(
+      await database.client.movimentacaoItem.count({
+        where: { profissionalId: { in: manuallyAssignedIds } },
+      }),
+    ).toBe(0);
+    expect(
+      await database.client.eventoParticipante.count({
+        where: { profissionalId: { in: manuallyAssignedIds } },
+      }),
+    ).toBe(0);
+    expect(
+      await database.client.auditoria.count({
+        where: { entidade: 'ATRIBUICAO_MANUAL', usuario: { login: credentials.director } },
+      }),
+    ).toBeGreaterThan(0);
   });
 });

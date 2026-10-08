@@ -16,12 +16,16 @@ import {
   QTd,
   QTr,
 } from 'quasar';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
+import { fieldError, formError } from '@/services/form-errors';
 import { eventApi } from '@/services/event.service';
 import { registryApi } from '@/services/registry.service';
+import { sessionStore } from '@/stores/session.store';
 
 const router = useRouter();
 const rows = ref<EventRecord[]>([]);
@@ -33,16 +37,26 @@ const page = ref(1);
 const totalPages = ref(1);
 const dialogOpen = ref(false);
 const editing = ref<EventRecord | null>(null);
+const dialogError = ref('');
+const saveFailure = ref<unknown>(null);
+const deleting = ref<EventRecord | null>(null);
+const deleteError = ref('');
+const isOperator = computed(() => sessionStore.state.user?.perfil === 'OPERADOR');
+const isAdmin = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
 const form = reactive({
   ano: new Date().getFullYear(),
   cargoFuncaoId: '',
   nome: '',
   tipo: 'REMOCAO' as EventType,
 });
+const formValid = computed(() =>
+  Boolean(form.nome.trim() && form.cargoFuncaoId && form.ano >= 1 && form.ano <= 9999),
+);
 const types = [
   { label: 'Remoção', value: 'REMOCAO' },
   { label: 'Permuta', value: 'PERMUTA' },
   { label: 'Listão', value: 'LISTAO' },
+  { label: 'Atribuição', value: 'ATRIBUICAO' },
 ];
 const columns = [
   { align: 'left' as const, field: 'nome', label: 'Nome', name: 'nome' },
@@ -69,6 +83,8 @@ async function load(): Promise<void> {
 }
 
 function openCreate(): void {
+  dialogError.value = '';
+  saveFailure.value = null;
   editing.value = null;
   Object.assign(form, {
     ano: new Date().getFullYear(),
@@ -80,6 +96,8 @@ function openCreate(): void {
 }
 
 function openEdit(event: EventRecord): void {
+  dialogError.value = '';
+  saveFailure.value = null;
   editing.value = event;
   Object.assign(form, {
     ano: event.ano,
@@ -93,7 +111,8 @@ function openEdit(event: EventRecord): void {
 async function save(): Promise<void> {
   if (saving.value) return;
   saving.value = true;
-  error.value = '';
+  dialogError.value = '';
+  saveFailure.value = null;
   try {
     const event = editing.value
       ? await eventApi.update(editing.value.id, { ...form })
@@ -102,7 +121,27 @@ async function save(): Promise<void> {
     await load();
     if (!editing.value) await router.push({ name: 'event-preparation', params: { id: event.id } });
   } catch (saveError) {
-    error.value = saveError instanceof Error ? saveError.message : 'Falha ao salvar o evento.';
+    saveFailure.value = saveError;
+    dialogError.value = formError(saveError, 'Falha ao salvar o evento.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+function issue(path: string): string | undefined {
+  return fieldError(saveFailure.value, path);
+}
+
+async function confirmDelete(password: string): Promise<void> {
+  if (!deleting.value || saving.value) return;
+  saving.value = true;
+  deleteError.value = '';
+  try {
+    await eventApi.delete(deleting.value.id, password);
+    deleting.value = null;
+    await load();
+  } catch (deleteFailure) {
+    deleteError.value = formError(deleteFailure, 'Falha ao excluir o evento.');
   } finally {
     saving.value = false;
   }
@@ -126,6 +165,7 @@ onMounted(async () => {
         <h1>Eventos</h1>
       </div>
       <QBtn
+        v-if="isOperator"
         data-testid="new-event"
         color="primary"
         icon="add"
@@ -141,7 +181,15 @@ onMounted(async () => {
         <QSpinner color="primary" size="36px" /> Carregando eventos…
       </div>
       <div v-else-if="rows.length === 0" class="registry-state">Nenhum evento encontrado.</div>
-      <QTable v-else flat :rows="rows" :columns="columns" row-key="id" hide-pagination>
+      <QTable
+        v-else
+        flat
+        :rows="rows"
+        :columns="columns"
+        row-key="id"
+        hide-pagination
+        :pagination="{ rowsPerPage: 0 }"
+      >
         <template #body="props">
           <QTr :props="props">
             <QTd key="nome" :props="props">{{ props.row.nome }}</QTd>
@@ -154,14 +202,14 @@ onMounted(async () => {
             }}</QTd>
             <QTd key="acoes" :props="props">
               <QBtn
-                v-if="props.row.status === 'RASCUNHO'"
+                v-if="isOperator && props.row.status === 'RASCUNHO'"
                 flat
                 dense
                 label="Editar"
                 @click="openEdit(props.row)"
               />
               <QBtn
-                v-if="props.row.status === 'RASCUNHO'"
+                v-if="isOperator && props.row.status === 'RASCUNHO'"
                 flat
                 dense
                 color="primary"
@@ -170,7 +218,9 @@ onMounted(async () => {
               />
               <QBtn
                 v-if="
-                  props.row.status === 'ATIVO' && ['REMOCAO', 'LISTAO'].includes(props.row.tipo)
+                  isOperator &&
+                  props.row.status === 'ATIVO' &&
+                  ['REMOCAO', 'LISTAO', 'ATRIBUICAO'].includes(props.row.tipo)
                 "
                 flat
                 dense
@@ -179,7 +229,7 @@ onMounted(async () => {
                 :to="{ name: 'event-operations', params: { id: props.row.id } }"
               />
               <QBtn
-                v-if="props.row.status === 'ATIVO' && props.row.tipo === 'PERMUTA'"
+                v-if="isOperator && props.row.status === 'ATIVO' && props.row.tipo === 'PERMUTA'"
                 flat
                 dense
                 color="primary"
@@ -200,6 +250,19 @@ onMounted(async () => {
                 label="Ver histórico"
                 :to="{ name: 'event-exchange', params: { id: props.row.id } }"
               />
+              <QBtn
+                v-if="isAdmin && props.row.status === 'RASCUNHO'"
+                flat
+                round
+                dense
+                color="negative"
+                icon="delete"
+                aria-label="Excluir evento"
+                @click="
+                  deleting = props.row;
+                  deleteError = '';
+                "
+              />
             </QTd>
           </QTr>
         </template>
@@ -211,11 +274,25 @@ onMounted(async () => {
 
     <QDialog v-model="dialogOpen" persistent>
       <QCard class="registry-dialog" data-testid="event-dialog">
-        <QCardSection
-          ><h2>{{ editing ? 'Editar evento' : 'Novo evento' }}</h2></QCardSection
-        >
+        <ModalHeader
+          :title="editing ? 'Editar evento' : 'Novo evento'"
+          :close-disabled="saving"
+          @close="dialogOpen = false"
+        />
         <QCardSection class="form-grid">
-          <QInput v-model="form.nome" outlined label="Nome *" />
+          <QBanner
+            v-if="dialogError"
+            class="bg-red-1 text-negative full-span"
+            data-testid="event-dialog-error"
+            >{{ dialogError }}</QBanner
+          >
+          <QInput
+            v-model="form.nome"
+            outlined
+            label="Nome *"
+            :error="Boolean(issue('nome'))"
+            :error-message="issue('nome')"
+          />
           <QInput
             v-model.number="form.ano"
             outlined
@@ -223,6 +300,8 @@ onMounted(async () => {
             min="1"
             max="9999"
             label="Ano *"
+            :error="Boolean(issue('ano'))"
+            :error-message="issue('ano')"
           />
           <QSelect
             v-model="form.tipo"
@@ -241,6 +320,8 @@ onMounted(async () => {
             option-value="id"
             :options="cargos"
             label="Cargo/função *"
+            :error="Boolean(issue('cargoFuncaoId'))"
+            :error-message="issue('cargoFuncaoId')"
           />
         </QCardSection>
         <QCardActions align="right">
@@ -250,11 +331,20 @@ onMounted(async () => {
             color="primary"
             label="Salvar"
             :loading="saving"
-            :disable="saving"
+            :disable="saving || !formValid"
             @click="save"
           />
         </QCardActions>
       </QCard>
     </QDialog>
+    <DeleteConfirmationDialog
+      :open="Boolean(deleting)"
+      title="Excluir evento"
+      :description="`Confirme a exclusão de ${deleting?.nome ?? 'este evento'} com sua senha atual.`"
+      :error="deleteError"
+      :loading="saving"
+      @cancel="deleting = null"
+      @confirm="confirmDelete"
+    />
   </QPage>
 </template>

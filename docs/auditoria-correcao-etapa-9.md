@@ -1,5 +1,8 @@
 # Etapa 9 — Auditoria e Correção Administrativa
 
+> Nota de evolução: o módulo de Correção Administrativa descrito historicamente nesta etapa foi
+> removido da entrega final na Etapa 11. A auditoria técnica permanece disponível.
+
 ## Dois históricos distintos
 
 `movimentacao` e `movimentacao_item` registram decisões presenciais de Remoção, Listão e Permuta. Esses registros continuam sendo a fonte do histórico operacional dos eventos.
@@ -37,7 +40,8 @@ Não existem endpoints de alteração ou exclusão de auditoria.
 
 ## Correção Administrativa
 
-O módulo usa router, service, schemas e páginas próprios em `/correcao-administrativa`. Somente `ADMINISTRADOR` possui acesso global. Não existe `skipAudit`, `ignoreHistory` nem outro bypass nos endpoints normais.
+Esta seção registra o escopo histórico da Etapa 9. A implementação, as rotas, os contratos e a tela
+foram removidos na Etapa 11 e não estão disponíveis na versão final.
 
 O fluxo é explícito: informar entidade, registro, campo permitido e novo valor; solicitar a prévia; conferir `ANTES` e `DEPOIS`; confirmar em diálogo. O payload submetido à prévia fica congelado para a confirmação, junto com uma versão criptográfica do estado conferido. O botão bloqueia submissão duplicada. Um aviso permanente esclarece que a exceção se limita às tabelas de negócio.
 

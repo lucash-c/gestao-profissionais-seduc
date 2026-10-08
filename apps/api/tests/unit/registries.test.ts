@@ -108,6 +108,7 @@ const professional: ProfessionalRecord = {
   pontuacao: '0',
   remocao: false,
   sedeAtual: { postoId: RECORD_ID, unidadeId: UNIT_A, unidadeNome: 'Unidade A' },
+  situacaoFuncional: { descricao: 'Trabalhando na própria sede', tipo: 'PROPRIA_SEDE' },
   telefones: [],
 };
 
@@ -123,6 +124,7 @@ function createServices(): RegistryServices {
     professionals: {
       addPhone: vi.fn().mockResolvedValue(professional),
       create: vi.fn().mockResolvedValue(professional),
+      delete: vi.fn().mockResolvedValue(undefined),
       deletePhone: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue(professional),
       list: vi.fn().mockResolvedValue({
@@ -143,6 +145,7 @@ function createServices(): RegistryServices {
         telefones: [{ id: PHONE_ID, numero: '19999999999', tipo: 'CELULAR' }],
       }),
       create: vi.fn().mockResolvedValue(unit),
+      delete: vi.fn().mockResolvedValue(undefined),
       deletePhone: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue(unit),
       list: vi
@@ -165,6 +168,7 @@ function createServices(): RegistryServices {
             unidades: input.unidadeIds.map((id: string) => ({ id, nome: `Unidade ${id}` })),
           }) satisfies UserRecord,
       ),
+      delete: vi.fn().mockResolvedValue(undefined),
       list: vi
         .fn()
         .mockResolvedValue({ items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 }),
@@ -237,6 +241,33 @@ describe('Etapa 3 registry API and RBAC', () => {
     );
     expect(services.units.update).toHaveBeenCalledTimes(2);
     expect(services.units.addPhone).toHaveBeenCalled();
+  });
+
+  it('retorna issues seguras por campo e aceita UUID PostgreSQL sem bits RFC', async () => {
+    const { agent, services } = await scenario('ADMINISTRADOR');
+    const invalid = await agent
+      .post('/unidades')
+      .send({ cep: '123', nome: '', tipoUnidadeId: 'incompleto' })
+      .expect(400);
+    expect(invalid.body).toEqual({
+      error: 'VALIDATION_ERROR',
+      issues: expect.arrayContaining([
+        expect.objectContaining({ path: 'cep' }),
+        expect.objectContaining({ path: 'nome' }),
+        expect.objectContaining({ path: 'tipoUnidadeId' }),
+      ]),
+      message: 'Revise os campos informados.',
+    });
+    expect(JSON.stringify(invalid.body)).not.toMatch(/senha|payload|stack/i);
+
+    await agent
+      .post('/unidades')
+      .send({ nome: 'UUID PostgreSQL', tipoUnidadeId: '10000000-0000-0000-0000-000000000001' })
+      .expect(201);
+    expect(services.units.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tipoUnidadeId: '10000000-0000-0000-0000-000000000001' }),
+      expect.anything(),
+    );
   });
 
   it('mantém Operador em leitura para unidades e profissionais', async () => {
@@ -427,6 +458,7 @@ describe('Etapa 3 validation rules', () => {
           unidades: [],
         }),
         findMany: vi.fn().mockResolvedValue([]),
+        findUnique: vi.fn().mockResolvedValue({ perfil: 'ADMINISTRADOR' }),
       },
     };
     const service = createPrismaRegistryServices({
@@ -474,6 +506,7 @@ describe('Etapa 3 validation rules', () => {
       email: null,
       endereco: null,
       exercicios: [],
+      afastamentos: [],
       id: RECORD_ID,
       lotacoesSede: [],
       matricula: professional.matricula,

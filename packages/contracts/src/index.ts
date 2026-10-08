@@ -124,6 +124,11 @@ export interface ProfessionalAbsenceRecord {
   tipo: string;
 }
 
+export interface ProfessionalFunctionalSituation {
+  descricao: string;
+  tipo: 'AFASTADO' | 'EXERCICIO_EXTERNO' | 'PROPRIA_SEDE' | 'SEM_EXERCICIO';
+}
+
 export interface ProfessionalRelationshipsRecord {
   afastamentos: ProfessionalAbsenceRecord[];
   afastamentosAtivos: ProfessionalAbsenceRecord[];
@@ -163,6 +168,7 @@ export interface ProfessionalRecord {
   pontuacao: string;
   remocao: boolean;
   sedeAtual: ProfessionalPlacement | null;
+  situacaoFuncional: ProfessionalFunctionalSituation;
   telefones: PhoneRecord[];
 }
 
@@ -218,7 +224,7 @@ export interface WorkPositionRecord {
   ativo: boolean;
   cargoFuncao: LookupRecord;
   cargoFuncaoId: string;
-  codigo: string | null;
+  codigo: string;
   disponibilidade: WorkPositionAvailability;
   estadoEstrutural: WorkPositionStructuralState;
   exercicioAtual: WorkPositionExercise | null;
@@ -233,7 +239,35 @@ export interface WorkPositionRecord {
   unidadeId: string;
 }
 
-export type EventType = 'REMOCAO' | 'PERMUTA' | 'LISTAO';
+export interface ManualAssignmentConfiguration {
+  habilitada: boolean;
+}
+
+export interface ManualAssignmentProfessional {
+  afastado: boolean;
+  ativo: boolean;
+  cargoFuncao: LookupRecord;
+  cargoFuncaoId: string;
+  exerciciosAtuais: ProfessionalExerciseHistory[];
+  id: string;
+  matricula: string;
+  nomeCompleto: string;
+  sedeAtual: ProfessionalPlacementHistory | null;
+}
+
+export interface ManualAssignmentSimulation {
+  destino: WorkPositionRecord;
+  exerciciosEncerrados: ProfessionalExerciseHistory[];
+  profissional: ManualAssignmentProfessional;
+  sedeAnterior: ProfessionalPlacementHistory | null;
+  tipoDestino: 'COM_SEDE' | 'SEM_SEDE';
+}
+
+export interface ManualAssignmentResult extends ManualAssignmentSimulation {
+  confirmadoEm: string;
+}
+
+export type EventType = 'REMOCAO' | 'PERMUTA' | 'LISTAO' | 'ATRIBUICAO';
 export type EventStatus = 'RASCUNHO' | 'ATIVO' | 'ENCERRADO' | 'CANCELADO';
 
 export interface EventRecord {
@@ -478,14 +512,6 @@ export interface AuditRecord {
   usuarioId: string;
 }
 
-export interface AdministrativeCorrectionPreview {
-  entidade: 'PROFISSIONAL' | 'UNIDADE';
-  registroId: string;
-  antes: Record<string, unknown>;
-  depois: Record<string, unknown>;
-  versao: string;
-}
-
 export interface PublicEventChoice {
   dataHora: string;
   periodo: string;
@@ -499,7 +525,7 @@ export interface PublicEventDisplay {
     ano: number;
     nome: string;
     status: 'ATIVO' | 'ENCERRADO';
-    tipo: 'REMOCAO' | 'LISTAO';
+    tipo: 'REMOCAO' | 'LISTAO' | 'ATRIBUICAO';
   };
   participanteAtual: { nome: string; posicao: number } | null;
   proximos: Array<{ nome: string; posicao: number }>;

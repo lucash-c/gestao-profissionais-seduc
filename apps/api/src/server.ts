@@ -14,6 +14,7 @@ async function main(): Promise<void> {
     const bootstrapResult = await bootstrapInitialSeducAdministrator(
       createPrismaInitialAdminRepository(database),
       hashPassword,
+      environment.NODE_ENV,
     );
     if (bootstrapResult === 'created') {
       console.info('Administrador inicial SEDUC criado.');
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
       server.close(async (error) => {
         await database.disconnect();
         if (error) {
-          console.error(error);
+          console.error('Falha ao encerrar o servidor HTTP.');
           process.exitCode = 1;
         }
       });
@@ -43,7 +44,7 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch((error: unknown) => {
-  console.error('Não foi possível inicializar a API.', error);
+void main().catch(() => {
+  console.error('Não foi possível inicializar a API. Consulte os indicadores de infraestrutura.');
   process.exitCode = 1;
 });

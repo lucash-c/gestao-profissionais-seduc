@@ -62,6 +62,7 @@ function candidate(
 function services(): EventServices {
   return {
     create: vi.fn().mockResolvedValue(event),
+    delete: vi.fn().mockResolvedValue(undefined),
     get: vi.fn().mockResolvedValue(event),
     list: vi
       .fn()
@@ -251,8 +252,17 @@ describe('Etapa 6 API e RBAC', () => {
     await operator.get('/eventos').expect(200);
     await operator
       .post('/eventos')
-      .send({ ano: 2026, cargoFuncaoId: ID, nome: 'Evento', tipo: 'REMOCAO' })
+      .send({
+        ano: 2026,
+        cargoFuncaoId: '30000000-0000-0000-0000-000000000001',
+        nome: 'Evento',
+        tipo: 'REMOCAO',
+      })
       .expect(201);
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ cargoFuncaoId: '30000000-0000-0000-0000-000000000001' }),
+      expect.anything(),
+    );
     await operator.patch(`/eventos/${ID}`).send({ nome: 'Evento revisto' }).expect(200);
     await operator.get(`/eventos/${ID}/preparacao`).expect(200);
     await operator.put(`/eventos/${ID}/preparacao`).send({ profissionalIds: [] }).expect(200);
@@ -260,7 +270,7 @@ describe('Etapa 6 API e RBAC', () => {
     expect(service.start).toHaveBeenCalledWith(ID, USER_ID);
   });
 
-  it.each(['ADMINISTRADOR', 'DIRETOR', 'SECRETARIO'] as const)(
+  it.each(['DIRETOR', 'SECRETARIO'] as const)(
     'nega toda operação de evento para %s',
     async (profile) => {
       const app = appFor(profile, services());
@@ -270,6 +280,34 @@ describe('Etapa 6 API e RBAC', () => {
       await request(app).post(`/eventos/${ID}/iniciar`).expect(403);
     },
   );
+
+  it('permite ao Administrador consultar eventos sem operá-los', async () => {
+    const app = appFor('ADMINISTRADOR', services());
+    await request(app).get('/eventos').expect(200);
+    await request(app).get(`/eventos/${ID}`).expect(200);
+    await request(app).post('/eventos').send({}).expect(403);
+    await request(app).get(`/eventos/${ID}/preparacao`).expect(403);
+    await request(app).post(`/eventos/${ID}/iniciar`).expect(403);
+  });
+
+  it('reserva ao Administrador apenas a exclusão administrativa de rascunho', async () => {
+    const service = services();
+    await request(appFor('ADMINISTRADOR', service))
+      .delete(`/eventos/${ID}`)
+      .send({ senhaAtual: 'senha atual' })
+      .expect(204);
+    expect(service.delete).toHaveBeenCalledWith(
+      ID,
+      'senha atual',
+      expect.objectContaining({ perfil: 'ADMINISTRADOR' }),
+    );
+    for (const profile of ['OPERADOR', 'DIRETOR', 'SECRETARIO'] as const) {
+      await request(appFor(profile, services()))
+        .delete(`/eventos/${ID}`)
+        .send({ senhaAtual: 'senha atual' })
+        .expect(403);
+    }
+  });
 
   it('exige cargo e rejeita campos de controle ou seleção duplicada estrutural inválida', () => {
     expect(() => eventCreateSchema.parse({ ano: 2026, nome: 'Evento', tipo: 'LISTAO' })).toThrow();

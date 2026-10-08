@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -123,9 +124,9 @@ onBeforeUnmount(() => {
       </QCard>
 
       <QDialog v-model="historyOpen">
-        <QCard class="public-history" data-testid="public-choice-history">
-          <QCardSection><h2>Escolhas anteriores</h2></QCardSection>
-          <QCardSection>
+        <QCard class="registry-dialog public-history" data-testid="public-choice-history">
+          <ModalHeader title="Escolhas anteriores" @close="historyOpen = false" />
+          <QCardSection class="modal-scroll-body">
             <p v-for="choice in choices" :key="`${choice.dataHora}-${choice.profissional}`">
               {{ choice.profissional }} · {{ choice.unidadeDestino }} · {{ choice.periodo }} ·
               {{ choice.tipoDestino }}

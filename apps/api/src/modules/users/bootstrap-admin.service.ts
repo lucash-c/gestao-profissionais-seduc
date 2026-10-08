@@ -28,7 +28,7 @@ export interface BootstrapAdminRepository extends UserIdentifierLookup<Bootstrap
   }): Promise<void>;
 }
 
-export type BootstrapAdminResult = 'created' | 'unchanged';
+export type BootstrapAdminResult = 'created' | 'disabled' | 'unchanged';
 
 export const INITIAL_SEDUC_ADMINISTRATOR = {
   email: null,
@@ -54,7 +54,12 @@ export interface InitialAdminRepository {
 export function bootstrapInitialSeducAdministrator(
   repository: InitialAdminRepository,
   passwordHasher: (password: string) => Promise<string>,
+  nodeEnvironment: 'development' | 'production' | 'test',
 ): Promise<BootstrapAdminResult> {
+  if (nodeEnvironment === 'production') {
+    return Promise.resolve('disabled');
+  }
+
   return repository.runExclusive(async (lockedRepository) => {
     if ((await lockedRepository.countUsers()) > 0) {
       return 'unchanged';

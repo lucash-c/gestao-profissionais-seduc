@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-const uuid = z.string().uuid();
+import { databaseIdSchema } from '../../validation/database-id.js';
+
+const uuid = databaseIdSchema;
 
 export const eventVacancyQuerySchema = z
   .object({

@@ -21,6 +21,7 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
   const suffix = randomUUID();
   const ids = {
     cargo: randomUUID(),
+    cargoB: randomUUID(),
     cargoIncompativel: randomUUID(),
     periodo: randomUUID(),
     segmento: randomUUID(),
@@ -50,11 +51,15 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
     await database.client.cargoFuncao.createMany({
       data: [
         { id: ids.cargo, nome: `Cargo compatível ${suffix}` },
+        { id: ids.cargoB, nome: `Cargo B ${suffix}` },
         { id: ids.cargoIncompativel, nome: `Cargo incompatível ${suffix}` },
       ],
     });
-    await database.client.cargoTipoUnidade.create({
-      data: { cargoFuncaoId: ids.cargo, tipoUnidadeId: ids.tipoUnidade },
+    await database.client.cargoTipoUnidade.createMany({
+      data: [ids.cargo, ids.cargoB].map((cargoFuncaoId) => ({
+        cargoFuncaoId,
+        tipoUnidadeId: ids.tipoUnidade,
+      })),
     });
     await database.client.periodo.create({
       data: { id: ids.periodo, nome: `Período quadro ${suffix}` },
@@ -111,10 +116,10 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
     await database.client.segmentoEnsino.deleteMany({ where: { id: ids.segmento } });
     await database.client.periodo.deleteMany({ where: { id: ids.periodo } });
     await database.client.cargoTipoUnidade.deleteMany({
-      where: { cargoFuncaoId: { in: [ids.cargo, ids.cargoIncompativel] } },
+      where: { cargoFuncaoId: { in: [ids.cargo, ids.cargoB, ids.cargoIncompativel] } },
     });
     await database.client.cargoFuncao.deleteMany({
-      where: { id: { in: [ids.cargo, ids.cargoIncompativel] } },
+      where: { id: { in: [ids.cargo, ids.cargoB, ids.cargoIncompativel] } },
     });
     await database.client.unidade.deleteMany({
       where: { id: { in: [ids.unidadeA, ids.unidadeB] } },
@@ -442,5 +447,70 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
         where: { ativo: true, quadroNecessidadeId: quadroId },
       }),
     ).toBe(8);
+  });
+
+  it('pagina todos os postos com ordenação determinística e filtros sem perdas', async () => {
+    const admin = await authenticated(credentials.admin);
+    const first = await admin.post('/quadros').send(payload(2050, 13)).expect(201);
+    const second = await admin
+      .post('/quadros')
+      .send(
+        payload(2050, 13, {
+          cargoFuncaoId: ids.cargoB,
+          unidadeId: ids.unidadeB,
+        }),
+      )
+      .expect(201);
+
+    const collect = async (query: Record<string, unknown>) => {
+      const firstPage = await admin
+        .get('/postos')
+        .query({ ...query, page: 1, pageSize: 10 })
+        .expect(200);
+      const idsFound: string[] = firstPage.body.items.map(({ id }: { id: string }) => id);
+      for (let page = 2; page <= firstPage.body.totalPages; page += 1) {
+        const response = await admin
+          .get('/postos')
+          .query({ ...query, page, pageSize: 10 })
+          .expect(200);
+        idsFound.push(...response.body.items.map(({ id }: { id: string }) => id));
+      }
+      return { ids: idsFound, total: firstPage.body.total, totalPages: firstPage.body.totalPages };
+    };
+
+    const all = await collect({ anoLetivo: 2050 });
+    expect(all).toMatchObject({ total: 26, totalPages: 3 });
+    expect(new Set(all.ids).size).toBe(26);
+    const cargoA = await collect({ anoLetivo: 2050, cargoFuncaoId: ids.cargo });
+    const cargoB = await collect({ anoLetivo: 2050, cargoFuncaoId: ids.cargoB });
+    expect(cargoA).toMatchObject({ total: 13, totalPages: 2 });
+    expect(cargoB).toMatchObject({ total: 13, totalPages: 2 });
+    expect(new Set([...cargoA.ids, ...cargoB.ids])).toEqual(new Set(all.ids));
+    expect(await collect({ anoLetivo: 2050 })).toEqual(all);
+
+    expect(
+      await database.client.postoTrabalho.count({
+        where: { quadroNecessidadeId: { in: [first.body.id, second.body.id] } },
+      }),
+    ).toBe(26);
+  });
+
+  it('gera códigos atômicos e únicos por prefixo em criações concorrentes', async () => {
+    const firstAdmin = await authenticated(credentials.admin);
+    const secondAdmin = await authenticated(credentials.admin);
+    const responses = await Promise.all([
+      firstAdmin.post('/quadros').send(payload(2051, 4)),
+      secondAdmin
+        .post('/quadros')
+        .send(payload(2052, 4, { cargoFuncaoId: ids.cargoB, unidadeId: ids.unidadeB })),
+    ]);
+    expect(responses.map(({ status }) => status)).toEqual([201, 201]);
+    const positions = await database.client.postoTrabalho.findMany({
+      orderBy: { codigo: 'asc' },
+      where: { quadroNecessidadeId: { in: responses.map(({ body }) => body.id as string) } },
+    });
+    expect(positions).toHaveLength(8);
+    expect(new Set(positions.map(({ codigo }) => codigo)).size).toBe(8);
+    expect(positions.every(({ codigo }) => /^CARG-\d{10}$/.test(codigo))).toBe(true);
   });
 });

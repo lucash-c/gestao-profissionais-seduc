@@ -7,6 +7,7 @@ export class AuthHttpError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'AuthHttpError';
@@ -14,11 +15,18 @@ export class AuthHttpError extends Error {
 }
 
 async function readError(response: Response): Promise<AuthHttpError> {
-  const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+  const body = (await response.json().catch(() => null)) as {
+    message?: unknown;
+    retryAfterSeconds?: unknown;
+  } | null;
   const message =
     typeof body?.message === 'string' ? body.message : 'Não foi possível concluir a solicitação.';
 
-  return new AuthHttpError(response.status, message);
+  return new AuthHttpError(
+    response.status,
+    message,
+    typeof body?.retryAfterSeconds === 'number' ? body.retryAfterSeconds : undefined,
+  );
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

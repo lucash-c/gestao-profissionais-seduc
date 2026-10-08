@@ -31,6 +31,8 @@ FROM build AS production
 
 ENV NODE_ENV=production
 
+USER node
+
 EXPOSE 3000
 
 CMD ["node", "apps/api/dist/server.js"]

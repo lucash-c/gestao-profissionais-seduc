@@ -19,6 +19,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -304,8 +305,12 @@ onMounted(load);
 
       <QDialog v-model="confirmStart" persistent>
         <QCard data-testid="start-event-dialog" class="registry-dialog">
-          <QCardSection
-            ><h2>Iniciar evento?</h2>
+          <ModalHeader
+            title="Iniciar evento?"
+            :close-disabled="starting"
+            @close="confirmStart = false"
+          />
+          <QCardSection class="modal-scroll-body">
             <p>
               Ao iniciar, a seleção e os critérios oficiais de classificação serão congelados para
               esta sessão.

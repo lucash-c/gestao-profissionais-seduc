@@ -2,11 +2,7 @@ import { Router, type Request } from 'express';
 
 import { HttpError } from '../../http/http-error.js';
 import { assertAuthorized, AUTHORIZATION_ACTIONS } from '../authorization/authorization.policy.js';
-import {
-  auditQuerySchema,
-  correctionApplySchema,
-  correctionPreviewSchema,
-} from './audit.schemas.js';
+import { auditQuerySchema } from './audit.schemas.js';
 import type { AuditServices } from './audit.service.js';
 
 function admin(request: Request): void {
@@ -14,7 +10,7 @@ function admin(request: Request): void {
     throw new HttpError(401, 'AUTHENTICATION_REQUIRED', 'Autenticação necessária.');
   }
   assertAuthorized({
-    action: AUTHORIZATION_ACTIONS.ACCESS_ADMIN_CORRECTION,
+    action: AUTHORIZATION_ACTIONS.READ_AUDIT,
     user: request.authenticatedUser,
   });
 }
@@ -27,21 +23,6 @@ export function createAuditRouter(service: AuditServices['history']): Router {
   });
   router.get('/', async (request, response) =>
     response.json(await service.list(auditQuerySchema.parse(request.query))),
-  );
-  return router;
-}
-
-export function createCorrectionRouter(service: AuditServices['corrections']): Router {
-  const router = Router();
-  router.use((request, _response, next) => {
-    admin(request);
-    next();
-  });
-  router.post('/previsualizar', async (request, response) =>
-    response.json(await service.preview(correctionPreviewSchema.parse(request.body))),
-  );
-  router.post('/aplicar', async (request, response) =>
-    response.json(await service.apply(correctionApplySchema.parse(request.body))),
   );
   return router;
 }

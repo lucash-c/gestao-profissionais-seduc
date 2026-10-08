@@ -23,7 +23,11 @@ const professionalSummary = {
 export const positionAvailabilityInclude = {
   exercicios: {
     include: {
-      profissional: { select: professionalSummary },
+      profissional: {
+        include: {
+          afastamentos: { select: { id: true }, where: { dataFim: null } },
+        },
+      },
       substituiProfissional: { select: professionalSummary },
     },
     take: 1,
@@ -127,22 +131,29 @@ function mapProfessional(value: {
 export function mapWorkPosition(position: PositionAvailabilityPayload): WorkPositionRecord {
   const placement = position.lotacoesSede[0];
   const holder = placement?.profissional;
-  const exercise = position.exercicios[0];
+  const storedExercise = position.exercicios[0];
+  const exercise =
+    storedExercise?.profissional.ativo && storedExercise.profissional.afastamentos.length === 0
+      ? storedExercise
+      : undefined;
   const motivosLiberacao: WorkPositionReleaseReason[] = [];
   if (holder?.afastamentos.length) motivosLiberacao.push('AFASTAMENTO');
   if (holder?.exercicios.some(({ postoTrabalhoId }) => postoTrabalhoId !== position.id)) {
     motivosLiberacao.push('EXERCICIO_OUTRO_POSTO');
   }
 
+  const holderOccupiesPosition = Boolean(
+    holder?.ativo && holder.afastamentos.length === 0 && motivosLiberacao.length === 0,
+  );
+  const occupant = exercise?.profissional ?? (holderOccupiesPosition ? holder : null);
+
   const disponibilidade = !position.ativo
     ? 'INATIVO'
-    : exercise
+    : occupant
       ? 'INDISPONIVEL'
       : !holder
         ? 'DISPONIVEL_COM_SEDE'
-        : holder.ativo && motivosLiberacao.length > 0
-          ? 'DISPONIVEL_SEM_SEDE'
-          : 'INDISPONIVEL';
+        : 'DISPONIVEL_SEM_SEDE';
 
   return {
     anoLetivo: position.anoLetivo,
@@ -164,7 +175,7 @@ export function mapWorkPosition(position: PositionAvailabilityPayload): WorkPosi
       : null,
     id: position.id,
     motivosLiberacao,
-    ocupanteAtual: exercise ? mapProfessional(exercise.profissional) : null,
+    ocupanteAtual: occupant ? mapProfessional(occupant) : null,
     periodo: position.quadroNecessidade.periodo,
     periodoId: position.periodoId,
     quadroNecessidadeId: position.quadroNecessidadeId,
@@ -367,6 +378,7 @@ export function createPrismaAssignmentServices(
         try {
           return await client.$transaction(async (transaction) => {
             await lockProfessionals(transaction, [profissionalId]);
+            const dataInicio = input.dataInicio ?? clock();
             const professional = await transaction.profissional.findUnique({
               select: { ativo: true },
               where: { id: profissionalId },
@@ -376,17 +388,46 @@ export function createPrismaAssignmentServices(
             if (!professional.ativo) {
               throw new HttpError(409, 'INACTIVE_PROFESSIONAL', 'O profissional está inativo.');
             }
+            await transaction.$queryRaw(Prisma.sql`
+              SELECT "id" FROM "exercicio_profissional"
+              WHERE "profissional_id" = ${profissionalId}::uuid AND "data_fim" IS NULL
+              ORDER BY "id" FOR UPDATE
+            `);
+            const activeExercises = await transaction.exercicioProfissional.findMany({
+              select: { dataInicio: true, id: true, postoTrabalhoId: true },
+              where: { dataFim: null, profissionalId },
+            });
+            await lockPositions(
+              transaction,
+              activeExercises.map(({ postoTrabalhoId }) => postoTrabalhoId),
+            );
+            const temporallyInvalid = activeExercises.find(
+              (exercise) => dataInicio <= exercise.dataInicio,
+            );
+            if (temporallyInvalid) {
+              throw new HttpError(
+                409,
+                'ABSENCE_PRECEDES_ACTIVE_EXERCISE',
+                'O início do afastamento deve ser posterior ao início do exercício ativo.',
+              );
+            }
+            if (activeExercises.length > 0) {
+              await transaction.exercicioProfissional.updateMany({
+                data: { dataFim: dataInicio },
+                where: { id: { in: activeExercises.map(({ id }) => id) } },
+              });
+            }
             const created = mapAbsence(
               await transaction.afastamentoProfissional.create({
                 data: {
-                  dataInicio: input.dataInicio ?? clock(),
+                  dataInicio,
                   observacoes: input.observacoes,
                   profissionalId,
                   tipo: input.tipo,
                 },
               }),
             );
-            if (user) {
+            if (user && user.perfil !== 'ADMINISTRADOR') {
               await writeAudit(transaction, {
                 acao: 'CREATE',
                 after: created,
@@ -434,7 +475,7 @@ export function createPrismaAssignmentServices(
                 where: { id },
               }),
             );
-            if (user) {
+            if (user && user.perfil !== 'ADMINISTRADOR') {
               await writeAudit(transaction, {
                 acao: 'UPDATE',
                 after: updated,
@@ -528,6 +569,7 @@ export function createPrismaAssignmentServices(
             const [professional, position] = await Promise.all([
               transaction.profissional.findUnique({
                 include: {
+                  afastamentos: { select: { id: true }, where: { dataFim: null } },
                   cargoFuncao: { select: { permiteMultiplosExercicios: true } },
                   lotacoesSede: { select: { id: true }, take: 1, where: { dataFim: null } },
                   _count: { select: { exercicios: { where: { dataFim: null } } } },
@@ -540,6 +582,13 @@ export function createPrismaAssignmentServices(
               throw new HttpError(404, 'NOT_FOUND', 'Profissional não encontrado.');
             if (!professional.ativo) {
               throw new HttpError(409, 'INACTIVE_PROFESSIONAL', 'O profissional está inativo.');
+            }
+            if (professional.afastamentos.length > 0) {
+              throw new HttpError(
+                409,
+                'PROFESSIONAL_ON_ACTIVE_ABSENCE',
+                'Profissional afastado não pode iniciar exercício temporário.',
+              );
             }
             const availability = mapWorkPosition(position);
             if (availability.disponibilidade !== 'DISPONIVEL_SEM_SEDE') {

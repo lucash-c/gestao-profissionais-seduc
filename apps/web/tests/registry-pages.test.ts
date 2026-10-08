@@ -7,7 +7,7 @@ import type {
   UserRecord,
   WorkPositionRecord,
 } from '@seduc/contracts';
-import { QLayout, QPageContainer, QPagination, Quasar } from 'quasar';
+import { QInput, QLayout, QPageContainer, QPagination, QSelect, Quasar } from 'quasar';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,6 +27,11 @@ const mocks = vi.hoisted(() => ({
   createStaffingPlan: vi.fn(),
   createUnit: vi.fn(),
   createUser: vi.fn(),
+  deleteProfessional: vi.fn(),
+  deleteStaffingPlan: vi.fn(),
+  deleteUnit: vi.fn(),
+  deleteUser: vi.fn(),
+  deleteWorkPosition: vi.fn(),
   deleteProfessionalPhone: vi.fn(),
   deleteUnitPhone: vi.fn(),
   getProfessionalRelationships: vi.fn(),
@@ -130,6 +135,7 @@ const professional: ProfessionalRecord = {
   pontuacao: '12.50',
   remocao: false,
   sedeAtual: { postoId: RECORD_ID, unidadeId: UNIT_ID, unidadeNome: 'EMEF Teste' },
+  situacaoFuncional: { descricao: 'Trabalhando na própria sede', tipo: 'PROPRIA_SEDE' },
   telefones: [],
 };
 const user: UserRecord = {
@@ -165,7 +171,7 @@ const workPosition: WorkPositionRecord = {
   ativo: true,
   cargoFuncao: professional.cargoFuncao,
   cargoFuncaoId: CARGO_ID,
-  codigo: null,
+  codigo: 'PEB1-0000000001',
   disponibilidade: 'DISPONIVEL_COM_SEDE',
   estadoEstrutural: 'DISPONIVEL_COM_SEDE',
   exercicioAtual: null,
@@ -305,6 +311,11 @@ beforeEach(() => {
   mocks.createUser.mockResolvedValue(user);
   mocks.updateUser.mockResolvedValue(user);
   mocks.resetPassword.mockResolvedValue(undefined);
+  mocks.deleteProfessional.mockResolvedValue(undefined);
+  mocks.deleteStaffingPlan.mockResolvedValue(undefined);
+  mocks.deleteUnit.mockResolvedValue(undefined);
+  mocks.deleteUser.mockResolvedValue(undefined);
+  mocks.deleteWorkPosition.mockResolvedValue(undefined);
   mocks.updateWorkPositionStatus.mockResolvedValue({ ...workPosition, ativo: false });
 });
 
@@ -334,6 +345,31 @@ describe('Etapa 3 Quasar pages', () => {
     );
   });
 
+  it('mantém erro de salvamento dentro do modal e associa issue ao campo', async () => {
+    mocks.updateUnit.mockRejectedValueOnce(
+      Object.assign(new Error('Revise os campos informados.'), {
+        issues: [{ message: 'CEP deve possuir 8 dígitos.', path: 'cep' }],
+      }),
+    );
+    const wrapper = mountPage(UnitsPage);
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((item) => item.text().includes('Editar'))!
+      .trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-testid="save-unit"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="unit-dialog-error"]').text()).toContain(
+      'Revise os campos informados.',
+    );
+    expect(wrapper.get('[data-testid="unit-dialog"]').text()).toContain(
+      'CEP deve possuir 8 dígitos.',
+    );
+    expect(wrapper.find('[data-testid="units-error"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('mostra erros e bloqueia dupla submissão no diálogo de unidade', async () => {
     mocks.listUnits.mockRejectedValueOnce(new Error('Falha controlada'));
     const errorWrapper = mountPage(UnitsPage);
@@ -350,6 +386,15 @@ describe('Etapa 3 Quasar pages', () => {
     const wrapper = mountPage(UnitsPage);
     await flushPromises();
     await wrapper.get('[data-testid="new-unit"]').trigger('click');
+    await flushPromises();
+    await wrapper
+      .findAllComponents(QInput)
+      .find((component) => component.props('label') === 'Nome *')!
+      .setValue('EMEF Nova');
+    wrapper
+      .findAllComponents(QSelect)
+      .find((component) => component.props('label') === 'Tipo *')!
+      .vm.$emit('update:modelValue', TYPE_ID);
     await flushPromises();
     const save = document.body.querySelector('[data-testid="save-unit"]') as HTMLElement;
     save.click();
@@ -396,20 +441,58 @@ describe('Etapa 3 Quasar pages', () => {
     const change = scores.findAll('button').find((button) => button.text().includes('Alterar'));
     await change!.trigger('click');
     await flushPromises();
-    expect(document.body.textContent).toContain('Valor anterior: 12.50');
+    expect(document.body.textContent).toContain('Valor anterior: 12,50');
     scores.unmount();
 
     const users = mountPage(UsersPage);
     await flushPromises();
     expect(users.text()).toContain('EMEF Teste, EMEF Segunda');
-    const editUser = users.findAll('button').find((button) => button.text().includes('Editar'));
-    await editUser!.trigger('click');
+    await users.get('button[aria-label="Editar usuário"]').trigger('click');
     await flushPromises();
     expect(document.body.querySelector('[data-testid="user-units-multiple"]')).not.toBeNull();
     expect(document.body.querySelector('[data-testid="user-unit-single"]')).toBeNull();
     await users.get('[data-testid="new-user"]').trigger('click');
     await flushPromises();
     expect(document.body.querySelector('[data-testid="user-dialog"]')).not.toBeNull();
+    users.unmount();
+  });
+
+  it('valida 12–72 caracteres e confirmação antes de redefinir senha', async () => {
+    const users = mountPage(UsersPage);
+    await flushPromises();
+    await users.get('button[aria-label="Redefinir senha"]').trigger('click');
+    await flushPromises();
+    const dialog = document.body.querySelector('[data-testid="password-dialog"]')!;
+    const inputs = dialog.querySelectorAll('input');
+    inputs[0]!.value = 'a'.repeat(11);
+    inputs[0]!.dispatchEvent(new Event('input'));
+    inputs[1]!.value = 'a'.repeat(11);
+    inputs[1]!.dispatchEvent(new Event('input'));
+    await flushPromises();
+    const save = document.body.querySelector('[data-testid="save-password"]') as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+
+    inputs[0]!.value = 'a'.repeat(73);
+    inputs[0]!.dispatchEvent(new Event('input'));
+    inputs[1]!.value = 'a'.repeat(73);
+    inputs[1]!.dispatchEvent(new Event('input'));
+    await flushPromises();
+    expect(save.disabled).toBe(true);
+
+    inputs[0]!.value = 'a'.repeat(12);
+    inputs[0]!.dispatchEvent(new Event('input'));
+    inputs[1]!.value = 'b'.repeat(12);
+    inputs[1]!.dispatchEvent(new Event('input'));
+    await flushPromises();
+    expect(save.disabled).toBe(true);
+
+    inputs[1]!.value = 'a'.repeat(12);
+    inputs[1]!.dispatchEvent(new Event('input'));
+    await flushPromises();
+    expect(save.disabled).toBe(false);
+    save.click();
+    await flushPromises();
+    expect(mocks.resetPassword).toHaveBeenCalledWith(RECORD_ID, 'a'.repeat(12));
     users.unmount();
   });
 
@@ -429,6 +512,36 @@ describe('Etapa 3 Quasar pages', () => {
     await flushPromises();
     expect(mocks.listProfessionals).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 2, pageSize: 20, usaPontuacao: true }),
+    );
+  });
+
+  it('envia o filtro de cargo das Pontuações ao backend e o limpa na página 1', async () => {
+    const scores = mountPage(ScoresPage);
+    await flushPromises();
+    const cargo = scores
+      .findAllComponents(QSelect)
+      .find((select) => select.props('label') === 'Cargo/função');
+    expect(cargo).toBeDefined();
+    cargo!.vm.$emit('update:modelValue', CARGO_ID);
+    await flushPromises();
+    await scores
+      .findAll('button')
+      .find((button) => button.text().includes('Buscar'))!
+      .trigger('click');
+    await flushPromises();
+    expect(mocks.listProfessionals).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cargoFuncaoId: CARGO_ID, page: 1, usaPontuacao: true }),
+    );
+
+    cargo!.vm.$emit('update:modelValue', null);
+    await flushPromises();
+    await scores
+      .findAll('button')
+      .find((button) => button.text().includes('Buscar'))!
+      .trigger('click');
+    await flushPromises();
+    expect(mocks.listProfessionals).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ cargoFuncaoId: CARGO_ID }),
     );
   });
 
@@ -477,7 +590,7 @@ describe('Etapa 3 Quasar pages', () => {
     expect(admin.find('[data-testid="staffing-plans-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="work-positions-menu"]').exists()).toBe(true);
     expect(admin.find('[data-testid="audit-menu"]').exists()).toBe(true);
-    expect(admin.find('[data-testid="correction-menu"]').exists()).toBe(true);
+    expect(admin.find('[data-testid="correction-menu"]').exists()).toBe(false);
     expect(admin.text()).toContain('Cadastros');
     expect(admin.text()).toContain('Administração');
     expect(admin.text()).not.toMatch(/ETAPA \d+/i);
@@ -589,7 +702,7 @@ describe('Etapa 4 Quasar pages', () => {
     });
     const admin = mountPage(WorkPositionsPage);
     await flushPromises();
-    expect(admin.text()).toContain('Sem sede: disponível');
+    expect(admin.text()).toContain('Vaga sem sede');
     expect(admin.text()).toContain('titular afastado');
     await admin.get('[data-testid="position-status-action"]').trigger('click');
     await flushPromises();
@@ -602,7 +715,7 @@ describe('Etapa 4 Quasar pages', () => {
     setProfile('OPERADOR');
     const operator = mountPage(WorkPositionsPage);
     await flushPromises();
-    expect(operator.text()).toContain('Com sede: disponível');
+    expect(operator.text()).toContain('Vaga com sede');
     expect(operator.find('[data-testid="position-status-action"]').exists()).toBe(false);
   });
 

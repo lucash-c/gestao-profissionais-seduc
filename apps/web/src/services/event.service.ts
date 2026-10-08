@@ -14,6 +14,8 @@ import type {
   WorkPositionRecord,
 } from '@seduc/contracts';
 
+import type { ValidationIssue } from './form-errors';
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 export class EventHttpError extends Error {
@@ -21,6 +23,7 @@ export class EventHttpError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    public readonly issues: ValidationIssue[] = [],
   ) {
     super(message);
     this.name = 'EventHttpError';
@@ -40,12 +43,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
       error?: unknown;
+      issues?: unknown;
       message?: unknown;
     } | null;
     throw new EventHttpError(
       response.status,
       typeof body?.error === 'string' ? body.error : 'EVENT_REQUEST_FAILED',
       typeof body?.message === 'string' ? body.message : 'Não foi possível concluir a solicitação.',
+      Array.isArray(body?.issues) ? (body.issues as ValidationIssue[]) : [],
     );
   }
   return (await response.json()) as T;
@@ -66,6 +71,12 @@ export const eventApi = {
   },
   create(body: unknown) {
     return request<EventRecord>('/eventos', { body: JSON.stringify(body), method: 'POST' });
+  },
+  delete(id: string, senhaAtual: string) {
+    return request<void>(`/eventos/${id}`, {
+      body: JSON.stringify({ senhaAtual }),
+      method: 'DELETE',
+    });
   },
   getPreparation(id: string) {
     return request<EventPreparationRecord>(`/eventos/${id}/preparacao`);

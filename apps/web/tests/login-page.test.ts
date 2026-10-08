@@ -73,4 +73,22 @@ describe('LoginPage', () => {
       'Login/e-mail ou senha inválidos.',
     );
   });
+
+  it('exibe contagem regressiva, mantém campos editáveis e libera o botão automaticamente', async () => {
+    vi.useFakeTimers();
+    sessionMock.login.mockRejectedValue(
+      new AuthHttpError(429, 'Muitas tentativas de autenticação.', 2),
+    );
+    const { wrapper } = await mountPage();
+    await wrapper.get('[data-testid="login-form"]').trigger('submit');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="login-countdown"]').text()).toContain('00:02');
+    expect(wrapper.get('[data-testid="login-submit"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-testid="login-identifier"]').attributes('disabled')).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(wrapper.find('[data-testid="login-countdown"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="login-submit"]').attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+    vi.useRealTimers();
+  });
 });

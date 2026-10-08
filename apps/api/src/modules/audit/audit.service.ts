@@ -1,13 +1,7 @@
-import type {
-  AdministrativeCorrectionPreview,
-  AuditRecord,
-  PaginatedResponse,
-} from '@seduc/contracts';
+import type { AuditRecord, PaginatedResponse } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
-import { createHash } from 'node:crypto';
 
-import { HttpError } from '../../http/http-error.js';
-import type { AuditQuery, CorrectionApplyInput, CorrectionInput } from './audit.schemas.js';
+import type { AuditQuery } from './audit.schemas.js';
 
 const forbiddenKeys =
   /(?:senha|password|token|cookie|secret|credential|credencial|connection|string|hash)/i;
@@ -60,63 +54,23 @@ export async function writeAudit(
   });
 }
 
+/** Normal administrative CRUD by ADMINISTRADOR is intentionally not audit history. */
+export async function writeCrudAudit(
+  transaction: Prisma.TransactionClient,
+  input: Parameters<typeof writeAudit>[1],
+): Promise<void> {
+  const actor = await transaction.usuario.findUnique({
+    select: { perfil: true },
+    where: { id: input.usuarioId },
+  });
+  if (actor?.perfil === 'ADMINISTRADOR') return;
+  await writeAudit(transaction, input);
+}
+
 export interface AuditServices {
-  corrections: {
-    apply(input: CorrectionApplyInput): Promise<AdministrativeCorrectionPreview>;
-    preview(input: CorrectionInput): Promise<AdministrativeCorrectionPreview>;
-  };
   history: {
     list(query: AuditQuery): Promise<PaginatedResponse<AuditRecord>>;
   };
-}
-
-const correctionProfessionalSelect = {
-  ativo: true,
-  cpf: true,
-  dataEntradaPrefeitura: true,
-  dataNascimento: true,
-  id: true,
-  matricula: true,
-  nomeCompleto: true,
-  numeroFilhos: true,
-  permuta: true,
-  remocao: true,
-} as const;
-const correctionUnitSelect = { ativo: true, codigoInep: true, id: true, nome: true } as const;
-
-function correctionValues(value: object): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      key,
-      item instanceof Date ? item.toISOString().slice(0, 10) : item,
-    ]),
-  );
-}
-
-function correctionVersion(value: Record<string, unknown>, input: CorrectionInput): string {
-  return createHash('sha256')
-    .update(
-      JSON.stringify({
-        entidade: input.entidade,
-        registroId: input.registroId,
-        valores: input.valores,
-        versaoRegistro: value,
-      }),
-    )
-    .digest('hex');
-}
-
-function assertCorrectionVersion(
-  current: Record<string, unknown>,
-  input: CorrectionApplyInput,
-): void {
-  if (correctionVersion(current, input) !== input.versaoEsperada) {
-    throw new HttpError(
-      409,
-      'CORRECTION_PREVIEW_STALE',
-      'O registro ou os valores mudaram desde a prévia. Gere uma nova prévia antes de confirmar.',
-    );
-  }
 }
 
 type AuditPayload = Prisma.AuditoriaGetPayload<{
@@ -130,128 +84,7 @@ function mapAudit(value: AuditPayload): AuditRecord {
 export function createPrismaAuditServices(database: DatabaseConnection): AuditServices {
   const { client } = database;
 
-  async function preview(input: CorrectionInput): Promise<AdministrativeCorrectionPreview> {
-    if (input.entidade === 'UNIDADE') {
-      const current = await client.unidade.findUnique({
-        select: correctionUnitSelect,
-        where: { id: input.registroId },
-      });
-      if (!current) throw new HttpError(404, 'NOT_FOUND', 'Unidade não encontrada.');
-      const antes = correctionValues(current);
-      return {
-        antes,
-        depois: { ...antes, ...input.valores },
-        entidade: input.entidade,
-        registroId: input.registroId,
-        versao: correctionVersion(antes, input),
-      };
-    }
-    const current = await client.profissional.findUnique({
-      select: correctionProfessionalSelect,
-      where: { id: input.registroId },
-    });
-    if (!current) throw new HttpError(404, 'NOT_FOUND', 'Profissional não encontrado.');
-    const antes = correctionValues(current);
-    return {
-      antes,
-      depois: { ...antes, ...input.valores },
-      entidade: input.entidade,
-      registroId: input.registroId,
-      versao: correctionVersion(antes, input),
-    };
-  }
-
   return {
-    corrections: {
-      async apply(input) {
-        try {
-          return await client.$transaction(async (transaction) => {
-            if (input.entidade === 'UNIDADE') {
-              await transaction.$queryRaw(
-                Prisma.sql`SELECT "id" FROM "unidade" WHERE "id" = ${input.registroId}::uuid FOR UPDATE`,
-              );
-              const before = await transaction.unidade.findUnique({
-                select: correctionUnitSelect,
-                where: { id: input.registroId },
-              });
-              if (!before) throw new HttpError(404, 'NOT_FOUND', 'Unidade não encontrada.');
-              const beforeValues = correctionValues(before);
-              assertCorrectionVersion(beforeValues, input);
-              const after = await transaction.unidade.update({
-                data: Object.fromEntries(
-                  Object.entries(input.valores).filter(([, value]) => value !== undefined),
-                ) as Prisma.UnidadeUncheckedUpdateInput,
-                select: correctionUnitSelect,
-                where: { id: input.registroId },
-              });
-              return {
-                antes: beforeValues,
-                depois: correctionValues(after),
-                entidade: input.entidade,
-                registroId: input.registroId,
-                versao: correctionVersion(correctionValues(after), input),
-              };
-            }
-            await transaction.$queryRaw(
-              Prisma.sql`SELECT "id" FROM "profissional" WHERE "id" = ${input.registroId}::uuid FOR UPDATE`,
-            );
-            const before = await transaction.profissional.findUnique({
-              select: correctionProfessionalSelect,
-              where: { id: input.registroId },
-            });
-            if (!before) throw new HttpError(404, 'NOT_FOUND', 'Profissional não encontrado.');
-            const beforeValues = correctionValues(before);
-            assertCorrectionVersion(beforeValues, input);
-            const data = {
-              ...Object.fromEntries(
-                Object.entries(input.valores).filter(
-                  ([key, value]) =>
-                    value !== undefined &&
-                    key !== 'dataEntradaPrefeitura' &&
-                    key !== 'dataNascimento',
-                ),
-              ),
-              ...(input.valores.dataEntradaPrefeitura
-                ? {
-                    dataEntradaPrefeitura: new Date(
-                      `${input.valores.dataEntradaPrefeitura}T00:00:00.000Z`,
-                    ),
-                  }
-                : {}),
-              ...(input.valores.dataNascimento
-                ? { dataNascimento: new Date(`${input.valores.dataNascimento}T00:00:00.000Z`) }
-                : {}),
-            } as Prisma.ProfissionalUncheckedUpdateInput;
-            const after = await transaction.profissional.update({
-              data,
-              select: correctionProfessionalSelect,
-              where: { id: input.registroId },
-            });
-            return {
-              antes: beforeValues,
-              depois: correctionValues(after),
-              entidade: input.entidade,
-              registroId: input.registroId,
-              versao: correctionVersion(correctionValues(after), input),
-            };
-          });
-        } catch (error) {
-          if (error instanceof HttpError) throw error;
-          if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            ['P2002', 'P2003', 'P2004'].includes(error.code)
-          ) {
-            throw new HttpError(
-              409,
-              'CORRECTION_CONFLICT',
-              'A correção viola uma regra estrutural.',
-            );
-          }
-          throw error;
-        }
-      },
-      preview,
-    },
     history: {
       async list(query) {
         const where: Prisma.AuditoriaWhereInput = {

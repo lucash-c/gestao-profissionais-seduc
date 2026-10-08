@@ -14,6 +14,7 @@ import {
 import { onMounted, reactive, ref } from 'vue';
 
 import DataComparison from '@/components/DataComparison.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
 import { auditApi } from '@/services/audit.service';
 
 const filters = reactive({
@@ -81,6 +82,9 @@ onMounted(() => load());
     </QCard>
     <div v-if="loading" class="registry-state"><QSpinner /> Carregando histórico…</div>
     <QBanner v-else-if="error" class="bg-red-1 text-negative" role="alert">{{ error }}</QBanner>
+    <QBanner v-else-if="items.length === 0" class="registry-state" data-testid="audit-empty">
+      Nenhum registro de auditoria encontrado.
+    </QBanner>
     <table v-else class="registry-table" data-testid="audit-table">
       <thead>
         <tr>
@@ -103,15 +107,15 @@ onMounted(() => load());
         </tr>
       </tbody>
     </table>
-    <div class="audit-pagination">
+    <div v-if="!loading && !error && totalPages > 0" class="audit-pagination">
       <QBtn label="Anterior" :disable="page <= 1" @click="load(page - 1)" />
       <span>Página {{ page }} de {{ totalPages }}</span>
       <QBtn label="Próxima" :disable="page >= totalPages" @click="load(page + 1)" />
     </div>
     <QDialog :model-value="Boolean(selected)" @update:model-value="selected = null">
       <QCard v-if="selected" class="registry-dialog" data-testid="audit-details">
-        <QCardSection
-          ><h2>Detalhes da alteração</h2>
+        <ModalHeader title="Detalhes da alteração" @close="selected = null" />
+        <QCardSection class="modal-scroll-body">
           <p>Campos alterados e respectivos valores antes e depois.</p>
           <DataComparison :antes="selected.dadosAnteriores" :depois="selected.dadosNovos" />
         </QCardSection>

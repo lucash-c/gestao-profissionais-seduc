@@ -223,7 +223,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
   async function createEvent(input: {
     participants: Array<{ professionalId: string; status?: 'AGUARDANDO' | 'ATENDIDO' }>;
     status?: 'RASCUNHO' | 'ATIVO' | 'ENCERRADO' | 'CANCELADO';
-    type?: 'REMOCAO' | 'LISTAO' | 'PERMUTA';
+    type?: 'REMOCAO' | 'LISTAO' | 'PERMUTA' | 'ATRIBUICAO';
   }) {
     const operator = await database.client.usuario.findUniqueOrThrow({
       where: { login: logins.operator },
@@ -1043,6 +1043,186 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     expect(await database.client.movimentacao.count({ where: { eventoId: event.eventId } })).toBe(
       2,
     );
+  });
+
+  it('formaliza Atribuição COM_SEDE, encerra o exercício anterior e registra o movimento próprio', async () => {
+    const candidate = await createProfessional('Atribuição com sede');
+    const previousTemporary = await availableWithoutSeat(ids.unitA);
+    const previousExercise = await exercise({
+      holderId: previousTemporary.holder.id,
+      positionId: previousTemporary.position.id,
+      professionalId: candidate.id,
+      type: 'SEM_SEDE',
+    });
+    const destination = await createPosition({ unitId: ids.unitC });
+    const event = await createEvent({
+      participants: [{ professionalId: candidate.id }],
+      type: 'ATRIBUICAO',
+    });
+    const operator = await authenticated();
+
+    const response = await operator
+      .post(`/eventos/${event.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: event.participantIds[0],
+        postoTrabalhoId: destination.id,
+      })
+      .expect(200);
+
+    expect(
+      await database.client.movimentacao.findFirst({
+        where: { eventoId: event.eventId, id: response.body.movimentacao.id },
+      }),
+    ).toMatchObject({ tipo: 'ATRIBUICAO' });
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, postoTrabalhoId: destination.id },
+      }),
+    ).toMatchObject({ profissionalId: candidate.id });
+    expect(
+      await database.client.exercicioProfissional.findUnique({
+        where: { id: previousExercise.id },
+      }),
+    ).toMatchObject({ dataFim: expect.any(Date) });
+    expect(
+      await database.client.eventoParticipante.findUnique({
+        where: { id: event.participantIds[0]! },
+      }),
+    ).toMatchObject({ status: 'ATENDIDO' });
+
+    const publicView = await request(app).get(`/public/eventos/${event.eventId}/telao`).expect(200);
+    expect(publicView.body.evento).toMatchObject({ tipo: 'ATRIBUICAO' });
+    expectNoSensitiveKeys(publicView.body);
+  });
+
+  it('formaliza Atribuição SEM_SEDE, preserva titular e respeita afastamento ativo', async () => {
+    const candidate = await createProfessional('Atribuição sem sede');
+    const temporaryDestination = await availableWithoutSeat(ids.unitB);
+    const event = await createEvent({
+      participants: [{ professionalId: candidate.id }],
+      type: 'ATRIBUICAO',
+    });
+    const operator = await authenticated();
+
+    await operator
+      .post(`/eventos/${event.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: event.participantIds[0],
+        postoTrabalhoId: temporaryDestination.position.id,
+      })
+      .expect(200);
+    expect(
+      await database.client.exercicioProfissional.findFirst({
+        where: {
+          dataFim: null,
+          postoTrabalhoId: temporaryDestination.position.id,
+          profissionalId: candidate.id,
+        },
+      }),
+    ).toMatchObject({
+      substituiProfissionalId: temporaryDestination.holder.id,
+      tipoExercicio: 'SEM_SEDE',
+    });
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, postoTrabalhoId: temporaryDestination.position.id },
+      }),
+    ).toMatchObject({ profissionalId: temporaryDestination.holder.id });
+
+    const absentCandidate = await createProfessional('Atribuição afastado');
+    await absence(absentCandidate.id);
+    const unavailableTemporary = await availableWithoutSeat(ids.unitC);
+    const absentEvent = await createEvent({
+      participants: [{ professionalId: absentCandidate.id }],
+      type: 'ATRIBUICAO',
+    });
+    const blocked = await operator
+      .post(`/eventos/${absentEvent.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: absentEvent.participantIds[0],
+        postoTrabalhoId: unavailableTemporary.position.id,
+      })
+      .expect(409);
+    expect(blocked.body.error).toBe('PROFESSIONAL_ON_ACTIVE_ABSENCE');
+
+    const seatDestination = await createPosition({ unitId: ids.unitA });
+    await operator
+      .post(`/eventos/${absentEvent.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: absentEvent.participantIds[0],
+        postoTrabalhoId: seatDestination.id,
+      })
+      .expect(200);
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, postoTrabalhoId: seatDestination.id },
+      }),
+    ).toMatchObject({ profissionalId: absentCandidate.id });
+
+    const nextCandidate = await createProfessional('Atribuição após afastado');
+    const nextEvent = await createEvent({
+      participants: [{ professionalId: nextCandidate.id }],
+      type: 'ATRIBUICAO',
+    });
+    const central = await operator.get(`/eventos/${nextEvent.eventId}/central`).expect(200);
+    expect(central.body.vagasDisponiveis).toContainEqual(
+      expect.objectContaining({
+        disponibilidade: 'DISPONIVEL_SEM_SEDE',
+        id: seatDestination.id,
+        ocupanteAtual: null,
+      }),
+    );
+  });
+
+  it('revalida elegibilidade e serializa Atribuições concorrentes para a mesma sede', async () => {
+    const noLongerEligible = await createProfessional('Atribuição com sede posterior');
+    const staleEvent = await createEvent({
+      participants: [{ professionalId: noLongerEligible.id }],
+      type: 'ATRIBUICAO',
+    });
+    await seat(noLongerEligible.id, (await createPosition({ unitId: ids.unitA })).id);
+    const operator = await authenticated();
+    const stale = await operator
+      .post(`/eventos/${staleEvent.eventId}/escolha`)
+      .send({
+        participanteEsperadoId: staleEvent.participantIds[0],
+        postoTrabalhoId: (await createPosition({ unitId: ids.unitB })).id,
+      })
+      .expect(409);
+    expect(stale.body.error).toBe('EVENT_PARTICIPANT_NO_LONGER_ELIGIBLE');
+
+    const candidateA = await createProfessional('Atribuição concorrente A');
+    const candidateB = await createProfessional('Atribuição concorrente B');
+    const destination = await createPosition({ unitId: ids.unitC });
+    const eventA = await createEvent({
+      participants: [{ professionalId: candidateA.id }],
+      type: 'ATRIBUICAO',
+    });
+    const eventB = await createEvent({
+      participants: [{ professionalId: candidateB.id }],
+      type: 'ATRIBUICAO',
+    });
+    const [responseA, responseB] = await Promise.all([
+      operator.post(`/eventos/${eventA.eventId}/escolha`).send({
+        participanteEsperadoId: eventA.participantIds[0],
+        postoTrabalhoId: destination.id,
+      }),
+      operator.post(`/eventos/${eventB.eventId}/escolha`).send({
+        participanteEsperadoId: eventB.participantIds[0],
+        postoTrabalhoId: destination.id,
+      }),
+    ]);
+    expect([responseA.status, responseB.status].sort()).toEqual([200, 409]);
+    expect(
+      await database.client.lotacaoSede.count({
+        where: { dataFim: null, postoTrabalhoId: destination.id },
+      }),
+    ).toBe(1);
+    expect(
+      await database.client.movimentacao.count({
+        where: { eventoId: { in: [eventA.eventId, eventB.eventId] }, tipo: 'ATRIBUICAO' },
+      }),
+    ).toBe(1);
   });
 
   it('só encerra sem AGUARDANDO, grava data do servidor e bloqueia novas escolhas', async () => {

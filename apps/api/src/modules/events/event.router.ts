@@ -1,8 +1,9 @@
 import type { AuthenticatedUser } from '@seduc/contracts';
 import { Router, type Request } from 'express';
-import { z } from 'zod';
 
 import { HttpError } from '../../http/http-error.js';
+import { databaseIdSchema } from '../../validation/database-id.js';
+import { adminDeletionSchema } from '../authorization/admin-deletion.js';
 import {
   assertAuthorized,
   AUTHORIZATION_ACTIONS,
@@ -26,7 +27,7 @@ import {
 } from './event.schemas.js';
 import type { EventServices } from './event.service.js';
 
-const idSchema = z.string().uuid();
+const idSchema = databaseIdSchema;
 
 function operator(
   request: Request,
@@ -46,6 +47,25 @@ function eventId(request: Request): string {
   return idSchema.parse(request.params.id);
 }
 
+function eventReader(request: Request): AuthenticatedUser {
+  if (!request.authenticatedUser) {
+    throw new HttpError(401, 'AUTHENTICATION_REQUIRED', 'Autenticação necessária.');
+  }
+  assertAuthorized({ action: AUTHORIZATION_ACTIONS.READ_EVENTS, user: request.authenticatedUser });
+  return request.authenticatedUser;
+}
+
+function administrator(request: Request): AuthenticatedUser {
+  if (!request.authenticatedUser) {
+    throw new HttpError(401, 'AUTHENTICATION_REQUIRED', 'Autenticação necessária.');
+  }
+  assertAuthorized({
+    action: AUTHORIZATION_ACTIONS.DELETE_RECORD,
+    user: request.authenticatedUser,
+  });
+  return request.authenticatedUser;
+}
+
 export function createEventRouter(
   service: EventServices,
   operations?: EventOperationServices,
@@ -53,7 +73,7 @@ export function createEventRouter(
 ): Router {
   const router = Router();
   router.get('/', async (request, response) => {
-    operator(request);
+    eventReader(request);
     response.json(await service.list(eventQuerySchema.parse(request.query)));
   });
   router.post('/', async (request, response) => {
@@ -61,7 +81,7 @@ export function createEventRouter(
     response.status(201).json(await service.create(eventCreateSchema.parse(request.body), user));
   });
   router.get('/:id', async (request, response) => {
-    operator(request);
+    eventReader(request);
     response.json(await service.get(eventId(request)));
   });
   router.patch('/:id', async (request, response) => {
@@ -69,6 +89,12 @@ export function createEventRouter(
     response.json(
       await service.update(eventId(request), eventUpdateSchema.parse(request.body), user),
     );
+  });
+  router.delete('/:id', async (request, response) => {
+    const user = administrator(request);
+    const input = adminDeletionSchema.parse(request.body);
+    await service.delete(eventId(request), input.senhaAtual, user);
+    response.status(204).send();
   });
   router.get('/:id/preparacao', async (request, response) => {
     operator(request);

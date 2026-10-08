@@ -11,19 +11,25 @@ import {
   QToolbar,
   QToolbarTitle,
 } from 'quasar';
-import { computed, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
+import logoSeduc from '@/assets/branding/logo-seduc-americana.png';
+import { manualAssignmentApi } from '@/services/manual-assignment.service';
 import { sessionStore } from '@/stores/session.store';
 
 const drawerOpen = ref(true);
-const route = useRoute();
 const router = useRouter();
 const user = computed(() => sessionStore.state.user);
 const isAdmin = computed(() => user.value?.perfil === 'ADMINISTRADOR');
 const isOperator = computed(() => user.value?.perfil === 'OPERADOR');
+const canReadEvents = computed(() => isAdmin.value || isOperator.value);
 const canReadStaffing = computed(
   () => user.value?.perfil === 'ADMINISTRADOR' || user.value?.perfil === 'OPERADOR',
+);
+const manualAssignmentEnabled = ref(false);
+const canSeeManualAssignment = computed(
+  () => isAdmin.value || (user.value?.perfil === 'DIRETOR' && manualAssignmentEnabled.value),
 );
 
 const profileLabels = {
@@ -32,21 +38,6 @@ const profileLabels = {
   OPERADOR: 'Operador',
   SECRETARIO: 'Secretário Escolar',
 } as const;
-const routeLabels: Record<string, string> = {
-  'administrative-correction': 'Correção Administrativa',
-  'audit-history': 'Auditoria / Histórico',
-  'event-exchange': 'Central de Permuta',
-  'event-operations': 'Central Operacional',
-  'event-preparation': 'Preparação da Fila',
-  events: 'Eventos',
-  professionals: 'Profissionais',
-  scores: 'Pontuações',
-  'staffing-plans': 'Quadro de Necessidades',
-  units: 'Unidades',
-  users: 'Usuários',
-  'work-positions': 'Postos de Trabalho',
-};
-const currentContext = computed(() => routeLabels[String(route.name)] ?? 'Gestão de Profissionais');
 
 async function logout(): Promise<void> {
   try {
@@ -55,6 +46,15 @@ async function logout(): Promise<void> {
     await router.replace({ name: 'login' });
   }
 }
+
+onMounted(async () => {
+  if (!['ADMINISTRADOR', 'DIRETOR'].includes(user.value?.perfil ?? '')) return;
+  try {
+    manualAssignmentEnabled.value = (await manualAssignmentApi.configuration()).habilitada;
+  } catch {
+    manualAssignmentEnabled.value = false;
+  }
+});
 </script>
 
 <template>
@@ -69,12 +69,15 @@ async function logout(): Promise<void> {
           icon="menu"
           @click="drawerOpen = !drawerOpen"
         />
-        <div class="brand-mark" aria-hidden="true">S</div>
+        <img
+          class="header-logo"
+          :src="logoSeduc"
+          alt="Prefeitura de Americana — Secretaria de Educação"
+        />
         <QToolbarTitle>
           <span class="brand-title">SEDUC AMERICANA</span>
           <span class="brand-subtitle">Gestão de Profissionais</span>
         </QToolbarTitle>
-        <div class="toolbar-context" aria-live="polite">{{ currentContext }}</div>
         <div v-if="user" class="session-summary">
           <span>{{ user.nome }}</span>
           <small
@@ -134,9 +137,9 @@ async function logout(): Promise<void> {
           <QItemSection avatar><span class="material-icons">work</span></QItemSection>
           <QItemSection>Postos de Trabalho</QItemSection>
         </QItem>
-        <div v-if="isOperator" class="nav-section-label">Eventos</div>
+        <div v-if="canReadEvents" class="nav-section-label">Eventos</div>
         <QItem
-          v-if="isOperator"
+          v-if="canReadEvents"
           data-testid="events-menu"
           clickable
           :to="{ name: 'events' }"
@@ -144,6 +147,17 @@ async function logout(): Promise<void> {
         >
           <QItemSection avatar><span class="material-icons">event</span></QItemSection>
           <QItemSection>Eventos</QItemSection>
+        </QItem>
+        <div v-if="canSeeManualAssignment" class="nav-section-label">Implantação</div>
+        <QItem
+          v-if="canSeeManualAssignment"
+          data-testid="manual-assignment-menu"
+          clickable
+          :to="{ name: 'manual-assignment' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">assignment_ind</span></QItemSection>
+          <QItemSection>Atribuição manual</QItemSection>
         </QItem>
         <div v-if="isAdmin" class="nav-section-label">Administração</div>
         <QItem
@@ -175,16 +189,6 @@ async function logout(): Promise<void> {
         >
           <QItemSection avatar><span class="material-icons">history</span></QItemSection>
           <QItemSection>Auditoria / Histórico</QItemSection>
-        </QItem>
-        <QItem
-          v-if="isAdmin"
-          data-testid="correction-menu"
-          clickable
-          :to="{ name: 'administrative-correction' }"
-          active-class="nav-active"
-        >
-          <QItemSection avatar><span class="material-icons">build</span></QItemSection>
-          <QItemSection>Correção Administrativa</QItemSection>
         </QItem>
       </QList>
     </QDrawer>

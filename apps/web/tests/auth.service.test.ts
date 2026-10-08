@@ -1,7 +1,7 @@
 import type { AuthenticatedUser } from '@seduc/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { authApi } from '@/services/auth.service';
+import { AuthHttpError, authApi } from '@/services/auth.service';
 
 const user: AuthenticatedUser = {
   email: 'admin@seduc.test',
@@ -65,5 +65,24 @@ describe('authApi', () => {
       credentials: 'include',
       method: 'POST',
     });
+  });
+
+  it('preserva o tempo de nova tentativa retornado no rate limit', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: 'TOO_MANY_REQUESTS',
+            message: 'Muitas tentativas.',
+            retryAfterSeconds: 42,
+          }),
+          { headers: { 'Content-Type': 'application/json' }, status: 429 },
+        ),
+      ),
+    );
+    await expect(
+      authApi.login({ identifier: 'admin', password: 'incorreta' }),
+    ).rejects.toMatchObject<Partial<AuthHttpError>>({ retryAfterSeconds: 42, status: 429 });
   });
 });

@@ -1,6 +1,8 @@
 import { USER_PROFILES } from '@seduc/contracts';
 import { z } from 'zod';
 
+import { databaseIdSchema } from '../../validation/database-id.js';
+
 const nullableText = (maximum: number) =>
   z
     .union([z.string().trim().max(maximum), z.null()])
@@ -14,6 +16,13 @@ const dateString = z
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
   }, 'Informe uma data civil válida.');
 const identifier = z.string().trim().min(1).max(254);
+const password = z
+  .string()
+  .min(12, 'A senha deve possuir ao menos 12 caracteres.')
+  .max(72, 'A senha deve possuir no máximo 72 caracteres.')
+  .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, {
+    message: 'A senha excede o limite seguro de 72 bytes.',
+  });
 
 function normalizeDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -41,7 +50,7 @@ export const phoneInputSchema = z
   .strict();
 
 export const phoneCollectionInputSchema = phoneInputSchema.extend({
-  id: z.string().uuid().optional(),
+  id: databaseIdSchema.optional(),
 });
 
 export const paginationSchema = z.object({
@@ -57,7 +66,7 @@ const activeQuery = z
 export const unitQuerySchema = paginationSchema.extend({
   ativo: activeQuery,
   nome: z.string().trim().max(200).optional(),
-  tipoUnidadeId: z.string().uuid().optional(),
+  tipoUnidadeId: databaseIdSchema.optional(),
 });
 
 export const unitCreateSchema = z
@@ -74,7 +83,7 @@ export const unitCreateSchema = z
     observacoes: nullableText(10_000).default(null),
     poloRegiao: nullableText(120).default(null),
     telefones: z.array(phoneInputSchema).max(20).default([]),
-    tipoUnidadeId: z.string().uuid(),
+    tipoUnidadeId: databaseIdSchema,
   })
   .strict();
 
@@ -86,19 +95,19 @@ export const unitUpdateSchema = unitCreateSchema
 
 export const professionalQuerySchema = paginationSchema.extend({
   ativo: activeQuery,
-  cargoFuncaoId: z.string().uuid().optional(),
+  cargoFuncaoId: databaseIdSchema.optional(),
   matricula: z.string().trim().max(50).optional(),
   nome: z.string().trim().max(200).optional(),
   permuta: activeQuery,
   remocao: activeQuery,
-  unidadeId: z.string().uuid().optional(),
+  unidadeId: databaseIdSchema.optional(),
   usaPontuacao: activeQuery,
 });
 
 const professionalFields = {
   ativo: z.boolean().default(true),
   bairro: nullableText(120).default(null),
-  cargoFuncaoId: z.string().uuid(),
+  cargoFuncaoId: databaseIdSchema,
   cep: nullableCep.default(null),
   cidade: nullableText(120).default(null),
   complemento: nullableText(120).default(null),
@@ -144,9 +153,9 @@ const userBaseSchema = z
     login: identifier,
     nome: z.string().trim().min(1).max(200),
     perfil: z.enum(USER_PROFILES),
-    senha: z.string().min(12).max(72),
+    senha: password,
     unidadeIds: z
-      .array(z.string().uuid())
+      .array(databaseIdSchema)
       .default([])
       .refine((value) => new Set(value).size === value.length, 'Não repita unidades.'),
   })
@@ -181,7 +190,7 @@ export const userUpdateSchema = userBaseSchema
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'Informe ao menos um campo.');
 
-export const passwordResetSchema = z.object({ senha: z.string().min(12).max(72) }).strict();
+export const passwordResetSchema = z.object({ senha: password }).strict();
 
 export const userQuerySchema = paginationSchema.extend({
   ativo: activeQuery,

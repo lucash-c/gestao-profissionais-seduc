@@ -19,6 +19,9 @@ import {
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import StatusChip from '@/components/StatusChip.vue';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
+import { fieldError, formError } from '@/services/form-errors';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -34,13 +37,19 @@ const saving = ref(false);
 const error = ref('');
 const dialogOpen = ref(false);
 const editing = ref<UnitRecord | null>(null);
+const deleting = ref<UnitRecord | null>(null);
+const deleteError = ref('');
+const dialogError = ref('');
+const saveFailure = ref<unknown>(null);
 const page = ref(1);
 const totalPages = ref(1);
 const search = ref('');
 const typeFilter = ref<string | null>(null);
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active');
 const canCreate = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
+const canDelete = canCreate;
 const canEdit = computed(() => sessionStore.state.user?.perfil !== 'OPERADOR');
+const formValid = computed(() => Boolean(form.nome.trim() && form.tipoUnidadeId));
 const form = reactive({
   ativo: true,
   bairro: '',
@@ -113,12 +122,16 @@ function resetForm(): void {
 }
 
 function openCreate(): void {
+  dialogError.value = '';
+  saveFailure.value = null;
   editing.value = null;
   resetForm();
   dialogOpen.value = true;
 }
 
 function openEdit(row: UnitRecord): void {
+  dialogError.value = '';
+  saveFailure.value = null;
   editing.value = row;
   Object.assign(form, {
     ativo: row.ativo,
@@ -145,7 +158,8 @@ function addPhone(): void {
 async function save(): Promise<void> {
   if (saving.value) return;
   saving.value = true;
-  error.value = '';
+  dialogError.value = '';
+  saveFailure.value = null;
   try {
     if (!editing.value) {
       await registryApi.createUnit(form);
@@ -155,10 +169,30 @@ async function save(): Promise<void> {
     dialogOpen.value = false;
     await load();
   } catch (saveError) {
-    error.value = saveError instanceof Error ? saveError.message : 'Falha ao salvar unidade.';
+    saveFailure.value = saveError;
+    dialogError.value = formError(saveError, 'Falha ao salvar unidade.');
   } finally {
     saving.value = false;
   }
+}
+
+async function confirmDelete(password: string): Promise<void> {
+  if (!deleting.value || saving.value) return;
+  saving.value = true;
+  deleteError.value = '';
+  try {
+    await registryApi.deleteUnit(deleting.value.id, password);
+    deleting.value = null;
+    await load();
+  } catch (deleteFailure) {
+    deleteError.value = formError(deleteFailure, 'Falha ao excluir unidade.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+function issue(path: string): string | undefined {
+  return fieldError(saveFailure.value, path);
 }
 
 onMounted(load);
@@ -238,7 +272,15 @@ onMounted(load);
       <div v-else-if="rows.length === 0" class="registry-state" data-testid="units-empty">
         Nenhuma unidade encontrada.
       </div>
-      <QTable v-else flat :rows="rows" :columns="columns" row-key="id" hide-pagination>
+      <QTable
+        v-else
+        flat
+        :rows="rows"
+        :columns="columns"
+        row-key="id"
+        hide-pagination
+        :pagination="{ rowsPerPage: 0 }"
+      >
         <template #body="props">
           <QTr :props="props">
             <QTd key="nome" :props="props">{{ props.row.nome }}</QTd>
@@ -255,6 +297,18 @@ onMounted(load);
                 color="primary"
                 label="Editar"
                 @click="openEdit(props.row)"
+              /><QBtn
+                v-if="canDelete"
+                flat
+                round
+                dense
+                color="negative"
+                icon="delete"
+                aria-label="Excluir unidade"
+                @click="
+                  deleting = props.row;
+                  deleteError = '';
+                "
               />
             </QTd>
           </QTr>
@@ -267,13 +321,29 @@ onMounted(load);
 
     <QDialog v-model="dialogOpen" persistent>
       <QCard class="registry-dialog" data-testid="unit-dialog">
-        <QCardSection>
-          <h2>{{ editing ? 'Editar unidade' : 'Nova unidade' }}</h2>
-        </QCardSection>
+        <ModalHeader
+          :title="editing ? 'Editar unidade' : 'Nova unidade'"
+          :close-disabled="saving"
+          @close="dialogOpen = false"
+        />
         <QCardSection class="form-grid">
-          <QInput v-model="form.nome" outlined label="Nome *" />
+          <QBanner
+            v-if="dialogError"
+            class="bg-red-1 text-negative full-span"
+            data-testid="unit-dialog-error"
+            >{{ dialogError }}</QBanner
+          >
+          <QInput
+            v-model="form.nome"
+            data-testid="unit-name"
+            outlined
+            label="Nome *"
+            :error="Boolean(issue('nome'))"
+            :error-message="issue('nome')"
+          />
           <QSelect
             v-model="form.tipoUnidadeId"
+            data-testid="unit-type"
             outlined
             emit-value
             map-options
@@ -281,6 +351,8 @@ onMounted(load);
             option-value="id"
             :options="types"
             label="Tipo *"
+            :error="Boolean(issue('tipoUnidadeId'))"
+            :error-message="issue('tipoUnidadeId')"
           />
           <QInput v-model="form.codigoInep" outlined label="Código INEP (opcional)" />
           <QInput v-model="form.poloRegiao" outlined label="Polo/região (opcional)" />
@@ -289,7 +361,13 @@ onMounted(load);
           <QInput v-model="form.complemento" outlined label="Complemento" />
           <QInput v-model="form.bairro" outlined label="Bairro" />
           <QInput v-model="form.cidade" outlined label="Cidade" />
-          <QInput v-model="form.cep" outlined label="CEP" />
+          <QInput
+            v-model="form.cep"
+            outlined
+            label="CEP"
+            :error="Boolean(issue('cep'))"
+            :error-message="issue('cep')"
+          />
           <QSelect
             v-model="form.ativo"
             outlined
@@ -341,11 +419,20 @@ onMounted(load);
             color="primary"
             label="Salvar"
             :loading="saving"
-            :disable="saving"
+            :disable="saving || !formValid"
             @click="save"
           />
         </QCardActions>
       </QCard>
     </QDialog>
+    <DeleteConfirmationDialog
+      :open="Boolean(deleting)"
+      title="Excluir unidade"
+      :description="`Confirme a exclusão de ${deleting?.nome ?? 'esta unidade'} com sua senha atual.`"
+      :error="deleteError"
+      :loading="saving"
+      @cancel="deleting = null"
+      @confirm="confirmDelete"
+    />
   </QPage>
 </template>

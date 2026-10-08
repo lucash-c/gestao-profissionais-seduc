@@ -138,12 +138,12 @@ describe('bootstrapInitialSeducAdministrator', () => {
     const { createAdmin, repository, userCount } = createInitialRepository();
     const passwordHasher = vi.fn().mockResolvedValue('hash-bcrypt');
 
-    await expect(bootstrapInitialSeducAdministrator(repository, passwordHasher)).resolves.toBe(
-      'created',
-    );
-    await expect(bootstrapInitialSeducAdministrator(repository, passwordHasher)).resolves.toBe(
-      'unchanged',
-    );
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, passwordHasher, 'test'),
+    ).resolves.toBe('created');
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, passwordHasher, 'test'),
+    ).resolves.toBe('unchanged');
     expect(userCount()).toBe(1);
     expect(passwordHasher).toHaveBeenCalledOnce();
     expect(passwordHasher).toHaveBeenCalledWith(INITIAL_SEDUC_ADMINISTRATOR.password);
@@ -159,9 +159,9 @@ describe('bootstrapInitialSeducAdministrator', () => {
     const { createAdmin, repository } = createInitialRepository(1);
     const passwordHasher = vi.fn().mockResolvedValue('hash-bcrypt');
 
-    await expect(bootstrapInitialSeducAdministrator(repository, passwordHasher)).resolves.toBe(
-      'unchanged',
-    );
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, passwordHasher, 'test'),
+    ).resolves.toBe('unchanged');
     expect(passwordHasher).not.toHaveBeenCalled();
     expect(createAdmin).not.toHaveBeenCalled();
   });
@@ -172,8 +172,8 @@ describe('bootstrapInitialSeducAdministrator', () => {
 
     await expect(
       Promise.all([
-        bootstrapInitialSeducAdministrator(repository, passwordHasher),
-        bootstrapInitialSeducAdministrator(repository, passwordHasher),
+        bootstrapInitialSeducAdministrator(repository, passwordHasher, 'test'),
+        bootstrapInitialSeducAdministrator(repository, passwordHasher, 'test'),
       ]),
     ).resolves.toEqual(['created', 'unchanged']);
     expect(userCount()).toBe(1);
@@ -184,7 +184,7 @@ describe('bootstrapInitialSeducAdministrator', () => {
     const repository: InitialAdminRepository = {
       runExclusive: vi.fn().mockRejectedValue(new Error('banco indisponível')),
     };
-    await expect(bootstrapInitialSeducAdministrator(repository, vi.fn())).rejects.toThrow(
+    await expect(bootstrapInitialSeducAdministrator(repository, vi.fn(), 'test')).rejects.toThrow(
       'banco indisponível',
     );
 
@@ -200,5 +200,16 @@ describe('bootstrapInitialSeducAdministrator', () => {
     expect(() =>
       passwordResetSchema.parse({ senha: INITIAL_SEDUC_ADMINISTRATOR.password }),
     ).toThrow();
+  });
+
+  it('é impossível executar o bootstrap conhecido em produção', async () => {
+    const { createAdmin, repository } = createInitialRepository();
+    const passwordHasher = vi.fn().mockResolvedValue('hash-bcrypt');
+
+    await expect(
+      bootstrapInitialSeducAdministrator(repository, passwordHasher, 'production'),
+    ).resolves.toBe('disabled');
+    expect(passwordHasher).not.toHaveBeenCalled();
+    expect(createAdmin).not.toHaveBeenCalled();
   });
 });

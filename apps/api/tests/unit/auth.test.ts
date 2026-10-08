@@ -153,7 +153,11 @@ describe('authentication endpoints', () => {
 
     expect(response.body).toEqual({
       error: 'VALIDATION_ERROR',
-      message: 'Dados de entrada inválidos.',
+      issues: expect.arrayContaining([
+        expect.objectContaining({ path: 'password' }),
+        expect.objectContaining({ path: '' }),
+      ]),
+      message: 'Revise os campos informados.',
     });
   });
 
@@ -322,6 +326,8 @@ describe('authentication endpoints', () => {
       .send({ identifier: 'admin.seduc', password: 'senha-errada' })
       .expect(429);
     expect(response.body.error).toBe('TOO_MANY_REQUESTS');
+    expect(response.body.retryAfterSeconds).toBeGreaterThan(0);
+    expect(Number(response.headers['retry-after'])).toBe(response.body.retryAfterSeconds);
   });
 
   it('ignora X-Forwarded-For quando nenhum proxy está configurado como confiável', async () => {

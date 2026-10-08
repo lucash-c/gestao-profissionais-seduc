@@ -22,6 +22,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -344,7 +345,11 @@ onMounted(load);
 
       <QDialog v-model="choiceDialog" persistent>
         <QCard class="registry-dialog" data-testid="choice-dialog">
-          <QCardSection><h2>Confirmar escolha</h2></QCardSection>
+          <ModalHeader
+            title="Confirmar escolha"
+            :close-disabled="confirming"
+            @close="choiceDialog = false"
+          />
           <QCardSection v-if="loadingSimulation"><QSpinner /> Simulando…</QCardSection>
           <QCardSection v-else-if="simulation">
             <h3>ANTES</h3>
@@ -394,8 +399,8 @@ onMounted(load);
 
       <QDialog v-model="historyDialog">
         <QCard class="registry-dialog" data-testid="movement-history-dialog">
-          <QCardSection><h2>Histórico do evento</h2></QCardSection>
-          <QCardSection>
+          <ModalHeader title="Histórico do evento" @close="historyDialog = false" />
+          <QCardSection class="modal-scroll-body">
             <p v-for="movement in history" :key="movement.id">
               {{ movement.profissional }} · origem:
               {{ movement.origem?.unidade.nome ?? 'sem origem registrada' }} →

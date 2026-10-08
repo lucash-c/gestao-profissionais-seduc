@@ -81,8 +81,7 @@ describe('proteção de rotas', () => {
     await router.push('/auditoria');
     expect(router.currentRoute.value.name).toBe('units');
 
-    await router.push('/correcao-administrativa');
-    expect(router.currentRoute.value.name).toBe('units');
+    expect(router.resolve('/correcao-administrativa').matched).toHaveLength(0);
   });
 
   it('permite Quadro/Postos ao Operador e bloqueia os perfis escolares', async () => {

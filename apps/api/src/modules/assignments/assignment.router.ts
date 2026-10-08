@@ -1,13 +1,13 @@
 import type { AuthenticatedUser } from '@seduc/contracts';
 import { Router, type Request } from 'express';
-import { z } from 'zod';
 
 import { HttpError } from '../../http/http-error.js';
+import { databaseIdSchema } from '../../validation/database-id.js';
 import { assertAuthorized, AUTHORIZATION_ACTIONS } from '../authorization/authorization.policy.js';
 import { absenceCreateSchema, absenceEndSchema, absenceQuerySchema } from './assignment.schemas.js';
 import type { AssignmentServices } from './assignment.service.js';
 
-const idSchema = z.string().uuid();
+const idSchema = databaseIdSchema;
 
 function currentUser(request: Request): AuthenticatedUser {
   if (!request.authenticatedUser) {

@@ -81,7 +81,7 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
 
   async function createEvent(
     agent: ReturnType<typeof request.agent>,
-    type: 'REMOCAO' | 'PERMUTA' | 'LISTAO',
+    type: 'REMOCAO' | 'PERMUTA' | 'LISTAO' | 'ATRIBUICAO',
     cargoFuncaoId = ids.cargoScore,
     name = `Evento ${type} ${randomUUID()}`,
   ) {
@@ -208,6 +208,7 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
       data: {
         anoLetivo: 2026,
         cargoFuncaoId: ids.cargoScore,
+        codigo: `TEST-${randomUUID()}`,
         periodoId: ids.period,
         quadroNecessidadeId: plan.id,
         unidadeId: ids.unit,
@@ -246,7 +247,13 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
       status: 'RASCUNHO',
     });
 
-    for (const login of [logins.admin, logins.director, logins.secretary]) {
+    const admin = await authenticated(logins.admin);
+    await admin.get('/eventos').expect(200);
+    await admin.post('/eventos').send({}).expect(403);
+    await admin.get(`/eventos/${eventId}/preparacao`).expect(403);
+    await admin.post(`/eventos/${eventId}/iniciar`).expect(403);
+
+    for (const login of [logins.director, logins.secretary]) {
       const unauthorized = await authenticated(login);
       await unauthorized.get('/eventos').expect(403);
       await unauthorized.post('/eventos').send({}).expect(403);
@@ -326,6 +333,43 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
     expect(list.body.profissionais.every(({ elegivel }: { elegivel: boolean }) => elegivel)).toBe(
       true,
     );
+  });
+
+  it('restringe Atribuição formal a profissionais sem sede oficial ativa', async () => {
+    const operator = await authenticated(logins.operator);
+    const eventId = await createEvent(operator, 'ATRIBUICAO');
+    const preparation = await operator.get(`/eventos/${eventId}/preparacao`).expect(200);
+    const withSeat = preparation.body.profissionais.find(
+      ({ profissionalId }: { profissionalId: string }) =>
+        profissionalId === professionals.get('with-seat'),
+    );
+    const withoutSeat = preparation.body.profissionais.find(
+      ({ profissionalId }: { profissionalId: string }) =>
+        profissionalId === professionals.get('without-seat'),
+    );
+
+    expect(withSeat).toMatchObject({
+      elegivel: false,
+      motivoInelegibilidade: 'Profissional já possui sede oficial ativa.',
+      possuiSedeAtual: true,
+    });
+    expect(withoutSeat).toMatchObject({ elegivel: true, possuiSedeAtual: false });
+
+    const rejected = await operator
+      .put(`/eventos/${eventId}/preparacao`)
+      .send({ profissionalIds: [professionals.get('with-seat')] })
+      .expect(409);
+    expect(rejected.body.error).toBe('INELIGIBLE_EVENT_PARTICIPANT');
+
+    await operator
+      .put(`/eventos/${eventId}/preparacao`)
+      .send({ profissionalIds: [professionals.get('without-seat')] })
+      .expect(200);
+    await operator.post(`/eventos/${eventId}/iniciar`).expect(200);
+    expect(await database.client.evento.findUnique({ where: { id: eventId } })).toMatchObject({
+      status: 'ATIVO',
+      tipo: 'ATRIBUICAO',
+    });
   });
 
   it('salva subconjunto e rejeita repetido, inativo, outro cargo e ID inexistente', async () => {

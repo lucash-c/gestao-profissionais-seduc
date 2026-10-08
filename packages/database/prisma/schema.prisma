@@ -29,6 +29,7 @@ enum TipoEvento {
   REMOCAO
   PERMUTA
   LISTAO
+  ATRIBUICAO
 
   @@map("tipo_evento")
 }
@@ -55,6 +56,7 @@ enum TipoMovimentacao {
   REMOCAO
   PERMUTA
   LISTAO
+  ATRIBUICAO
 
   @@map("tipo_movimentacao")
 }
@@ -260,7 +262,7 @@ model PostoTrabalho {
   cargoFuncaoId       String                  @map("cargo_funcao_id") @db.Uuid
   periodoId           String                  @map("periodo_id") @db.Uuid
   anoLetivo           Int                     @map("ano_letivo")
-  codigo              String?                 @db.VarChar(80)
+  codigo              String                  @db.VarChar(80)
   ativo               Boolean                 @default(true)
   criadoEm            DateTime                @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime                @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
@@ -274,6 +276,21 @@ model PostoTrabalho {
   @@index([quadroNecessidadeId], map: "posto_trabalho_quadro_idx")
   @@index([ativo], map: "posto_trabalho_ativo_idx")
   @@map("posto_trabalho")
+}
+
+model PostoCodigoContador {
+  prefixo     String @id @db.VarChar(4)
+  ultimoValor BigInt @default(0) @map("ultimo_valor")
+
+  @@map("posto_codigo_contador")
+}
+
+model ConfiguracaoSistema {
+  chave          String   @id @db.VarChar(100)
+  valorBooleano Boolean  @map("valor_booleano")
+  atualizadoEm  DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  @@map("configuracao_sistema")
 }
 
 model LotacaoSede {

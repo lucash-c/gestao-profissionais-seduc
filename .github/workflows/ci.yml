@@ -15,7 +15,7 @@ jobs:
   validate:
     name: Validate project and PostgreSQL 17
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     services:
       postgres:
@@ -80,5 +80,29 @@ jobs:
       - name: Test PostgreSQL migrations and constraints
         run: pnpm --filter @seduc/database test:integration
 
-      - name: Test Stage 7 PostgreSQL integration
+      - name: Test API PostgreSQL integration
         run: pnpm --filter @seduc/api test:integration
+
+      - name: Test PostgreSQL 17 backup and restoration
+        env:
+          POSTGRES_TOOLS_CONTAINER: ${{ job.services.postgres.id }}
+          POSTGRES_USER: seduc
+          POSTGRES_PASSWORD: ci-test-password
+          SOURCE_DATABASE: seduc_test
+          RESTORE_DATABASE: seduc_restore_test
+        run: bash scripts/test-backup-restore.sh
+
+      - name: Validate production Compose
+        env:
+          CORS_ORIGIN: https://seduc.example.invalid
+          POSTGRES_PASSWORD: ci-compose-only-password
+          SESSION_SECRET: ci-compose-only-session-secret-with-at-least-32-characters
+        run: docker compose -f compose.production.yaml config --quiet
+
+      - name: Build production images
+        run: |
+          docker build --file docker/api.Dockerfile --target production --tag seduc-api:ci .
+          docker build --file docker/web.Dockerfile --target production --tag seduc-web:ci .
+
+      - name: Validate operational shell scripts
+        run: bash -n scripts/backup-postgres.sh scripts/restore-postgres.sh scripts/test-backup-restore.sh

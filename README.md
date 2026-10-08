@@ -1,189 +1,192 @@
-# SEDUC Americana - Remoção, Permuta e Listão
+# Gestão de Profissionais — SEDUC Americana
 
-Sistema administrativo da Secretaria Municipal de Educação de Americana/SP.
+Sistema administrativo para cadastros, quadro de necessidades, lotação, exercício,
+afastamentos, Remoção, Listão, Permuta e auditoria da Secretaria
+Municipal de Educação de Americana/SP.
 
-## Estado atual
+## Arquitetura
 
-O projeto contém as etapas aprovadas até o momento:
+- monorepo pnpm com Node.js 24;
+- API Express 5 com validação Zod e sessão administrativa em cookie HttpOnly;
+- frontend Vue 3 + Quasar, com identidade visual inspirada no Windows 11/Fluent;
+- PostgreSQL 17, Prisma e migrations SQL versionadas;
+- Nginx para servir o frontend e encaminhar `/api` à API;
+- Docker Compose separado para desenvolvimento e produção.
 
-- **Etapa 0 — Fundação técnica:** monorepo pnpm, Express, Vue 3, Quasar, Prisma, Docker Compose e verificações de qualidade;
-- **Etapa 1 — Banco base:** estrutura relacional, históricos, constraints e migrations PostgreSQL;
-- **Etapa 2 — Autenticação e RBAC:** login administrativo, sessões HttpOnly, autorização por perfil e escopo de unidade;
-- **Etapa 3 — Cadastros:** unidades, profissionais, usuários, telefones e pontuação oficial;
-- **Etapa 4 — Quadro e postos:** necessidades configuráveis, materialização de postos e manutenção histórica transacional.
-- **Etapa 5 — Lotação, exercício e afastamentos:** lotação de sede, exercício temporário, afastamentos, disponibilidade calculada COM SEDE e SEM SEDE, substituições em cadeia, históricos e regras transacionais e de concorrência.
-- **Etapa 6 — Eventos e preparação da fila:** eventos em RASCUNHO, cargo da sessão, elegibilidade, seleção, prévia oficial, snapshots, tratamento de empates, congelamento da fila e transição para ATIVO.
-- **Etapa 7 — Central Operacional de Remoção/Listão:** atendimento da fila congelada, consulta e simulação de vagas, escolha transacional, movimentações, encerramento controlado, histórico e telão público sanitizado.
-- **Etapa 8 — Permuta:** seleção bilateral na fila congelada, simulação antes/depois, troca atômica de sedes oficiais, histórico único com dois itens e proteção transacional contra concorrência e estado obsoleto.
-- **Etapa 9 — Auditoria e Correção Administrativa:** histórico técnico transacional das alterações normais, consulta paginada exclusiva do Administrador e módulo excepcional isolado de correção cadastral com confirmação antes/depois.
-
-Ainda não estão implementados ausência e desistência em eventos, salto de participante e os demais fluxos previstos para etapas futuras.
+As decisões consolidadas de domínio estão em
+[`docs/decisoes-de-dominio-v4.md`](docs/decisoes-de-dominio-v4.md). O resultado do aceite
+funcional está em [`docs/checklist-aceite-v4.md`](docs/checklist-aceite-v4.md).
 
 ## Requisitos
 
-- Node.js 24 ou superior;
-- pnpm 11 ou superior;
-- Docker com o plugin Docker Compose, para o ambiente integrado.
+- Node.js 24;
+- pnpm 11.19.0;
+- PostgreSQL 17;
+- Docker com Docker Compose para o ambiente integrado;
+- clientes PostgreSQL 17 (`pg_dump`/`pg_restore`) para backup fora do container.
 
 ## Configuração
 
-Copie `.env.example` para `.env` e substitua as senhas de demonstração antes de usar o ambiente.
-
-PowerShell:
+Copie `.env.example` para `.env` e substitua todos os placeholders:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Bash:
-
 ```bash
 cp .env.example .env
 ```
 
-As credenciais e segredos do exemplo são apenas placeholders locais e não devem ser usados em produção. Configure `SESSION_SECRET` com um valor aleatório de pelo menos 32 caracteres e ajuste `SESSION_TTL_HOURS` conforme a política do ambiente.
+Variáveis principais:
 
-## Primeiro acesso em instalação nova
+| Variável            | Finalidade                                                     |
+| ------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`      | conexão PostgreSQL da aplicação; nunca registrar ou publicar   |
+| `DATABASE_TEST_URL` | banco exclusivamente descartável para integração               |
+| `SESSION_SECRET`    | segredo aleatório entre 32 e 256 caracteres                    |
+| `SESSION_TTL_HOURS` | validade da sessão, entre 1 e 168 horas                        |
+| `CORS_ORIGIN`       | origens exatas permitidas, separadas por vírgula               |
+| `TRUST_PROXY_HOPS`  | quantidade exata de proxies confiáveis; padrão `0`             |
+| `LOG_LEVEL`         | `fatal`, `error`, `warn`, `info`, `debug`, `trace` ou `silent` |
+| `VITE_API_BASE_URL` | base pública da API usada pelo frontend                        |
 
-Quando a API inicia com a tabela `usuario` completamente vazia, ela cria automaticamente a conta administrativa inicial:
+Os arquivos `.env`, backups, chaves e credenciais são ignorados pelo Git. Não use os valores de
+exemplo em produção.
 
-- **Usuário:** `seduc`
-- **Senha:** `12345678`
+## Primeiro administrador
 
-> Esta é a conta administrativa inicial do sistema. Após criar um administrador definitivo, desative ou remova o usuário SEDUC.
-
-A senha é armazenada exclusivamente como hash bcrypt. Se já existir qualquer usuário, ativo ou inativo, nenhuma conta automática será criada. Duas instâncias iniciando simultaneamente são serializadas no PostgreSQL para que exista somente um administrador inicial.
-
-## Autenticação administrativa
-
-O login aceita exclusivamente `usuario.login` ou `usuario.email`. A sessão fica em cookie HttpOnly; profissionais não são usuários da aplicação e não autenticam por CPF ou matrícula.
-
-O bootstrap manual parametrizado continua disponível para operações administrativas controladas. Informe explicitamente `DATABASE_URL`, `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_LOGIN`, `BOOTSTRAP_ADMIN_PASSWORD` e, opcionalmente, `BOOTSTRAP_ADMIN_EMAIL`. Depois execute:
+Em `NODE_ENV=production` não existe conta nem senha automática. Após aplicar as migrations,
+execute explicitamente o bootstrap administrativo com credenciais próprias:
 
 ```bash
+DATABASE_URL='postgresql://...' \
+BOOTSTRAP_ADMIN_NAME='Administrador responsável' \
+BOOTSTRAP_ADMIN_LOGIN='login.individual' \
+BOOTSTRAP_ADMIN_PASSWORD='senha-forte-com-12-ou-mais' \
 pnpm --filter @seduc/api auth:bootstrap-admin
 ```
 
-Não existem outras credenciais padrão além da conta inicial SEDUC descrita acima. O bootstrap manual não possui credenciais predefinidas.
+`BOOTSTRAP_ADMIN_EMAIL` é opcional. A senha não é impressa e é persistida somente como hash
+bcrypt. O script é idempotente para a mesma identidade e rejeita conflito de login/e-mail.
 
-### Proxy reverso e HTTPS
+Somente em `development` e `test`, quando não existe usuário algum, a conveniência histórica cria
+a conta local `seduc` com senha `12345678`. Essa senha não satisfaz a política normal e o código
+bloqueia esse bootstrap antes de qualquer acesso ao banco em produção.
 
-`TRUST_PROXY_HOPS` informa quantos proxies conhecidos existem entre o navegador e a API. O padrão `0` não confia em `X-Forwarded-For`, adequado à execução direta. Use `1` somente quando houver exatamente um proxy confiável antes da API, como na topologia do Compose; não use um valor maior que o número real de proxies. Com valor maior que zero, a API não deve ficar acessível publicamente por um caminho que contorne o proxy.
-
-Em `NODE_ENV=production`, o cookie é sempre `Secure`. Portanto, a conexão do navegador até a entrada pública do sistema deve usar HTTPS. É aceitável haver HTTP entre o proxy reverso e o container da API quando o TLS termina no Traefik, Coolify ou proxy equivalente.
-
-## Execução local
-
-Instale as dependências e gere o Prisma Client:
+## Desenvolvimento
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm db:generate
-```
-
-Com um PostgreSQL acessível pela `DATABASE_URL` do `.env`, inicie API e frontend:
-
-```bash
 pnpm dev
 ```
-
-Serviços padrão:
 
 - frontend: <http://localhost:9000>
 - API: <http://localhost:3000>
 - liveness: <http://localhost:3000/health/live>
-- readiness com PostgreSQL: <http://localhost:3000/health/ready>
+- readiness: <http://localhost:3000/health/ready>
 
-## Docker Compose
-
-> **Pendência de validação:** O `docker compose config` e a subida completa dos containers ainda não foram validados porque o cliente Docker não está disponível no ambiente Windows atual.
-
-Suba o ambiente integrado:
-
-```bash
-docker compose up --build
-```
-
-Confira a configuração resolvida antes de subir:
+Ambiente integrado de desenvolvimento:
 
 ```bash
 docker compose config
+docker compose up --build
 ```
 
-O PostgreSQL possui healthcheck com `pg_isready`. A API só é considerada pronta quando consegue executar `SELECT 1`; o frontend aguarda a prontidão da API.
+`compose.yaml` publica banco, API e Vite somente em `127.0.0.1`. O PostgreSQL possui healthcheck
+e a API só fica pronta após `SELECT 1`.
 
-Para encerrar sem remover o volume do banco:
+## Produção com Docker
+
+`compose.production.yaml` usa os targets `production`, executa migrations antes da API, não roda
+servidor de desenvolvimento e não publica o PostgreSQL. Por segurança, o frontend também escuta
+somente em `127.0.0.1` por padrão, atrás do proxy HTTPS da instalação.
 
 ```bash
-docker compose down
+docker compose -f compose.production.yaml config --quiet
+docker compose -f compose.production.yaml build
+docker compose -f compose.production.yaml up -d
 ```
 
-Remova o volume apenas quando a perda dos dados locais for intencional:
+`POSTGRES_PASSWORD`, `SESSION_SECRET` e `CORS_ORIGIN` são obrigatórias. Consulte
+[`docs/implantacao.md`](docs/implantacao.md) antes de disponibilizar o serviço.
+
+## Migrations e banco
 
 ```bash
-docker compose down --volumes
+pnpm db:generate
+pnpm db:validate
+pnpm --filter @seduc/database db:migrate:deploy
 ```
 
-## Qualidade
+Nunca use `prisma db push` no ambiente oficial. As migrations preservam históricos e constraints
+PostgreSQL, inclusive índices únicos parciais e triggers de concorrência.
 
-Execute toda a verificação do projeto:
+## Testes e qualidade
 
 ```bash
 pnpm verify
-```
-
-Ou execute separadamente:
-
-```bash
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
 pnpm db:validate
-```
-
-O teste de integração contra PostgreSQL real utiliza `DATABASE_TEST_URL`:
-
-Com o ambiente Docker ativo, ele pode ser executado dentro da API:
-
-```bash
-docker compose exec api pnpm --filter @seduc/api test:integration
-```
-
-PowerShell:
-
-```powershell
-$env:DATABASE_TEST_URL = 'postgresql://seduc:senha@localhost:5432/seduc_test?schema=public'
 pnpm test:integration
 ```
 
-Bash:
+`pnpm verify` executa formatação, lint, typecheck, testes e build. A integração exige
+`DATABASE_TEST_URL`; a recriação destrutiva só é aceita para banco local nomeado como teste ou com
+`DATABASE_TEST_ALLOW_RESET=true` explicitamente definido. O GitHub Actions usa PostgreSQL 17
+descartável e também valida backup/restauração e os dois builds de produção.
+
+## Backup e restauração
+
+Os scripts geram formato custom (`pg_dump -Fc`), não sobrescrevem arquivo existente e não contêm
+credenciais:
 
 ```bash
-DATABASE_TEST_URL='postgresql://seduc:senha@localhost:5432/seduc_test?schema=public' pnpm test:integration
+DATABASE_URL='postgresql://...' BACKUP_DIRECTORY='./backups' bash scripts/backup-postgres.sh
 ```
 
-Sem `DATABASE_TEST_URL`, esse teste é marcado como ignorado; os testes unitários dos estados saudável e indisponível continuam obrigatórios.
+```powershell
+$env:DATABASE_URL = 'postgresql://...'
+.\scripts\backup-postgres.ps1
+```
 
-O GitHub Actions executa as migrations e os testes de integração em PostgreSQL 17 descartável.
+A restauração é destrutiva no banco de destino e exige `ALLOW_DATABASE_RESTORE=true`. Veja o
+procedimento completo e o teste obrigatório em
+[`docs/backup-restauracao.md`](docs/backup-restauracao.md).
 
-## Healthchecks
+## Segurança e operação
 
-- `GET /health/live`: confirma que o processo da API está ativo; não consulta o banco.
-- `GET /health/ready`: executa uma consulta mínima no PostgreSQL. Retorna `200` quando pronto e `503` quando o banco não está acessível.
+- autenticação exclusivamente administrativa; não há cadastro público nem login de profissional;
+- cookie HttpOnly, SameSite=Lax e Secure em produção; tokens de sessão persistidos somente em hash;
+- RBAC e escopo de unidade conferidos no backend;
+- mutações autenticadas protegidas por origem e CORS explícito;
+- login limitado a cinco falhas por janela de quinze minutos;
+- logs omitem headers, payloads, query strings, credenciais e mensagens internas de erro;
+- telão e escolhas públicas expõem apenas nomes, posições e dados operacionais sanitizados;
+- `/health/live` verifica processo e `/health/ready` verifica PostgreSQL sem revelar infraestrutura.
 
-Nenhum erro do banco ou credencial é devolvido na resposta HTTP.
+Para operação de eventos, recuperação, logs e incidentes, consulte
+[`docs/operacao.md`](docs/operacao.md) e [`docs/seguranca.md`](docs/seguranca.md).
+
+## Perfis
+
+- `ADMINISTRADOR`: cadastros globais, pontuação, usuários, quadro, auditoria e correção excepcional;
+- `OPERADOR`: cria, prepara, inicia, opera e encerra eventos; não altera cadastros protegidos;
+- `DIRETOR`: cadastros permitidos e profissionais das suas múltiplas unidades vinculadas;
+- `SECRETARIO`: cadastros permitidos e profissionais da sua unidade vinculada.
+
+Ausência, desistência, salto de participante e “manter na mesma sede” permanecem sem regra de
+negócio definitiva e não foram inventados nesta entrega.
 
 ## Estrutura
 
 ```text
-apps/api                 API Express e testes HTTP
-apps/web                 Vue 3, Quasar e testes de componentes
-packages/contracts       Contratos TypeScript compartilhados
-packages/database        Prisma, adapter PostgreSQL e conexão
-docker                   Dockerfiles e configuração Nginx
-compose.yaml             Ambiente integrado local
+apps/api                    API Express e testes HTTP/PostgreSQL
+apps/web                    Vue 3, Quasar e testes de componentes
+packages/contracts          contratos TypeScript compartilhados
+packages/database           Prisma, migrations e testes de constraints
+docker                      Dockerfiles, Nginx e inicialização local
+scripts                     backup, restauração e prova de restauração
+docs                        operação, implantação, segurança e aceite
+compose.yaml                ambiente de desenvolvimento
+compose.production.yaml     ambiente de produção
 ```
-
-As regras posteriores de movimentação e disponibilidade serão criadas somente após autorização explícita.

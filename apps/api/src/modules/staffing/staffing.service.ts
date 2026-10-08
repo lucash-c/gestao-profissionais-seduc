@@ -7,8 +7,9 @@ import type {
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
-import { writeAudit } from '../audit/audit.service.js';
+import { writeCrudAudit as writeAudit } from '../audit/audit.service.js';
 import { mapWorkPosition, positionAvailabilityInclude } from '../assignments/assignment.service.js';
+import { assertAdministratorPassword } from '../authorization/admin-deletion.js';
 import type {
   StaffingPlanCreateInput,
   StaffingPlanQuery,
@@ -19,6 +20,7 @@ import type {
 export interface StaffingServices {
   staffingPlans: {
     create(input: StaffingPlanCreateInput, user: AuthenticatedUser): Promise<StaffingPlanRecord>;
+    delete(id: string, password: string, user: AuthenticatedUser): Promise<void>;
     get(id: string): Promise<StaffingPlanRecord>;
     list(query: StaffingPlanQuery): Promise<PaginatedResponse<StaffingPlanRecord>>;
     update(
@@ -28,6 +30,7 @@ export interface StaffingServices {
     ): Promise<StaffingPlanRecord>;
   };
   workPositions: {
+    delete(id: string, password: string, user: AuthenticatedUser): Promise<void>;
     get(id: string): Promise<WorkPositionRecord>;
     list(query: WorkPositionQuery): Promise<PaginatedResponse<WorkPositionRecord>>;
     updateStatus(id: string, ativo: boolean, user: AuthenticatedUser): Promise<WorkPositionRecord>;
@@ -124,6 +127,56 @@ async function assertCompatible(
   }
 }
 
+export function workPositionCodePrefix(cargoName: string): string {
+  const prefix = cargoName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 4);
+  if (!prefix) {
+    throw new HttpError(409, 'INVALID_POSITION_CODE_PREFIX', 'O cargo não gera um prefixo válido.');
+  }
+  return prefix;
+}
+
+async function allocateWorkPositionCodes(
+  transaction: Prisma.TransactionClient,
+  cargoFuncaoId: string,
+  quantity: number,
+): Promise<string[]> {
+  if (quantity <= 0) return [];
+  const cargo = await transaction.cargoFuncao.findUnique({
+    select: { nome: true },
+    where: { id: cargoFuncaoId },
+  });
+  if (!cargo) throw new HttpError(404, 'NOT_FOUND', 'Cargo/função não encontrado.');
+  const prefix = workPositionCodePrefix(cargo.nome);
+  const rows = await transaction.$queryRaw<{ ultimoValor: bigint }[]>(Prisma.sql`
+    INSERT INTO "posto_codigo_contador" ("prefixo", "ultimo_valor")
+    VALUES (${prefix}, ${quantity})
+    ON CONFLICT ("prefixo") DO UPDATE
+      SET "ultimo_valor" = "posto_codigo_contador"."ultimo_valor" + ${quantity}
+    RETURNING "ultimo_valor" AS "ultimoValor"
+  `);
+  const end = rows[0]?.ultimoValor;
+  if (end === undefined) {
+    throw new HttpError(
+      409,
+      'POSITION_CODE_ALLOCATION_FAILED',
+      'Não foi possível gerar os códigos.',
+    );
+  }
+  const start = end - BigInt(quantity) + 1n;
+  if (end > 9_999_999_999n) {
+    throw new HttpError(409, 'POSITION_CODE_LIMIT_REACHED', 'A sequência de postos foi esgotada.');
+  }
+  return Array.from(
+    { length: quantity },
+    (_, index) => `${prefix}-${(start + BigInt(index)).toString().padStart(10, '0')}`,
+  );
+}
+
 async function loadPlan(
   transaction: Prisma.TransactionClient,
   id: string,
@@ -161,10 +214,16 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
               data: input,
             });
             if (input.quantidade > 0) {
+              const codes = await allocateWorkPositionCodes(
+                transaction,
+                input.cargoFuncaoId,
+                input.quantidade,
+              );
               await transaction.postoTrabalho.createMany({
-                data: Array.from({ length: input.quantidade }, () => ({
+                data: Array.from({ length: input.quantidade }, (_, index) => ({
                   anoLetivo: input.anoLetivo,
                   cargoFuncaoId: input.cargoFuncaoId,
+                  codigo: codes[index]!,
                   periodoId: input.periodoId,
                   quadroNecessidadeId: plan.id,
                   unidadeId: input.unidadeId,
@@ -185,6 +244,23 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
         } catch (error) {
           handleDatabaseError(error);
         }
+      },
+      async delete(id, password, user) {
+        await client.$transaction(async (transaction) => {
+          await assertAdministratorPassword(transaction, user, password);
+          await lockPlan(transaction, id);
+          const positionCount = await transaction.postoTrabalho.count({
+            where: { quadroNecessidadeId: id },
+          });
+          if (positionCount > 0) {
+            throw new HttpError(
+              409,
+              'PROTECTED_HISTORY',
+              'O quadro possui postos vinculados e não pode ser excluído.',
+            );
+          }
+          await transaction.quadroNecessidade.delete({ where: { id } });
+        });
       },
       async get(id) {
         const plan = await client.quadroNecessidade.findUnique({
@@ -264,10 +340,17 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
                 );
               }
               if (targetQuantity > current.quantidade) {
+                const increase = targetQuantity - current.quantidade;
+                const codes = await allocateWorkPositionCodes(
+                  transaction,
+                  current.cargoFuncaoId,
+                  increase,
+                );
                 await transaction.postoTrabalho.createMany({
-                  data: Array.from({ length: targetQuantity - current.quantidade }, () => ({
+                  data: Array.from({ length: increase }, (_, index) => ({
                     anoLetivo: current.anoLetivo,
                     cargoFuncaoId: current.cargoFuncaoId,
+                    codigo: codes[index]!,
                     periodoId: current.periodoId,
                     quadroNecessidadeId: id,
                     unidadeId: current.unidadeId,
@@ -347,6 +430,41 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
       },
     },
     workPositions: {
+      async delete(id, password, user) {
+        await client.$transaction(async (transaction) => {
+          await assertAdministratorPassword(transaction, user, password);
+          const locked = await transaction.$queryRaw<
+            { ativo: boolean; quadroNecessidadeId: string }[]
+          >(Prisma.sql`
+            SELECT "ativo", "quadro_necessidade_id" AS "quadroNecessidadeId"
+            FROM "posto_trabalho"
+            WHERE "id" = ${id}::uuid
+            FOR UPDATE
+          `);
+          const target = locked[0];
+          if (!target) throw new HttpError(404, 'NOT_FOUND', 'Posto não encontrado.');
+          const [placements, exercises, origins, destinations] = await Promise.all([
+            transaction.lotacaoSede.count({ where: { postoTrabalhoId: id } }),
+            transaction.exercicioProfissional.count({ where: { postoTrabalhoId: id } }),
+            transaction.movimentacaoItem.count({ where: { postoOrigemId: id } }),
+            transaction.movimentacaoItem.count({ where: { postoDestinoId: id } }),
+          ]);
+          if (placements + exercises + origins + destinations > 0) {
+            throw new HttpError(
+              409,
+              'PROTECTED_HISTORY',
+              'O posto possui histórico de vínculos ou movimentações e não pode ser excluído.',
+            );
+          }
+          await transaction.postoTrabalho.delete({ where: { id } });
+          if (target.ativo) {
+            await transaction.quadroNecessidade.update({
+              data: { quantidade: { decrement: 1 } },
+              where: { id: target.quadroNecessidadeId },
+            });
+          }
+        });
+      },
       async get(id) {
         const position = await client.postoTrabalho.findUnique({
           include: positionAvailabilityInclude,
@@ -370,6 +488,7 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
               { anoLetivo: 'desc' },
               { quadroNecessidade: { unidade: { nome: 'asc' } } },
               { criadoEm: 'asc' },
+              { id: 'asc' },
             ],
             skip: (query.page - 1) * query.pageSize,
             take: query.pageSize,

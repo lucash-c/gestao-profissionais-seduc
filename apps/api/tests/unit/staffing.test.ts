@@ -12,7 +12,10 @@ import {
   staffingPlanCreateSchema,
   staffingPlanUpdateSchema,
 } from '../../src/modules/staffing/staffing.schemas.js';
-import type { StaffingServices } from '../../src/modules/staffing/staffing.service.js';
+import {
+  type StaffingServices,
+  workPositionCodePrefix,
+} from '../../src/modules/staffing/staffing.service.js';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_ID = '22222222-2222-4222-8222-222222222222';
@@ -36,7 +39,7 @@ const position = {
   ativo: true,
   cargoFuncao: plan.cargoFuncao,
   cargoFuncaoId: ID,
-  codigo: null,
+  codigo: 'PEB1-0000000001',
   disponibilidade: 'DISPONIVEL_COM_SEDE' as const,
   estadoEstrutural: 'DISPONIVEL_COM_SEDE' as const,
   exercicioAtual: null,
@@ -55,6 +58,7 @@ function services(): StaffingServices {
   return {
     staffingPlans: {
       create: vi.fn().mockResolvedValue(plan),
+      delete: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue(plan),
       list: vi
         .fn()
@@ -62,6 +66,7 @@ function services(): StaffingServices {
       update: vi.fn().mockResolvedValue(plan),
     },
     workPositions: {
+      delete: vi.fn().mockResolvedValue(undefined),
       get: vi.fn().mockResolvedValue(position),
       list: vi
         .fn()
@@ -93,6 +98,16 @@ function appFor(profile: UserProfile, staffing: StaffingServices) {
 }
 
 describe('Etapa 4 staffing API and RBAC', () => {
+  it.each([
+    ['Escriturário', 'ESCR'],
+    ['PEB 1 - Fundamental', 'PEB1'],
+    ['PEB 1 - Infantil', 'PEB1'],
+    ['Cozinheira', 'COZI'],
+    ['Monitora', 'MONI'],
+  ])('deriva o prefixo de %s como %s', (name, expected) => {
+    expect(workPositionCodePrefix(name)).toBe(expected);
+  });
+
   it('permite gestão ao Administrador e leitura ao Operador', async () => {
     const adminServices = services();
     const admin = appFor('ADMINISTRADOR', adminServices);

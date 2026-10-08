@@ -20,6 +20,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -32,6 +33,7 @@ const simulating = ref(false);
 const confirming = ref(false);
 const closing = ref(false);
 const error = ref('');
+const dialogError = ref('');
 const dialogOpen = ref(false);
 
 const candidateOptions = computed(() =>
@@ -75,7 +77,7 @@ async function simulate(): Promise<void> {
 async function confirm(): Promise<void> {
   if (!simulation.value || confirming.value) return;
   confirming.value = true;
-  error.value = '';
+  dialogError.value = '';
   try {
     const result = await eventApi.confirmExchange(eventId.value, {
       participanteEsperadoId: simulation.value.participanteAtualEsperadoId,
@@ -88,7 +90,7 @@ async function confirm(): Promise<void> {
     simulation.value = null;
     dialogOpen.value = false;
   } catch (confirmationError) {
-    error.value =
+    dialogError.value =
       confirmationError instanceof Error
         ? confirmationError.message
         : 'Não foi possível confirmar a permuta.';
@@ -234,8 +236,12 @@ onMounted(load);
 
       <QDialog v-model="dialogOpen" persistent>
         <QCard v-if="simulation" class="registry-dialog" data-testid="exchange-dialog">
-          <QCardSection>
-            <h2>Confirmar Permuta</h2>
+          <ModalHeader
+            title="Confirmar Permuta"
+            :close-disabled="confirming"
+            @close="dialogOpen = false"
+          />
+          <QCardSection class="modal-scroll-body">
             <p>Confira os dois profissionais e as sedes antes de confirmar a troca atômica.</p>
             <div class="exchange-comparison">
               <section>
@@ -267,6 +273,9 @@ onMounted(load);
               </section>
             </div>
             <p>{{ simulation.consequenciaQuadro }}</p>
+            <QBanner v-if="dialogError" class="bg-red-1 text-negative" role="alert">{{
+              dialogError
+            }}</QBanner>
           </QCardSection>
           <QCardActions align="right">
             <QBtn flat label="Cancelar" :disable="confirming" @click="dialogOpen = false" />

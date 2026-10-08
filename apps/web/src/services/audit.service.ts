@@ -1,8 +1,4 @@
-import type {
-  AdministrativeCorrectionPreview,
-  AuditRecord,
-  PaginatedResponse,
-} from '@seduc/contracts';
+import type { AuditRecord, PaginatedResponse } from '@seduc/contracts';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
@@ -34,19 +30,7 @@ function queryString(input: Record<string, unknown>): string {
 }
 
 export const auditApi = {
-  applyCorrection(body: unknown) {
-    return request<AdministrativeCorrectionPreview>('/correcao-administrativa/aplicar', {
-      body: JSON.stringify(body),
-      method: 'POST',
-    });
-  },
   list(filters: Record<string, unknown>) {
     return request<PaginatedResponse<AuditRecord>>(`/auditoria${queryString(filters)}`);
-  },
-  previewCorrection(body: unknown) {
-    return request<AdministrativeCorrectionPreview>('/correcao-administrativa/previsualizar', {
-      body: JSON.stringify(body),
-      method: 'POST',
-    });
   },
 };

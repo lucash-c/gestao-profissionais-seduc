@@ -19,7 +19,10 @@ import {
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { registryApi } from '@/services/registry.service';
+import { formError } from '@/services/form-errors';
 import { sessionStore } from '@/stores/session.store';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
+import ModalHeader from '@/components/ModalHeader.vue';
 
 const rows = ref<StaffingPlanRecord[]>([]);
 const units = ref<LookupRecord[]>([]);
@@ -38,6 +41,9 @@ const periodFilter = ref<string | null>(null);
 const segmentFilter = ref<string | null>(null);
 const dialogOpen = ref(false);
 const editing = ref<StaffingPlanRecord | null>(null);
+const deleting = ref<StaffingPlanRecord | null>(null);
+const deleteError = ref('');
+const dialogError = ref('');
 const canManage = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
 const form = reactive({
   anoLetivo: new Date().getFullYear(),
@@ -48,6 +54,16 @@ const form = reactive({
   segmentoEnsinoId: null as string | null,
   unidadeId: '',
 });
+const formValid = computed(() =>
+  Boolean(
+    form.unidadeId &&
+    form.cargoFuncaoId &&
+    form.periodoId &&
+    form.anoLetivo >= 1 &&
+    Number.isInteger(form.quantidade) &&
+    form.quantidade >= 0,
+  ),
+);
 const impact = computed(() => {
   if (!editing.value || form.quantidade === editing.value.quantidade) return '';
   const difference = Math.abs(form.quantidade - editing.value.quantidade);
@@ -120,12 +136,14 @@ function resetForm(): void {
 }
 
 function openCreate(): void {
+  dialogError.value = '';
   editing.value = null;
   resetForm();
   dialogOpen.value = true;
 }
 
 function openEdit(row: StaffingPlanRecord): void {
+  dialogError.value = '';
   editing.value = row;
   Object.assign(form, {
     anoLetivo: row.anoLetivo,
@@ -142,7 +160,7 @@ function openEdit(row: StaffingPlanRecord): void {
 async function save(): Promise<void> {
   if (saving.value) return;
   saving.value = true;
-  error.value = '';
+  dialogError.value = '';
   try {
     if (editing.value) {
       await registryApi.updateStaffingPlan(editing.value.id, {
@@ -155,7 +173,22 @@ async function save(): Promise<void> {
     dialogOpen.value = false;
     await load();
   } catch (saveError) {
-    error.value = saveError instanceof Error ? saveError.message : 'Falha ao salvar o quadro.';
+    dialogError.value = formError(saveError, 'Falha ao salvar o quadro.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function confirmDelete(password: string): Promise<void> {
+  if (!deleting.value || saving.value) return;
+  saving.value = true;
+  deleteError.value = '';
+  try {
+    await registryApi.deleteStaffingPlan(deleting.value.id, password);
+    deleting.value = null;
+    await load();
+  } catch (deleteFailure) {
+    deleteError.value = formError(deleteFailure, 'Falha ao excluir o quadro.');
   } finally {
     saving.value = false;
   }
@@ -253,7 +286,15 @@ onMounted(async () => {
       <div v-else-if="rows.length === 0" class="registry-state" data-testid="staffing-plans-empty">
         Nenhuma necessidade encontrada.
       </div>
-      <QTable v-else flat :rows="rows" :columns="columns" row-key="id" hide-pagination>
+      <QTable
+        v-else
+        flat
+        :rows="rows"
+        :columns="columns"
+        row-key="id"
+        hide-pagination
+        :pagination="{ rowsPerPage: 0 }"
+      >
         <template #body="props">
           <QTr :props="props">
             <QTd key="ano" :props="props">{{ props.row.anoLetivo }}</QTd>
@@ -271,7 +312,18 @@ onMounted(async () => {
                 dense
                 color="primary"
                 label="Ajustar"
-                @click="openEdit(props.row)"
+                @click="openEdit(props.row)" /><QBtn
+                v-if="canManage"
+                flat
+                round
+                dense
+                color="negative"
+                icon="delete"
+                aria-label="Excluir quadro"
+                @click="
+                  deleting = props.row;
+                  deleteError = '';
+                "
             /></QTd>
           </QTr>
         </template>
@@ -287,10 +339,18 @@ onMounted(async () => {
 
     <QDialog v-model="dialogOpen" persistent>
       <QCard class="registry-dialog" data-testid="staffing-plan-dialog">
-        <QCardSection
-          ><h2>{{ editing ? 'Ajustar necessidade' : 'Nova necessidade' }}</h2></QCardSection
-        >
+        <ModalHeader
+          :title="editing ? 'Ajustar necessidade' : 'Nova necessidade'"
+          :close-disabled="saving"
+          @close="dialogOpen = false"
+        />
         <QCardSection class="form-grid">
+          <QBanner
+            v-if="dialogError"
+            class="bg-red-1 text-negative full-span"
+            data-testid="staffing-dialog-error"
+            >{{ dialogError }}</QBanner
+          >
           <QSelect
             v-model="form.unidadeId"
             :disable="Boolean(editing)"
@@ -372,10 +432,19 @@ onMounted(async () => {
             color="primary"
             label="Salvar"
             :loading="saving"
-            :disable="saving"
+            :disable="saving || !formValid"
             @click="save"
         /></QCardActions>
       </QCard>
     </QDialog>
+    <DeleteConfirmationDialog
+      :open="Boolean(deleting)"
+      title="Excluir quadro"
+      :description="`Confirme a exclusão do quadro de ${deleting?.unidade.nome ?? 'necessidade'} com sua senha atual.`"
+      :error="deleteError"
+      :loading="saving"
+      @cancel="deleting = null"
+      @confirm="confirmDelete"
+    />
   </QPage>
 </template>

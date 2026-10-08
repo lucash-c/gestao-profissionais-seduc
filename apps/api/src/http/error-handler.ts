@@ -2,6 +2,7 @@ import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 
 import { HttpError } from './http-error.js';
+import { safeErrorContext } from '../observability/logging.js';
 
 export const notFoundHandler: RequestHandler = (_request, response) => {
   response.status(404).json({
@@ -22,12 +23,16 @@ export const errorHandler: ErrorRequestHandler = (error, request, response, _nex
   if (error instanceof ZodError) {
     response.status(400).json({
       error: 'VALIDATION_ERROR',
-      message: 'Dados de entrada inválidos.',
+      issues: error.issues.map((issue) => ({
+        message: issue.message,
+        path: issue.path.map(String).join('.'),
+      })),
+      message: 'Revise os campos informados.',
     });
     return;
   }
 
-  request.log.error({ error }, 'Falha não tratada na requisição');
+  request.log.error(safeErrorContext(error), 'Falha não tratada na requisição');
   response.status(500).json({
     error: 'INTERNAL_SERVER_ERROR',
     message: 'Não foi possível concluir a solicitação.',

@@ -75,8 +75,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : 'Falha desconhecida.';
-  console.error(`Não foi possível criar o administrador inicial: ${message}`);
+main().catch(() => {
+  console.error('Não foi possível criar o administrador inicial. Verifique a configuração segura.');
   process.exitCode = 1;
 });
