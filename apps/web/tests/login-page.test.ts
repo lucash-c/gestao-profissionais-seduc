@@ -39,9 +39,17 @@ describe('LoginPage', () => {
     sessionMock.login.mockResolvedValue(undefined);
   });
 
-  it('monta o formulário administrativo sem cadastro público', async () => {
+  it('concentra a identidade institucional e o formulário em um único card', async () => {
     const { wrapper } = await mountPage();
 
+    expect(wrapper.findAll('[data-testid="login-card"]')).toHaveLength(1);
+    expect(
+      wrapper.get('img[alt="Prefeitura de Americana — Secretaria de Educação"]').element,
+    ).toBeInstanceOf(HTMLImageElement);
+    expect(wrapper.text()).toContain('Gestão de profissionais');
+    expect(wrapper.text()).toContain(
+      'Sistema de gestão de profissionais e eventos da Secretaria de Educação.',
+    );
     expect(wrapper.get('[data-testid="login-form"]').element).toBeInstanceOf(HTMLFormElement);
     expect(wrapper.text()).toContain('Login ou e-mail');
     expect(wrapper.text()).not.toMatch(/criar conta|cadastre-se/i);

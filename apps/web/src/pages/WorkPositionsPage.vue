@@ -286,12 +286,21 @@ onMounted(async () => {
                 substitui {{ props.row.exercicioAtual.substituiProfissional.nomeCompleto }}
               </small>
             </QTd>
-            <QTd key="estado" :props="props"
-              ><StatusChip :status="availabilityLabel(props.row)" />
+            <QTd key="estado" :props="props">
+              <div class="position-status-stack">
+                <StatusChip :status="availabilityLabel(props.row)" />
+                <StatusChip v-if="props.row.reservadoParaEvento" status="RESERVADA_PARA_EVENTO" />
+              </div>
+              <small
+                v-if="props.row.reservadoParaEvento"
+                class="block position-event-reservation-note"
+              >
+                Preenchimento posterior em evento formal; não disponível para Atribuição Manual.
+              </small>
               <small v-if="props.row.motivosLiberacao.length" class="block">
                 {{ releaseReasons(props.row) }}
-              </small></QTd
-            >
+              </small>
+            </QTd>
             <QTd key="ativo" :props="props"
               ><StatusChip :status="props.row.ativo ? 'ATIVO' : 'INATIVO'"
             /></QTd>
@@ -354,6 +363,11 @@ onMounted(async () => {
                 : 'A reativação também ajustará a quantidade do quadro.'
             }}
           </p>
+          <QBanner v-if="selected?.reservadoParaEvento" class="bg-orange-1">
+            <QIcon name="event" aria-hidden="true" />
+            Sede reservada para evento formal. Ela não pode ser redistribuída pela Atribuição
+            Manual.
+          </QBanner>
           <QBanner v-if="dialogError" class="bg-red-1 text-negative">{{
             dialogError
           }}</QBanner></QCardSection

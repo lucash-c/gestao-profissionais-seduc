@@ -218,37 +218,12 @@ body {
 }
 
 .login-content {
-  align-items: center;
-  display: grid;
-  gap: 64px;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
-  max-width: 1040px;
+  max-width: 500px;
   width: 100%;
 }
 
-.login-introduction {
-  color: #fff;
-  max-width: 520px;
-}
-
-.login-introduction h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  margin: 0 0 24px;
-}
-
-.login-introduction > p:last-child {
-  color: rgb(255 255 255 / 78%);
-  font-size: 1.1rem;
-  line-height: 1.6;
-}
-
-.login-brand-mark {
-  background: rgb(255 255 255 / 12%);
-  height: 48px;
-  margin-bottom: 32px;
-  width: 48px;
+.login-branding {
+  text-align: center;
 }
 
 .login-card {
@@ -261,6 +236,18 @@ body {
 .login-error {
   font-size: 0.875rem;
   margin: 0;
+}
+
+.position-status-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.position-event-reservation-note {
+  color: #765300;
+  line-height: 1.35;
+  margin-top: 6px;
 }
 
 @media (max-width: 599px) {
@@ -278,23 +265,6 @@ body {
 
   .login-page {
     padding: 20px;
-  }
-
-  .login-content {
-    gap: 32px;
-    grid-template-columns: 1fr;
-  }
-
-  .login-introduction {
-    text-align: center;
-  }
-
-  .login-brand-mark {
-    margin-inline: auto;
-  }
-
-  .login-introduction > p:last-child {
-    display: none;
   }
 
   .registry-page {

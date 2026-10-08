@@ -60,6 +60,7 @@ function position(
     periodo: lookupPeriod,
     periodoId: PERIOD,
     quadroNecessidadeId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    reservadoParaEvento: false,
     titularAtual:
       disponibilidade === 'DISPONIVEL_SEM_SEDE'
         ? { id: PROFESSIONAL_B, matricula: 'M2', nomeCompleto: 'Titular B' }

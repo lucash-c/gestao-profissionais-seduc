@@ -181,6 +181,7 @@ const workPosition: WorkPositionRecord = {
   periodo: staffingPlan.periodo,
   periodoId: TYPE_ID,
   quadroNecessidadeId: RECORD_ID,
+  reservadoParaEvento: false,
   titularAtual: null,
   unidade: staffingPlan.unidade,
   unidadeId: UNIT_ID,
@@ -747,6 +748,48 @@ describe('Etapa 4 Quasar pages', () => {
     await flushPromises();
     expect(operator.text()).toContain('Vaga com sede');
     expect(operator.find('[data-testid="position-status-action"]').exists()).toBe(false);
+  });
+
+  it('identifica sede reservada para evento sem ocultar titular ou ocupante', async () => {
+    mocks.listWorkPositions.mockResolvedValueOnce({
+      items: [
+        {
+          ...workPosition,
+          disponibilidade: 'INDISPONIVEL',
+          estadoEstrutural: 'INDISPONIVEL',
+          ocupanteAtual: { id: RECORD_ID, matricula: 'M-1', nomeCompleto: 'Maria' },
+          reservadoParaEvento: true,
+          titularAtual: null,
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      totalPages: 1,
+    });
+    const wrapper = mountPage(WorkPositionsPage);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Sem titular');
+    expect(wrapper.text()).toContain('Maria');
+    expect(wrapper.text()).toContain('Reservada para evento');
+    expect(wrapper.text()).toContain('não disponível para Atribuição Manual');
+    await wrapper.get('[data-testid="position-status-action"]').trigger('click');
+    await flushPromises();
+    expect(document.body.textContent).toContain('Sede reservada para evento formal');
+    wrapper.unmount();
+
+    mocks.listWorkPositions.mockResolvedValueOnce({
+      items: [{ ...workPosition, reservadoParaEvento: false }],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+      totalPages: 1,
+    });
+    const normal = mountPage(WorkPositionsPage);
+    await flushPromises();
+    expect(normal.text()).not.toContain('Reservada para evento');
+    normal.unmount();
   });
 
   it('exibe estados vazio e erro dos postos', async () => {

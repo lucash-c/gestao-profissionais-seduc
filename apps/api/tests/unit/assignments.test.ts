@@ -21,6 +21,7 @@ function position(options: {
   holder?: boolean;
   occupant?: boolean;
   occupantAbsent?: boolean;
+  reservedForEvent?: boolean;
 }) {
   const professional = {
     ativo: true,
@@ -93,6 +94,7 @@ function position(options: {
       unidadeId: UNIT_ID,
     },
     quadroNecessidadeId: ID,
+    reservadoParaEvento: options.reservedForEvent ?? false,
     unidadeId: UNIT_ID,
   } as never;
 }
@@ -121,6 +123,18 @@ describe('motor de disponibilidade da Etapa 5', () => {
       },
       motivosLiberacao: ['AFASTAMENTO'],
       ocupanteAtual: { nomeCompleto: 'Substituta' },
+      titularAtual: { nomeCompleto: 'Titular' },
+    });
+  });
+
+  it('expõe a reserva de sede para evento sem alterar titular ou ocupante', () => {
+    expect(
+      mapWorkPosition(
+        position({ absence: true, holder: true, occupant: true, reservedForEvent: true }),
+      ),
+    ).toMatchObject({
+      ocupanteAtual: { nomeCompleto: 'Substituta' },
+      reservadoParaEvento: true,
       titularAtual: { nomeCompleto: 'Titular' },
     });
   });

@@ -179,6 +179,7 @@ export function mapWorkPosition(position: PositionAvailabilityPayload): WorkPosi
     periodo: position.quadroNecessidade.periodo,
     periodoId: position.periodoId,
     quadroNecessidadeId: position.quadroNecessidadeId,
+    reservadoParaEvento: position.reservadoParaEvento,
     titularAtual: holder ? mapProfessional(holder) : null,
     unidade: position.quadroNecessidade.unidade,
     unidadeId: position.unidadeId,

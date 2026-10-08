@@ -234,6 +234,7 @@ export interface WorkPositionRecord {
   periodo: LookupRecord;
   periodoId: string;
   quadroNecessidadeId: string;
+  reservadoParaEvento: boolean;
   titularAtual: WorkPositionProfessional | null;
   unidade: LookupRecord;
   unidadeId: string;

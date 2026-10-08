@@ -549,35 +549,47 @@ body {
 }
 
 .login-content {
-  gap: clamp(36px, 6vw, 72px);
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
-  max-width: 940px;
+  max-width: 500px;
 }
 
-.login-introduction {
+.login-branding {
+  padding: 32px 36px 28px;
+}
+
+.login-branding h1 {
   color: var(--fluent-text);
-  max-width: 480px;
-}
-
-.login-introduction h1 {
-  font-size: clamp(1.85rem, 3.4vw, 2.65rem);
+  font-size: 1.65rem;
   font-weight: 650;
-  letter-spacing: -0.04em;
-  margin-bottom: 16px;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin: 0 0 10px;
 }
 
-.login-introduction > p:last-child {
+.login-subtitle {
   color: var(--fluent-text-secondary);
+  line-height: 1.5;
+  margin: 0;
 }
 
-.login-brand-mark {
-  background: var(--fluent-primary);
+.login-logo {
+  margin: 0 auto 20px;
+  max-width: 250px;
 }
 
 .login-card {
   border-color: var(--fluent-border);
-  box-shadow: 0 12px 30px rgb(31 31 31 / 8%);
-  padding: 12px;
+  box-shadow: 0 8px 24px rgb(31 31 31 / 7%);
+  padding: 0;
+}
+
+.login-form-section {
+  padding: 28px 36px 32px;
+}
+
+.login-form-section h2 {
+  color: var(--fluent-text);
+  font-size: 1.2rem;
+  font-weight: 650;
 }
 
 .login-error {
@@ -591,6 +603,17 @@ body {
   color: var(--fluent-text-secondary);
   font-size: 0.78rem;
   margin: 16px 0 0;
+}
+
+@media (max-width: 599px) {
+  .login-page {
+    padding: 16px;
+  }
+
+  .login-branding,
+  .login-form-section {
+    padding-inline: 24px;
+  }
 }
 
 .password-guidance {

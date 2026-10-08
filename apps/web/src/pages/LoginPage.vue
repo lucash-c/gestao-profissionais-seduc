@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { QBtn, QCard, QCardSection, QForm, QInput, QLayout, QPage, QPageContainer } from 'quasar';
+import {
+  QBtn,
+  QCard,
+  QCardSection,
+  QForm,
+  QInput,
+  QLayout,
+  QPage,
+  QPageContainer,
+  QSeparator,
+} from 'quasar';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -65,22 +75,23 @@ async function submit(): Promise<void> {
     <QPageContainer>
       <QPage class="login-page">
         <main class="login-content">
-          <section class="login-introduction" aria-labelledby="login-title">
-            <img
-              class="login-logo"
-              :src="logoSeduc"
-              alt="Prefeitura de Americana — Secretaria de Educação"
-            />
-            <p class="eyebrow q-mb-sm">SEDUC AMERICANA</p>
-            <h1 id="login-title">Gestão de profissionais</h1>
-            <p>
-              Acesso administrativo ao sistema de remoção, permuta e listão da Secretaria de
-              Educação.
-            </p>
-          </section>
+          <QCard flat bordered class="login-card" data-testid="login-card">
+            <QCardSection class="login-branding">
+              <img
+                class="login-logo"
+                :src="logoSeduc"
+                alt="Prefeitura de Americana — Secretaria de Educação"
+              />
+              <p class="eyebrow q-mb-sm">SEDUC AMERICANA</p>
+              <h1 id="login-title">Gestão de profissionais</h1>
+              <p class="login-subtitle">
+                Sistema de gestão de profissionais e eventos da Secretaria de Educação.
+              </p>
+            </QCardSection>
 
-          <QCard flat bordered class="login-card">
-            <QCardSection>
+            <QSeparator />
+
+            <QCardSection class="login-form-section">
               <h2 class="text-h5 q-mt-none q-mb-xs">Entrar</h2>
               <p class="text-body2 text-grey-7 q-mt-none q-mb-lg">
                 Use seu login administrativo ou e-mail.

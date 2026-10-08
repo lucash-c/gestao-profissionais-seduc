@@ -27,6 +27,7 @@ const labels: Record<string, string> = {
   PERMUTA: 'Permuta',
   RASCUNHO: 'Rascunho',
   REMOCAO: 'Remoção',
+  RESERVADA_PARA_EVENTO: 'Reservada para evento',
   SEDE: 'Sede fixa',
   SEM_SEDE: 'Sem sede',
   SUBSTITUICAO: 'Substituição',
@@ -43,9 +44,14 @@ const resolvedTone = computed(() => {
     return 'negative';
   }
   if (
-    ['AGUARDANDO', 'EMPATE_PENDENTE', 'RASCUNHO', 'SEM_SEDE', 'DISPONIVEL_SEM_SEDE'].includes(
-      normalized.value,
-    )
+    [
+      'AGUARDANDO',
+      'EMPATE_PENDENTE',
+      'RASCUNHO',
+      'RESERVADA_PARA_EVENTO',
+      'SEM_SEDE',
+      'DISPONIVEL_SEM_SEDE',
+    ].includes(normalized.value)
   ) {
     return 'warning';
   }
@@ -59,6 +65,7 @@ const resolvedTone = computed(() => {
   return 'neutral';
 });
 const icon = computed(() => {
+  if (normalized.value === 'RESERVADA_PARA_EVENTO') return 'event';
   if (resolvedTone.value === 'positive') return 'check_circle';
   if (resolvedTone.value === 'negative') return 'block';
   if (resolvedTone.value === 'warning') return 'schedule';
