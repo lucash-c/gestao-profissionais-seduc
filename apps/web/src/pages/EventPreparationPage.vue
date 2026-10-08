@@ -343,13 +343,23 @@ onMounted(load);
   display: block;
 }
 .event-totals strong {
-  font-size: 1.6rem;
+  color: var(--fluent-primary);
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+.event-totals span {
+  color: var(--fluent-text-secondary);
+  font-size: 0.78rem;
+  margin-top: 4px;
 }
 .event-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+.event-controls .q-btn {
+  min-height: 32px;
 }
 .event-controls .q-input {
   min-width: 260px;

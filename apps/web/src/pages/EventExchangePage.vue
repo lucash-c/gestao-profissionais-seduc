@@ -304,7 +304,7 @@ onMounted(load);
 .exchange-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 .queue-row {
   align-items: center;
@@ -325,6 +325,16 @@ onMounted(load);
   border: 1px solid var(--fluent-border);
   border-radius: 8px;
   padding: 12px;
+}
+.exchange-comparison h3 {
+  color: var(--fluent-text-secondary);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+.exchange-comparison strong {
+  font-size: 0.92rem;
 }
 .exchange-arrow {
   color: var(--fluent-primary);

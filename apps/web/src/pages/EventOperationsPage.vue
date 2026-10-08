@@ -344,45 +344,62 @@ onMounted(load);
       </QCard>
 
       <QDialog v-model="choiceDialog" persistent>
-        <QCard class="registry-dialog" data-testid="choice-dialog">
+        <QCard class="registry-dialog choice-dialog" data-testid="choice-dialog">
           <ModalHeader
             title="Confirmar escolha"
             :close-disabled="confirming"
             @close="choiceDialog = false"
           />
-          <QCardSection v-if="loadingSimulation"><QSpinner /> Simulando…</QCardSection>
-          <QCardSection v-else-if="simulation">
-            <h3>ANTES</h3>
-            <p>{{ simulation.antes.profissional }}</p>
-            <p>Sede: {{ simulation.antes.sedeOficial?.unidade.nome ?? 'Sem sede oficial' }}</p>
-            <p>Exercícios: {{ simulation.antes.exerciciosAtuais.length }}</p>
-            <h3>DESTINO</h3>
-            <p>
-              {{ simulation.destino.unidade.nome }} · {{ simulation.destino.periodo.nome }} ·
-              {{ simulation.destino.tipo }}
-            </p>
-            <p v-if="simulation.destino.titular">
-              Titular preservado: {{ simulation.destino.titular.nome }}
-            </p>
-            <h3>DEPOIS</h3>
-            <p>
-              Sede:
-              {{ simulation.depois.sedeOficial?.unidade.nome ?? 'Sem alteração de sede' }}
-            </p>
-            <p v-if="simulation.depois.exercicioNovo">
-              Exercício: {{ simulation.depois.exercicioNovo.unidade.nome }} ·
-              {{ simulation.depois.exercicioNovo.tipo }}
-            </p>
-            <p v-if="simulation.depois.vinculoEncerrado">
-              Vínculo encerrado: {{ simulation.depois.vinculoEncerrado.unidade.nome }}
-            </p>
-            <h3>NOVA VAGA GERADA</h3>
-            <p v-if="simulation.novasVagasGeradas.length === 0">Nenhuma identificada.</p>
-            <p v-for="vacancy in simulation.novasVagasGeradas" :key="vacancy.postoId">
-              {{ vacancy.unidade.nome }} · {{ vacancy.periodo.nome }} · {{ vacancy.tipo }}
-            </p>
+          <QCardSection v-if="loadingSimulation" class="modal-scroll-body choice-dialog-body">
+            <div class="choice-loading"><QSpinner /> Simulando escolha…</div>
           </QCardSection>
-          <QBanner v-if="dialogError" class="bg-red-1 text-negative">{{ dialogError }}</QBanner>
+          <QCardSection v-else-if="simulation" class="modal-scroll-body choice-dialog-body">
+            <div class="choice-sections">
+              <section class="choice-section">
+                <h3>ANTES</h3>
+                <p class="choice-person">{{ simulation.antes.profissional }}</p>
+                <p>Sede: {{ simulation.antes.sedeOficial?.unidade.nome ?? 'Sem sede oficial' }}</p>
+                <p>Exercícios ativos: {{ simulation.antes.exerciciosAtuais.length }}</p>
+              </section>
+              <section class="choice-section">
+                <h3>DESTINO</h3>
+                <p>
+                  {{ simulation.destino.unidade.nome }} · {{ simulation.destino.periodo.nome }} ·
+                  {{ simulation.destino.tipo }}
+                </p>
+                <p v-if="simulation.destino.titular">
+                  Titular preservado: {{ simulation.destino.titular.nome }}
+                </p>
+              </section>
+              <section class="choice-section">
+                <h3>DEPOIS</h3>
+                <p>
+                  Sede:
+                  {{ simulation.depois.sedeOficial?.unidade.nome ?? 'Sem alteração de sede' }}
+                </p>
+                <p v-if="simulation.depois.exercicioNovo">
+                  Exercício: {{ simulation.depois.exercicioNovo.unidade.nome }} ·
+                  {{ simulation.depois.exercicioNovo.tipo }}
+                </p>
+                <p v-if="simulation.depois.vinculoEncerrado">
+                  Vínculo encerrado: {{ simulation.depois.vinculoEncerrado.unidade.nome }}
+                </p>
+              </section>
+              <section class="choice-section choice-section--result">
+                <h3>NOVA VAGA GERADA</h3>
+                <p v-if="simulation.novasVagasGeradas.length === 0">Nenhuma identificada.</p>
+                <p v-for="vacancy in simulation.novasVagasGeradas" :key="vacancy.postoId">
+                  {{ vacancy.unidade.nome }} · {{ vacancy.periodo.nome }} · {{ vacancy.tipo }}
+                </p>
+              </section>
+            </div>
+            <QBanner v-if="dialogError" class="bg-red-1 text-negative" role="alert">
+              {{ dialogError }}
+            </QBanner>
+          </QCardSection>
+          <QBanner v-if="dialogError && !simulation" class="bg-red-1 text-negative" role="alert">
+            {{ dialogError }}
+          </QBanner>
           <QCardActions align="right">
             <QBtn flat label="Cancelar" :disable="confirming" @click="choiceDialog = false" />
             <QBtn
@@ -424,21 +441,70 @@ onMounted(load);
 .operations-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 .event-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 .vacancy-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  gap: 10px;
+}
+.vacancy-grid > .q-card {
+  display: flex;
+  flex-direction: column;
+}
+.vacancy-grid > .q-card .q-card__actions {
+  margin-top: auto;
 }
 .compact-heading {
   margin-bottom: 8px;
+}
+.choice-dialog {
+  max-width: 560px;
+  width: min(94vw, 560px);
+}
+.choice-dialog-body {
+  padding: 18px 20px;
+}
+.choice-sections {
+  display: grid;
+  gap: 10px;
+}
+.choice-section {
+  background: var(--fluent-surface-secondary);
+  border: 1px solid var(--fluent-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.choice-section h3 {
+  color: var(--fluent-text-secondary);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+.choice-section p {
+  margin: 4px 0;
+}
+.choice-section .choice-person {
+  color: var(--fluent-text);
+  font-size: 1rem;
+  font-weight: 650;
+}
+.choice-section--result {
+  background: var(--fluent-info-surface);
+}
+.choice-loading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  min-height: 100px;
 }
 @media (max-width: 800px) {
   .operations-grid,
