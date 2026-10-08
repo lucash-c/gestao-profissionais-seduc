@@ -2,6 +2,8 @@
 import type {
   ManualAssignmentProfessional,
   ManualAssignmentSimulation,
+  ManualExerciseEndSimulation,
+  ManualSeatRemovalSimulation,
   WorkPositionRecord,
 } from '@seduc/contracts';
 import {
@@ -26,6 +28,8 @@ import { formError } from '@/services/form-errors';
 import {
   manualAssignmentApi,
   type ManualAssignmentInput,
+  type ManualExerciseEndInput,
+  type ManualSeatRemovalInput,
 } from '@/services/manual-assignment.service';
 import { sessionStore } from '@/stores/session.store';
 
@@ -41,6 +45,10 @@ const selectedProfessional = ref<ManualAssignmentProfessional | null>(null);
 const positions = ref<WorkPositionRecord[]>([]);
 const simulation = ref<ManualAssignmentSimulation | null>(null);
 const pendingInput = ref<ManualAssignmentInput | null>(null);
+const seatRemovalSimulation = ref<ManualSeatRemovalSimulation | null>(null);
+const exerciseEndSimulation = ref<ManualExerciseEndSimulation | null>(null);
+const pendingSeatRemoval = ref<ManualSeatRemovalInput | null>(null);
+const pendingExerciseEnd = ref<ManualExerciseEndInput | null>(null);
 const isAdmin = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
 
 const professionalColumns = [
@@ -69,6 +77,21 @@ function situation(professional: ManualAssignmentProfessional): string {
     return `Em exercício: ${professional.exerciciosAtuais.map(({ unidadeNome }) => unidadeNome).join(', ')}`;
   }
   return professional.sedeAtual ? `Sede: ${professional.sedeAtual.unidadeNome}` : 'Sem sede';
+}
+
+function exerciseLabel(exercise: { postoCodigo?: string; unidadeNome: string }): string {
+  return [exercise.postoCodigo, exercise.unidadeNome].filter(Boolean).join(' — ');
+}
+
+function exerciseOutcomeLabel(simulation: ManualExerciseEndSimulation): string {
+  if (simulation.situacaoPrevista === 'RETORNA_A_PROPRIA_SEDE') {
+    return 'Retorna à própria sede';
+  }
+  if (simulation.situacaoPrevista === 'PERMANECE_AFASTADO') return 'Permanece afastado';
+  if (simulation.situacaoPrevista === 'PERMANECE_EM_OUTRO_EXERCICIO') {
+    return 'Permanece em outro exercício';
+  }
+  return 'Permanece sem sede';
 }
 
 async function loadProfessionals(): Promise<void> {
@@ -127,12 +150,81 @@ async function confirm(): Promise<void> {
     await manualAssignmentApi.confirm(pendingInput.value);
     simulation.value = null;
     pendingInput.value = null;
-    await Promise.all([
-      loadProfessionals(),
-      selectedProfessional.value && selectProfessional(selectedProfessional.value),
-    ]);
+    await refreshSelectedProfessional();
   } catch (failure) {
     error.value = formError(failure, 'Falha ao confirmar a atribuição.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function refreshSelectedProfessional(): Promise<void> {
+  const selectedId = selectedProfessional.value?.id;
+  await loadProfessionals();
+  const refreshed = professionals.value.find(({ id }) => id === selectedId) ?? null;
+  selectedProfessional.value = refreshed;
+  if (refreshed) await selectProfessional(refreshed);
+  else positions.value = [];
+}
+
+async function openSeatRemoval(): Promise<void> {
+  const professional = selectedProfessional.value;
+  if (!professional?.sedeAtual) return;
+  error.value = '';
+  const input: ManualSeatRemovalInput = {
+    lotacaoSedeId: professional.sedeAtual.id,
+    profissionalId: professional.id,
+  };
+  try {
+    pendingSeatRemoval.value = input;
+    seatRemovalSimulation.value = await manualAssignmentApi.simulateSeatRemoval(input);
+  } catch (failure) {
+    pendingSeatRemoval.value = null;
+    error.value = formError(failure, 'Falha ao simular a retirada de sede.');
+  }
+}
+
+async function openExerciseEnd(exercicioId: string): Promise<void> {
+  const professional = selectedProfessional.value;
+  if (!professional) return;
+  error.value = '';
+  const input: ManualExerciseEndInput = { exercicioId, profissionalId: professional.id };
+  try {
+    pendingExerciseEnd.value = input;
+    exerciseEndSimulation.value = await manualAssignmentApi.simulateExerciseEnd(input);
+  } catch (failure) {
+    pendingExerciseEnd.value = null;
+    error.value = formError(failure, 'Falha ao simular o encerramento do exercício.');
+  }
+}
+
+async function confirmSeatRemoval(): Promise<void> {
+  if (!pendingSeatRemoval.value || saving.value) return;
+  saving.value = true;
+  error.value = '';
+  try {
+    await manualAssignmentApi.confirmSeatRemoval(pendingSeatRemoval.value);
+    seatRemovalSimulation.value = null;
+    pendingSeatRemoval.value = null;
+    await refreshSelectedProfessional();
+  } catch (failure) {
+    error.value = formError(failure, 'Falha ao retirar a sede.');
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function confirmExerciseEnd(): Promise<void> {
+  if (!pendingExerciseEnd.value || saving.value) return;
+  saving.value = true;
+  error.value = '';
+  try {
+    await manualAssignmentApi.confirmExerciseEnd(pendingExerciseEnd.value);
+    exerciseEndSimulation.value = null;
+    pendingExerciseEnd.value = null;
+    await refreshSelectedProfessional();
+  } catch (failure) {
+    error.value = formError(failure, 'Falha ao encerrar o exercício.');
   } finally {
     saving.value = false;
   }
@@ -240,6 +332,42 @@ onMounted(async () => {
           <StatusChip :status="selectedProfessional.afastado ? 'AFASTADO' : 'ATIVO'" />
         </p>
       </QCardSection>
+      <QCardSection
+        v-if="
+          isAdmin &&
+          (selectedProfessional.sedeAtual || selectedProfessional.exerciciosAtuais.length > 0)
+        "
+        class="administrative-actions"
+        data-testid="manual-administrative-actions"
+      >
+        <p class="eyebrow">Controle administrativo</p>
+        <h3>Ações administrativas</h3>
+        <p class="text-caption text-grey-7">
+          Titularidade e exercício são tratados separadamente e preservam o histórico.
+        </p>
+        <div class="row q-gutter-sm q-mt-sm">
+          <QBtn
+            v-if="selectedProfessional.sedeAtual"
+            outline
+            color="secondary"
+            icon="home_off"
+            label="Retirar sede"
+            data-testid="manual-remove-seat"
+            @click="openSeatRemoval"
+          />
+          <QBtn
+            v-for="exercise in selectedProfessional.exerciciosAtuais"
+            :key="exercise.id"
+            outline
+            color="secondary"
+            icon="work_off"
+            label="Encerrar exercício atual"
+            :aria-label="`Encerrar exercício atual em ${exercise.unidadeNome}`"
+            data-testid="manual-end-exercise"
+            @click="openExerciseEnd(exercise.id)"
+          />
+        </div>
+      </QCardSection>
       <div v-if="positions.length === 0" class="registry-state">
         Nenhum posto compatível disponível.
       </div>
@@ -293,6 +421,117 @@ onMounted(async () => {
         <QCardActions align="right">
           <QBtn flat label="Cancelar" @click="simulation = null" />
           <QBtn color="primary" label="Confirmar" :loading="saving" @click="confirm" />
+        </QCardActions>
+      </QCard>
+    </QDialog>
+
+    <QDialog :model-value="Boolean(seatRemovalSimulation)" persistent>
+      <QCard class="registry-dialog compact" data-testid="manual-remove-seat-confirmation">
+        <ModalHeader
+          title="Retirar sede"
+          :close-disabled="saving"
+          @close="seatRemovalSimulation = null"
+        />
+        <QCardSection v-if="seatRemovalSimulation" class="modal-scroll-body">
+          <p>
+            <strong>Profissional:</strong> {{ seatRemovalSimulation.profissional.nomeCompleto }}
+          </p>
+          <p>
+            <strong>Sede atual:</strong> {{ seatRemovalSimulation.sedeAtual.postoCodigo }} —
+            {{ seatRemovalSimulation.sedeAtual.unidadeNome }}
+          </p>
+          <p>
+            <strong>Ocupante atual do posto:</strong>
+            {{ seatRemovalSimulation.ocupanteAtual?.nomeCompleto ?? 'Nenhum' }}
+          </p>
+          <p>
+            <strong>Exercício atual:</strong>
+            {{
+              seatRemovalSimulation.exercicioAtual
+                ? exerciseLabel(seatRemovalSimulation.exercicioAtual)
+                : 'Nenhum'
+            }}
+          </p>
+          <h3 class="q-mt-md">Depois</h3>
+          <p><strong>Sede:</strong> Sem sede</p>
+          <p>
+            <strong>Exercício atual:</strong>
+            {{
+              seatRemovalSimulation.exercicioAtual
+                ? `${exerciseLabel(seatRemovalSimulation.exercicioAtual)} (preservado)`
+                : 'Nenhum'
+            }}
+          </p>
+          <p><strong>Titular do posto anterior:</strong> Sem titular</p>
+          <p>
+            <strong>Ocupante do posto anterior:</strong>
+            {{ seatRemovalSimulation.ocupanteAtual?.nomeCompleto ?? 'Nenhum' }}
+          </p>
+          <QBanner class="bg-blue-1 text-primary q-mt-md">
+            A sede ficará sem titular e será reservada para realocação em evento formal.
+          </QBanner>
+        </QCardSection>
+        <QCardActions align="right">
+          <QBtn flat label="Cancelar" :disable="saving" @click="seatRemovalSimulation = null" />
+          <QBtn
+            color="primary"
+            label="Confirmar retirada"
+            :loading="saving"
+            @click="confirmSeatRemoval"
+          />
+        </QCardActions>
+      </QCard>
+    </QDialog>
+
+    <QDialog :model-value="Boolean(exerciseEndSimulation)" persistent>
+      <QCard class="registry-dialog compact" data-testid="manual-end-exercise-confirmation">
+        <ModalHeader
+          title="Encerrar exercício atual"
+          :close-disabled="saving"
+          @close="exerciseEndSimulation = null"
+        />
+        <QCardSection v-if="exerciseEndSimulation" class="modal-scroll-body">
+          <p>
+            <strong>Profissional:</strong> {{ exerciseEndSimulation.profissional.nomeCompleto }}
+          </p>
+          <p>
+            <strong>Sede oficial:</strong>
+            {{
+              exerciseEndSimulation.sedeAtual
+                ? `${exerciseEndSimulation.sedeAtual.postoCodigo} — ${exerciseEndSimulation.sedeAtual.unidadeNome}`
+                : 'Sem sede'
+            }}
+          </p>
+          <p>
+            <strong>Exercício atual:</strong>
+            {{ exerciseLabel(exerciseEndSimulation.exercicioAtual) }}
+          </p>
+          <p>
+            <strong>Posto ocupado:</strong> {{ exerciseEndSimulation.postoOcupado.postoCodigo }} —
+            {{ exerciseEndSimulation.postoOcupado.unidadeNome }}
+          </p>
+          <h3 class="q-mt-md">Depois</h3>
+          <p>
+            <strong>Sede:</strong>
+            {{ exerciseEndSimulation.sedeAtual ? 'Preservada' : 'Sem sede' }}
+          </p>
+          <p><strong>Exercício:</strong> Nenhum</p>
+          <p>
+            <strong>Situação prevista:</strong> {{ exerciseOutcomeLabel(exerciseEndSimulation) }}
+          </p>
+          <QBanner v-if="exerciseEndSimulation.impedimento" class="bg-red-1 text-negative q-mt-md">
+            {{ exerciseEndSimulation.impedimento }}
+          </QBanner>
+        </QCardSection>
+        <QCardActions align="right">
+          <QBtn flat label="Cancelar" :disable="saving" @click="exerciseEndSimulation = null" />
+          <QBtn
+            color="primary"
+            label="Confirmar encerramento"
+            :disable="!exerciseEndSimulation?.podeConfirmar"
+            :loading="saving"
+            @click="confirmExerciseEnd"
+          />
         </QCardActions>
       </QCard>
     </QDialog>

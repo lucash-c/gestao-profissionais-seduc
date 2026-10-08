@@ -1,9 +1,13 @@
 import type {
   AuthenticatedUser,
+  ManualAdministrativeExercise,
+  ManualAdministrativePosition,
   ManualAssignmentConfiguration,
   ManualAssignmentProfessional,
   ManualAssignmentResult,
   ManualAssignmentSimulation,
+  ManualExerciseEndSimulation,
+  ManualSeatRemovalSimulation,
   PaginatedResponse,
   WorkPositionRecord,
 } from '@seduc/contracts';
@@ -16,13 +20,16 @@ import {
   lockProfessionals,
   mapWorkPosition,
   positionAvailabilityInclude,
+  type PositionAvailabilityPayload,
 } from '../assignments/assignment.service.js';
 import { writeAudit } from '../audit/audit.service.js';
 import { assertAuthorized, AUTHORIZATION_ACTIONS } from '../authorization/authorization.policy.js';
 import type {
   ManualAssignmentInput,
+  ManualExerciseEndInput,
   ManualAssignmentPositionQuery,
   ManualAssignmentProfessionalQuery,
+  ManualSeatRemovalInput,
 } from './manual-assignment.schemas.js';
 
 const CONFIGURATION_KEY = 'ATRIBUICAO_MANUAL_HABILITADA';
@@ -52,6 +59,25 @@ const professionalInclude = {
 
 type ProfessionalPayload = Prisma.ProfissionalGetPayload<{ include: typeof professionalInclude }>;
 
+type AdministrativeExerciseSource = {
+  id: string;
+  postoTrabalhoId: string;
+  tipoExercicio: 'SEDE' | 'SEM_SEDE' | 'SUBSTITUICAO';
+  postoTrabalho: {
+    codigo: string;
+    quadroNecessidade: { unidade: { id: string; nome: string } };
+  };
+};
+
+type AdministrativeSeatSource = {
+  id: string;
+  postoTrabalhoId: string;
+  postoTrabalho: {
+    codigo: string;
+    quadroNecessidade: { unidade: { id: string; nome: string } };
+  };
+};
+
 export interface ManualAssignmentServices {
   configuration: {
     get(user: AuthenticatedUser): Promise<ManualAssignmentConfiguration>;
@@ -66,10 +92,20 @@ export interface ManualAssignmentServices {
     query: ManualAssignmentProfessionalQuery,
     user: AuthenticatedUser,
   ): Promise<PaginatedResponse<ManualAssignmentProfessional>>;
+  simulateExerciseEnd(
+    input: ManualExerciseEndInput,
+    user: AuthenticatedUser,
+  ): Promise<ManualExerciseEndSimulation>;
+  simulateSeatRemoval(
+    input: ManualSeatRemovalInput,
+    user: AuthenticatedUser,
+  ): Promise<ManualSeatRemovalSimulation>;
   simulate(
     input: ManualAssignmentInput,
     user: AuthenticatedUser,
   ): Promise<ManualAssignmentSimulation>;
+  endExercise(input: ManualExerciseEndInput, user: AuthenticatedUser): Promise<void>;
+  removeSeat(input: ManualSeatRemovalInput, user: AuthenticatedUser): Promise<void>;
 }
 
 function asIso(value: Date): string {
@@ -111,10 +147,44 @@ function mapProfessional(professional: ProfessionalPayload): ManualAssignmentPro
   };
 }
 
+function mapAdministrativeProfessional(value: {
+  id: string;
+  matricula: string;
+  nomeCompleto: string;
+}) {
+  return { id: value.id, matricula: value.matricula, nomeCompleto: value.nomeCompleto };
+}
+
+function mapAdministrativePosition(
+  value: Pick<AdministrativeSeatSource, 'postoTrabalhoId' | 'postoTrabalho'>,
+): ManualAdministrativePosition {
+  const unit = value.postoTrabalho.quadroNecessidade.unidade;
+  return {
+    postoCodigo: value.postoTrabalho.codigo,
+    postoId: value.postoTrabalhoId,
+    unidadeId: unit.id,
+    unidadeNome: unit.nome,
+  };
+}
+
+function mapAdministrativeSeat(value: AdministrativeSeatSource) {
+  return { lotacaoSedeId: value.id, ...mapAdministrativePosition(value) };
+}
+
+function mapAdministrativeExercise(
+  value: AdministrativeExerciseSource,
+): ManualAdministrativeExercise {
+  return { id: value.id, tipo: value.tipoExercicio, ...mapAdministrativePosition(value) };
+}
+
 function assertManualRole(user: AuthenticatedUser): void {
   if (!['ADMINISTRADOR', 'DIRETOR'].includes(user.perfil)) {
     throw new HttpError(403, 'FORBIDDEN', 'Acesso não autorizado.');
   }
+}
+
+function assertAdministrativeRole(user: AuthenticatedUser): void {
+  assertAuthorized({ action: AUTHORIZATION_ACTIONS.MANAGE_MANUAL_ASSIGNMENT_ADMINISTRATION, user });
 }
 
 async function configuration(
@@ -168,6 +238,190 @@ async function loadProfessional(
   return professional;
 }
 
+function seatChanged(): never {
+  throw new HttpError(
+    409,
+    'OFFICIAL_SEAT_CHANGED',
+    'A sede oficial foi alterada desde a simulação. Atualize e tente novamente.',
+  );
+}
+
+function exerciseChanged(): never {
+  throw new HttpError(
+    409,
+    'CURRENT_EXERCISE_CHANGED',
+    'O exercício atual foi alterado desde a simulação. Atualize e tente novamente.',
+  );
+}
+
+async function lockActiveProfessionalExercises(
+  transaction: Prisma.TransactionClient,
+  professionalId: string,
+): Promise<void> {
+  await transaction.$queryRaw(Prisma.sql`
+    SELECT "id" FROM "exercicio_profissional"
+    WHERE "profissional_id" = ${professionalId}::uuid AND "data_fim" IS NULL
+    ORDER BY "id" FOR UPDATE
+  `);
+}
+
+async function lockActivePositionExercises(
+  transaction: Prisma.TransactionClient,
+  positionId: string,
+): Promise<void> {
+  await transaction.$queryRaw(Prisma.sql`
+    SELECT "id" FROM "exercicio_profissional"
+    WHERE "posto_trabalho_id" = ${positionId}::uuid AND "data_fim" IS NULL
+    ORDER BY "id" FOR UPDATE
+  `);
+}
+
+async function lockActiveProfessionalSeat(
+  transaction: Prisma.TransactionClient,
+  professionalId: string,
+): Promise<void> {
+  await transaction.$queryRaw(Prisma.sql`
+    SELECT "id" FROM "lotacao_sede"
+    WHERE "profissional_id" = ${professionalId}::uuid AND "data_fim" IS NULL
+    ORDER BY "id" FOR UPDATE
+  `);
+}
+
+async function loadSeatRemovalState(
+  transaction: Prisma.TransactionClient,
+  input: ManualSeatRemovalInput,
+  lock: boolean,
+): Promise<{
+  placement: ProfessionalPayload['lotacoesSede'][number];
+  position: PositionAvailabilityPayload;
+  professional: ProfessionalPayload;
+}> {
+  if (lock) await lockProfessionals(transaction, [input.profissionalId]);
+  let professional = await loadProfessional(transaction, input.profissionalId);
+  let placement = professional.lotacoesSede.find(({ id }) => id === input.lotacaoSedeId);
+  if (!placement) seatChanged();
+
+  if (lock) {
+    await lockActiveProfessionalSeat(transaction, input.profissionalId);
+    await lockActiveProfessionalExercises(transaction, input.profissionalId);
+    await lockPositions(transaction, [
+      placement.postoTrabalhoId,
+      ...professional.exercicios.map(({ postoTrabalhoId }) => postoTrabalhoId),
+    ]);
+    await lockActivePositionExercises(transaction, placement.postoTrabalhoId);
+    professional = await loadProfessional(transaction, input.profissionalId);
+    placement = professional.lotacoesSede.find(({ id }) => id === input.lotacaoSedeId);
+    if (!placement) seatChanged();
+  }
+
+  const position = await loadPosition(transaction, placement.postoTrabalhoId);
+  const occupantId = position.exercicios[0]?.profissionalId;
+  if (lock && occupantId) await lockProfessionals(transaction, [occupantId]);
+  return { placement, position, professional };
+}
+
+async function loadExerciseEndState(
+  transaction: Prisma.TransactionClient,
+  input: ManualExerciseEndInput,
+  lock: boolean,
+): Promise<{
+  exercise: ProfessionalPayload['exercicios'][number];
+  officialPosition: PositionAvailabilityPayload | null;
+  placement: ProfessionalPayload['lotacoesSede'][number] | null;
+  professional: ProfessionalPayload;
+}> {
+  if (lock) await lockProfessionals(transaction, [input.profissionalId]);
+  let professional = await loadProfessional(transaction, input.profissionalId);
+  let exercise = professional.exercicios.find(({ id }) => id === input.exercicioId);
+  if (!exercise) exerciseChanged();
+
+  if (lock) {
+    await lockActiveProfessionalExercises(transaction, input.profissionalId);
+    await lockActiveProfessionalSeat(transaction, input.profissionalId);
+    professional = await loadProfessional(transaction, input.profissionalId);
+    exercise = professional.exercicios.find(({ id }) => id === input.exercicioId);
+    if (!exercise) exerciseChanged();
+  }
+
+  const placement = professional.lotacoesSede[0] ?? null;
+  if (lock) {
+    await lockPositions(transaction, [
+      exercise.postoTrabalhoId,
+      ...(placement ? [placement.postoTrabalhoId] : []),
+    ]);
+    if (placement) await lockActivePositionExercises(transaction, placement.postoTrabalhoId);
+  }
+
+  const officialPosition = placement
+    ? await loadPosition(transaction, placement.postoTrabalhoId)
+    : null;
+  const occupantId = officialPosition?.exercicios[0]?.profissionalId;
+  if (lock && occupantId && occupantId !== input.profissionalId) {
+    await lockProfessionals(transaction, [occupantId]);
+  }
+  return { exercise, officialPosition, placement, professional };
+}
+
+function simulateSeatRemoval(input: {
+  placement: ProfessionalPayload['lotacoesSede'][number];
+  position: PositionAvailabilityPayload;
+  professional: ProfessionalPayload;
+}): ManualSeatRemovalSimulation {
+  return {
+    exercicioAtual: input.professional.exercicios[0]
+      ? mapAdministrativeExercise(input.professional.exercicios[0] as AdministrativeExerciseSource)
+      : null,
+    ocupanteAtual: mapWorkPosition(input.position).ocupanteAtual,
+    profissional: mapAdministrativeProfessional(input.professional),
+    sedeAtual: mapAdministrativeSeat(input.placement as AdministrativeSeatSource),
+  };
+}
+
+function simulateExerciseEnd(input: {
+  exercise: ProfessionalPayload['exercicios'][number];
+  officialPosition: PositionAvailabilityPayload | null;
+  placement: ProfessionalPayload['lotacoesSede'][number] | null;
+  professional: ProfessionalPayload;
+}): ManualExerciseEndSimulation {
+  const otherExternalExercises = input.professional.exercicios.filter(
+    ({ id, postoTrabalhoId }) =>
+      id !== input.exercise.id && postoTrabalhoId !== input.placement?.postoTrabalhoId,
+  );
+  const shouldReturnToSeat = Boolean(
+    input.placement &&
+    input.professional.afastamentos.length === 0 &&
+    otherExternalExercises.length === 0,
+  );
+  const seatExercise = input.officialPosition?.exercicios[0];
+  const seatOccupiedByAnotherProfessional = Boolean(
+    shouldReturnToSeat &&
+    seatExercise &&
+    seatExercise.id !== input.exercise.id &&
+    seatExercise.profissionalId !== input.professional.id,
+  );
+  const impedimento = seatOccupiedByAnotherProfessional
+    ? 'Não é possível encerrar este exercício porque a sede oficial do profissional ainda está ocupada por outro profissional.'
+    : null;
+  const situacaoPrevista = !input.placement
+    ? 'PERMANECE_SEM_SEDE'
+    : input.professional.afastamentos.length > 0
+      ? 'PERMANECE_AFASTADO'
+      : otherExternalExercises.length > 0
+        ? 'PERMANECE_EM_OUTRO_EXERCICIO'
+        : 'RETORNA_A_PROPRIA_SEDE';
+  return {
+    exercicioAtual: mapAdministrativeExercise(input.exercise as AdministrativeExerciseSource),
+    impedimento,
+    podeConfirmar: !impedimento,
+    postoOcupado: mapAdministrativePosition(input.exercise as AdministrativeExerciseSource),
+    profissional: mapAdministrativeProfessional(input.professional),
+    sedeAtual: input.placement
+      ? mapAdministrativeSeat(input.placement as AdministrativeSeatSource)
+      : null,
+    situacaoPrevista,
+  };
+}
+
 function assertEndAfterStart(end: Date, start: Date): void {
   if (end <= start) {
     throw new HttpError(
@@ -207,6 +461,13 @@ async function analyze(
     );
   }
   const destination = mapWorkPosition(destinationPayload);
+  if (destinationPayload.reservadoParaEvento) {
+    throw new HttpError(
+      409,
+      'POSITION_RESERVED_FOR_EVENT',
+      'O posto está reservado para preenchimento em evento formal.',
+    );
+  }
   const expectedAvailability =
     input.tipoDestino === 'COM_SEDE' ? 'DISPONIVEL_COM_SEDE' : 'DISPONIVEL_SEM_SEDE';
   if (destination.disponibilidade !== expectedAvailability) {
@@ -401,6 +662,30 @@ export function createPrismaManualAssignmentServices(
         handleDatabaseError(error);
       }
     },
+    async endExercise(input, user) {
+      try {
+        await client.$transaction(
+          async (transaction) => {
+            assertAdministrativeRole(user);
+            const state = await loadExerciseEndState(transaction, input, true);
+            const simulation = simulateExerciseEnd(state);
+            if (!simulation.podeConfirmar) {
+              throw new HttpError(409, 'OFFICIAL_SEAT_STILL_OCCUPIED', simulation.impedimento!);
+            }
+            const now = clock();
+            assertEndAfterStart(now, state.exercise.dataInicio);
+            const ended = await transaction.exercicioProfissional.updateMany({
+              data: { dataFim: now },
+              where: { dataFim: null, id: input.exercicioId, profissionalId: input.profissionalId },
+            });
+            if (ended.count !== 1) exerciseChanged();
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        handleDatabaseError(error);
+      }
+    },
     async listPositions(query, user) {
       return client.$transaction(async (transaction) => {
         await assertAccessible(transaction, user);
@@ -412,6 +697,7 @@ export function createPrismaManualAssignmentServices(
           where: {
             ativo: true,
             cargoFuncaoId: professional.cargoFuncaoId,
+            reservadoParaEvento: false,
             ...(unitIds ? { unidadeId: { in: unitIds } } : {}),
           },
         });
@@ -454,6 +740,46 @@ export function createPrismaManualAssignmentServices(
           total,
           totalPages: Math.ceil(total / query.pageSize),
         };
+      });
+    },
+    async removeSeat(input, user) {
+      try {
+        await client.$transaction(
+          async (transaction) => {
+            assertAdministrativeRole(user);
+            const state = await loadSeatRemovalState(transaction, input, true);
+            const now = clock();
+            assertEndAfterStart(now, state.placement.dataInicio);
+            const ended = await transaction.lotacaoSede.updateMany({
+              data: { dataFim: now, motivoFim: 'Sede retirada administrativamente' },
+              where: {
+                dataFim: null,
+                id: input.lotacaoSedeId,
+                profissionalId: input.profissionalId,
+              },
+            });
+            if (ended.count !== 1) seatChanged();
+            await transaction.postoTrabalho.update({
+              data: { reservadoParaEvento: true },
+              where: { id: state.placement.postoTrabalhoId },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        handleDatabaseError(error);
+      }
+    },
+    async simulateExerciseEnd(input, user) {
+      return client.$transaction(async (transaction) => {
+        assertAdministrativeRole(user);
+        return simulateExerciseEnd(await loadExerciseEndState(transaction, input, false));
+      });
+    },
+    async simulateSeatRemoval(input, user) {
+      return client.$transaction(async (transaction) => {
+        assertAdministrativeRole(user);
+        return simulateSeatRemoval(await loadSeatRemovalState(transaction, input, false));
       });
     },
     async simulate(input, user) {

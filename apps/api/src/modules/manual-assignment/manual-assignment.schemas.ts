@@ -27,8 +27,28 @@ export const manualAssignmentInputSchema = z
   })
   .strict();
 
+const manualAdministrativeInputSchema = z
+  .object({
+    profissionalId: databaseIdSchema,
+  })
+  .strict();
+
+export const manualSeatRemovalInputSchema = manualAdministrativeInputSchema
+  .extend({
+    lotacaoSedeId: databaseIdSchema,
+  })
+  .strict();
+
+export const manualExerciseEndInputSchema = manualAdministrativeInputSchema
+  .extend({
+    exercicioId: databaseIdSchema,
+  })
+  .strict();
+
 export type ManualAssignmentInput = z.infer<typeof manualAssignmentInputSchema>;
+export type ManualExerciseEndInput = z.infer<typeof manualExerciseEndInputSchema>;
 export type ManualAssignmentProfessionalQuery = z.infer<
   typeof manualAssignmentProfessionalQuerySchema
 >;
 export type ManualAssignmentPositionQuery = z.infer<typeof manualAssignmentPositionQuerySchema>;
+export type ManualSeatRemovalInput = z.infer<typeof manualSeatRemovalInputSchema>;

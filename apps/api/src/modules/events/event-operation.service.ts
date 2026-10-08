@@ -712,6 +712,10 @@ export function createPrismaEventOperationServices(
                 where: { id: analysis.oldExercise.id },
               });
             }
+            await transaction.postoTrabalho.update({
+              data: { reservadoParaEvento: false },
+              where: { id: analysis.destination.id },
+            });
             await transaction.lotacaoSede.create({
               data: {
                 dataInicio: now,

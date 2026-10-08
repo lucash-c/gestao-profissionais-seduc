@@ -3,6 +3,8 @@ import type {
   ManualAssignmentProfessional,
   ManualAssignmentResult,
   ManualAssignmentSimulation,
+  ManualExerciseEndSimulation,
+  ManualSeatRemovalSimulation,
   PaginatedResponse,
   WorkPositionRecord,
 } from '@seduc/contracts';
@@ -15,12 +17,34 @@ export interface ManualAssignmentInput {
   tipoDestino: 'COM_SEDE' | 'SEM_SEDE';
 }
 
+export interface ManualExerciseEndInput {
+  exercicioId: string;
+  profissionalId: string;
+}
+
+export interface ManualSeatRemovalInput {
+  lotacaoSedeId: string;
+  profissionalId: string;
+}
+
 export const manualAssignmentApi = {
   configuration() {
     return request<ManualAssignmentConfiguration>('/atribuicao-manual/configuracao');
   },
   confirm(input: ManualAssignmentInput) {
     return request<ManualAssignmentResult>('/atribuicao-manual/confirmar', {
+      body: JSON.stringify(input),
+      method: 'POST',
+    });
+  },
+  confirmExerciseEnd(input: ManualExerciseEndInput) {
+    return request<void>('/atribuicao-manual/encerrar-exercicio/confirmar', {
+      body: JSON.stringify(input),
+      method: 'POST',
+    });
+  },
+  confirmSeatRemoval(input: ManualSeatRemovalInput) {
+    return request<void>('/atribuicao-manual/retirar-sede/confirmar', {
       body: JSON.stringify(input),
       method: 'POST',
     });
@@ -37,6 +61,18 @@ export const manualAssignmentApi = {
   },
   simulate(input: ManualAssignmentInput) {
     return request<ManualAssignmentSimulation>('/atribuicao-manual/simular', {
+      body: JSON.stringify(input),
+      method: 'POST',
+    });
+  },
+  simulateExerciseEnd(input: ManualExerciseEndInput) {
+    return request<ManualExerciseEndSimulation>('/atribuicao-manual/encerrar-exercicio/simular', {
+      body: JSON.stringify(input),
+      method: 'POST',
+    });
+  },
+  simulateSeatRemoval(input: ManualSeatRemovalInput) {
+    return request<ManualSeatRemovalSimulation>('/atribuicao-manual/retirar-sede/simular', {
       body: JSON.stringify(input),
       method: 'POST',
     });

@@ -267,6 +267,49 @@ export interface ManualAssignmentResult extends ManualAssignmentSimulation {
   confirmadoEm: string;
 }
 
+export interface ManualAdministrativeExercise {
+  id: string;
+  postoId: string;
+  postoCodigo: string;
+  tipo: 'SEDE' | 'SUBSTITUICAO' | 'SEM_SEDE';
+  unidadeId: string;
+  unidadeNome: string;
+}
+
+export interface ManualAdministrativePosition {
+  postoId: string;
+  postoCodigo: string;
+  unidadeId: string;
+  unidadeNome: string;
+}
+
+export interface ManualAdministrativeSeat extends ManualAdministrativePosition {
+  lotacaoSedeId: string;
+}
+
+export interface ManualSeatRemovalSimulation {
+  exercicioAtual: ManualAdministrativeExercise | null;
+  ocupanteAtual: WorkPositionProfessional | null;
+  profissional: WorkPositionProfessional;
+  sedeAtual: ManualAdministrativeSeat;
+}
+
+export type ManualExerciseEndOutcome =
+  | 'PERMANECE_AFASTADO'
+  | 'PERMANECE_EM_OUTRO_EXERCICIO'
+  | 'PERMANECE_SEM_SEDE'
+  | 'RETORNA_A_PROPRIA_SEDE';
+
+export interface ManualExerciseEndSimulation {
+  exercicioAtual: ManualAdministrativeExercise;
+  impedimento: string | null;
+  podeConfirmar: boolean;
+  postoOcupado: ManualAdministrativePosition;
+  profissional: WorkPositionProfessional;
+  sedeAtual: ManualAdministrativeSeat | null;
+  situacaoPrevista: ManualExerciseEndOutcome;
+}
+
 export type EventType = 'REMOCAO' | 'PERMUTA' | 'LISTAO' | 'ATRIBUICAO';
 export type EventStatus = 'RASCUNHO' | 'ATIVO' | 'ENCERRADO' | 'CANCELADO';
 

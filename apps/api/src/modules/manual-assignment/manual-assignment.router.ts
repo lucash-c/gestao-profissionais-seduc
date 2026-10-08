@@ -4,9 +4,11 @@ import { Router, type Request } from 'express';
 import { HttpError } from '../../http/http-error.js';
 import {
   manualAssignmentConfigurationSchema,
+  manualExerciseEndInputSchema,
   manualAssignmentInputSchema,
   manualAssignmentPositionQuerySchema,
   manualAssignmentProfessionalQuerySchema,
+  manualSeatRemovalInputSchema,
 } from './manual-assignment.schemas.js';
 import type { ManualAssignmentServices } from './manual-assignment.service.js';
 
@@ -51,6 +53,36 @@ export function createManualAssignmentRouter(service: ManualAssignmentServices):
     response.json(
       await service.confirm(manualAssignmentInputSchema.parse(request.body), currentUser(request)),
     );
+  });
+  router.post('/retirar-sede/simular', async (request, response) => {
+    response.json(
+      await service.simulateSeatRemoval(
+        manualSeatRemovalInputSchema.parse(request.body),
+        currentUser(request),
+      ),
+    );
+  });
+  router.post('/retirar-sede/confirmar', async (request, response) => {
+    await service.removeSeat(
+      manualSeatRemovalInputSchema.parse(request.body),
+      currentUser(request),
+    );
+    response.status(204).end();
+  });
+  router.post('/encerrar-exercicio/simular', async (request, response) => {
+    response.json(
+      await service.simulateExerciseEnd(
+        manualExerciseEndInputSchema.parse(request.body),
+        currentUser(request),
+      ),
+    );
+  });
+  router.post('/encerrar-exercicio/confirmar', async (request, response) => {
+    await service.endExercise(
+      manualExerciseEndInputSchema.parse(request.body),
+      currentUser(request),
+    );
+    response.status(204).end();
   });
   return router;
 }

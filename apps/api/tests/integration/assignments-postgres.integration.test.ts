@@ -807,4 +807,237 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
       }),
     ).toBeGreaterThan(0);
   });
+
+  it('administra sede e exercício de forma independente, preservando ocupantes e históricos', async () => {
+    const admin = await authenticated(credentials.admin);
+    const director = await authenticated(credentials.director);
+
+    const derivedSeat = await createPosition(ids.unidadeA);
+    const derivedHolder = await createProfessional();
+    const derivedPlacement = await assignments.placements.assign({
+      postoTrabalhoId: derivedSeat.id,
+      profissionalId: derivedHolder.id,
+    });
+    await admin
+      .post('/atribuicao-manual/retirar-sede/confirmar')
+      .send({ lotacaoSedeId: derivedPlacement.id, profissionalId: derivedHolder.id })
+      .expect(204);
+    await expect(staffing.workPositions.get(derivedSeat.id)).resolves.toMatchObject({
+      ocupanteAtual: null,
+      titularAtual: null,
+    });
+    expect(
+      await database.client.exercicioProfissional.count({
+        where: { dataFim: null, profissionalId: derivedHolder.id },
+      }),
+    ).toBe(0);
+
+    const ownSeat = await createPosition(ids.unidadeA);
+    const external = await makeTemporaryPosition();
+    const holder = await createProfessional();
+    const placement = await assignments.placements.assign({
+      postoTrabalhoId: ownSeat.id,
+      profissionalId: holder.id,
+    });
+    const externalExercise = await assignments.exercises.startTemporary({
+      postoTrabalhoId: external.position.id,
+      profissionalId: holder.id,
+    });
+    const substitute = await createProfessional();
+    const substituteExercise = await assignments.exercises.startTemporary({
+      postoTrabalhoId: ownSeat.id,
+      profissionalId: substitute.id,
+    });
+
+    await director
+      .post('/atribuicao-manual/retirar-sede/simular')
+      .send({ lotacaoSedeId: placement.id, profissionalId: holder.id })
+      .expect(403);
+    await director
+      .post('/atribuicao-manual/encerrar-exercicio/simular')
+      .send({ exercicioId: externalExercise.id, profissionalId: holder.id })
+      .expect(403);
+
+    const removalPreview = await admin
+      .post('/atribuicao-manual/retirar-sede/simular')
+      .send({ lotacaoSedeId: placement.id, profissionalId: holder.id })
+      .expect(200);
+    expect(removalPreview.body).toMatchObject({
+      exercicioAtual: { id: externalExercise.id },
+      ocupanteAtual: { id: substitute.id },
+      sedeAtual: { lotacaoSedeId: placement.id, postoId: ownSeat.id },
+    });
+    await admin
+      .post('/atribuicao-manual/retirar-sede/confirmar')
+      .send({ lotacaoSedeId: placement.id, profissionalId: holder.id })
+      .expect(204);
+
+    expect(
+      await database.client.lotacaoSede.findUniqueOrThrow({ where: { id: placement.id } }),
+    ).toMatchObject({ dataFim: expect.any(Date), motivoFim: 'Sede retirada administrativamente' });
+    expect(
+      await database.client.exercicioProfissional.findUniqueOrThrow({
+        where: { id: externalExercise.id },
+      }),
+    ).toMatchObject({ dataFim: null, profissionalId: holder.id });
+    expect(
+      await database.client.exercicioProfissional.findUniqueOrThrow({
+        where: { id: substituteExercise.id },
+      }),
+    ).toMatchObject({ dataFim: null, profissionalId: substitute.id });
+    expect(
+      await database.client.postoTrabalho.findUniqueOrThrow({ where: { id: ownSeat.id } }),
+    ).toMatchObject({
+      reservadoParaEvento: true,
+    });
+    await expect(staffing.workPositions.get(ownSeat.id)).resolves.toMatchObject({
+      ocupanteAtual: { id: substitute.id },
+      titularAtual: null,
+    });
+    const assignablePositions = await admin
+      .get(`/atribuicao-manual/postos?profissionalId=${holder.id}`)
+      .expect(200);
+    expect(assignablePositions.body.map(({ id }: { id: string }) => id)).not.toContain(ownSeat.id);
+
+    const returnSeat = await createPosition(ids.unidadeA);
+    const returnExternal = await makeTemporaryPosition();
+    const returnee = await createProfessional();
+    await assignments.placements.assign({
+      postoTrabalhoId: returnSeat.id,
+      profissionalId: returnee.id,
+    });
+    const returnExercise = await assignments.exercises.startTemporary({
+      postoTrabalhoId: returnExternal.position.id,
+      profissionalId: returnee.id,
+    });
+    const returnPreview = await admin
+      .post('/atribuicao-manual/encerrar-exercicio/simular')
+      .send({ exercicioId: returnExercise.id, profissionalId: returnee.id })
+      .expect(200);
+    expect(returnPreview.body).toMatchObject({
+      impedimento: null,
+      podeConfirmar: true,
+      situacaoPrevista: 'RETORNA_A_PROPRIA_SEDE',
+    });
+    await admin
+      .post('/atribuicao-manual/encerrar-exercicio/confirmar')
+      .send({ exercicioId: returnExercise.id, profissionalId: returnee.id })
+      .expect(204);
+    expect(
+      await database.client.exercicioProfissional.findUniqueOrThrow({
+        where: { id: returnExercise.id },
+      }),
+    ).toMatchObject({ dataFim: expect.any(Date) });
+    await expect(staffing.workPositions.get(returnSeat.id)).resolves.toMatchObject({
+      ocupanteAtual: { id: returnee.id },
+      titularAtual: { id: returnee.id },
+    });
+
+    const blockedSeat = await createPosition(ids.unidadeA);
+    const blockedExternal = await makeTemporaryPosition();
+    const blockedHolder = await createProfessional();
+    await assignments.placements.assign({
+      postoTrabalhoId: blockedSeat.id,
+      profissionalId: blockedHolder.id,
+    });
+    const blockedExercise = await assignments.exercises.startTemporary({
+      postoTrabalhoId: blockedExternal.position.id,
+      profissionalId: blockedHolder.id,
+    });
+    const blockedSubstitute = await createProfessional();
+    await assignments.exercises.startTemporary({
+      postoTrabalhoId: blockedSeat.id,
+      profissionalId: blockedSubstitute.id,
+    });
+    const blockedPreview = await admin
+      .post('/atribuicao-manual/encerrar-exercicio/simular')
+      .send({ exercicioId: blockedExercise.id, profissionalId: blockedHolder.id })
+      .expect(200);
+    expect(blockedPreview.body).toMatchObject({
+      impedimento:
+        'Não é possível encerrar este exercício porque a sede oficial do profissional ainda está ocupada por outro profissional.',
+      podeConfirmar: false,
+    });
+    await admin
+      .post('/atribuicao-manual/encerrar-exercicio/confirmar')
+      .send({ exercicioId: blockedExercise.id, profissionalId: blockedHolder.id })
+      .expect(409);
+
+    const noSeatExternal = await makeTemporaryPosition();
+    const noSeatProfessional = await createProfessional();
+    const noSeatExercise = await assignments.exercises.startTemporary({
+      postoTrabalhoId: noSeatExternal.position.id,
+      profissionalId: noSeatProfessional.id,
+    });
+    await admin
+      .post('/atribuicao-manual/encerrar-exercicio/confirmar')
+      .send({ exercicioId: noSeatExercise.id, profissionalId: noSeatProfessional.id })
+      .expect(204);
+    expect(
+      await database.client.exercicioProfissional.findUniqueOrThrow({
+        where: { id: noSeatExercise.id },
+      }),
+    ).toMatchObject({ dataFim: expect.any(Date) });
+    expect(
+      await database.client.lotacaoSede.count({
+        where: { dataFim: null, profissionalId: noSeatProfessional.id },
+      }),
+    ).toBe(0);
+
+    const absentSeat = await createPosition(ids.unidadeA);
+    const absentExternal = await makeTemporaryPosition();
+    const absentProfessional = await createProfessional();
+    await assignments.placements.assign({
+      postoTrabalhoId: absentSeat.id,
+      profissionalId: absentProfessional.id,
+    });
+    const absentExercise = await assignments.exercises.startTemporary({
+      postoTrabalhoId: absentExternal.position.id,
+      profissionalId: absentProfessional.id,
+    });
+    const activeAbsence = await database.client.afastamentoProfissional.create({
+      data: {
+        dataInicio: new Date(),
+        profissionalId: absentProfessional.id,
+        tipo: 'Afastamento preservado administrativamente',
+      },
+    });
+    const absencePreview = await admin
+      .post('/atribuicao-manual/encerrar-exercicio/simular')
+      .send({ exercicioId: absentExercise.id, profissionalId: absentProfessional.id })
+      .expect(200);
+    expect(absencePreview.body).toMatchObject({ situacaoPrevista: 'PERMANECE_AFASTADO' });
+    await admin
+      .post('/atribuicao-manual/encerrar-exercicio/confirmar')
+      .send({ exercicioId: absentExercise.id, profissionalId: absentProfessional.id })
+      .expect(204);
+    expect(
+      await database.client.afastamentoProfissional.findUniqueOrThrow({
+        where: { id: activeAbsence.id },
+      }),
+    ).toMatchObject({ dataFim: null });
+  });
+
+  it('revalida a sede simulada antes da confirmação administrativa', async () => {
+    const admin = await authenticated(credentials.admin);
+    const professional = await createProfessional();
+    const seat = await createPosition(ids.unidadeA);
+    const placement = await assignments.placements.assign({
+      postoTrabalhoId: seat.id,
+      profissionalId: professional.id,
+    });
+
+    await admin
+      .post('/atribuicao-manual/retirar-sede/simular')
+      .send({ lotacaoSedeId: placement.id, profissionalId: professional.id })
+      .expect(200);
+    await database.client.lotacaoSede.update({
+      data: { dataFim: new Date() },
+      where: { id: placement.id },
+    });
+    await admin
+      .post('/atribuicao-manual/retirar-sede/confirmar')
+      .send({ lotacaoSedeId: placement.id, profissionalId: professional.id })
+      .expect(409);
+  });
 });

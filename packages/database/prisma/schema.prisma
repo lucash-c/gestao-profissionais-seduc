@@ -264,6 +264,7 @@ model PostoTrabalho {
   anoLetivo           Int                     @map("ano_letivo")
   codigo              String                  @db.VarChar(80)
   ativo               Boolean                 @default(true)
+  reservadoParaEvento Boolean                 @default(false) @map("reservado_para_evento")
   criadoEm            DateTime                @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime                @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   quadroNecessidade   QuadroNecessidade       @relation(fields: [quadroNecessidadeId, unidadeId, cargoFuncaoId, periodoId, anoLetivo], references: [id, unidadeId, cargoFuncaoId, periodoId, anoLetivo], onDelete: Restrict, onUpdate: Restrict)
@@ -286,7 +287,7 @@ model PostoCodigoContador {
 }
 
 model ConfiguracaoSistema {
-  chave          String   @id @db.VarChar(100)
+  chave         String   @id @db.VarChar(100)
   valorBooleano Boolean  @map("valor_booleano")
   atualizadoEm  DateTime @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

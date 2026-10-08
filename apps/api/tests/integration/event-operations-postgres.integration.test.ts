@@ -1288,4 +1288,32 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     expect(history.body.items).toHaveLength(1);
     expectNoSensitiveKeys(history.body);
   });
+
+  it('permite que evento formal preencha e consuma uma sede reservada administrativamente', async () => {
+    const candidate = await createProfessional('Destino reservado');
+    const reservedSeat = await createPosition({ unitId: ids.unitA });
+    await database.client.postoTrabalho.update({
+      data: { reservadoParaEvento: true },
+      where: { id: reservedSeat.id },
+    });
+    const event = await createEvent({ participants: [{ professionalId: candidate.id }] });
+    const operator = await authenticated();
+    const central = await operator.get(`/eventos/${event.eventId}/central`).expect(200);
+    expect(central.body.vagasDisponiveis.map(({ id }: { id: string }) => id)).toContain(
+      reservedSeat.id,
+    );
+
+    await operator
+      .post(`/eventos/${event.eventId}/escolha`)
+      .send({ participanteEsperadoId: event.participantIds[0], postoTrabalhoId: reservedSeat.id })
+      .expect(200);
+    expect(
+      await database.client.postoTrabalho.findUniqueOrThrow({ where: { id: reservedSeat.id } }),
+    ).toMatchObject({ reservadoParaEvento: false });
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, postoTrabalhoId: reservedSeat.id },
+      }),
+    ).toMatchObject({ profissionalId: candidate.id });
+  });
 });
