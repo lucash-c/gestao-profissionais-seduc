@@ -19,6 +19,7 @@ import StaffingPlansPage from '@/pages/StaffingPlansPage.vue';
 import UnitsPage from '@/pages/UnitsPage.vue';
 import UsersPage from '@/pages/UsersPage.vue';
 import WorkPositionsPage from '@/pages/WorkPositionsPage.vue';
+import { clearCepLookupCache } from '@/services/cep.service';
 
 const mocks = vi.hoisted(() => ({
   addProfessionalPhone: vi.fn(),
@@ -344,6 +345,46 @@ describe('Etapa 3 Quasar pages', () => {
     expect(mocks.listUnits).toHaveBeenLastCalledWith(
       expect.objectContaining({ nome: 'Norte', page: 1 }),
     );
+  });
+
+  it('autopreenche endereço em Unidades sem alterar número ou complemento e permite correção manual', async () => {
+    clearCepLookupCache();
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: vi.fn().mockResolvedValue({
+        bairro: 'Centro',
+        complemento: 'Sala 2',
+        localidade: 'Americana',
+        logradouro: 'Rua das Flores',
+        uf: 'SP',
+      }),
+      ok: true,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const wrapper = mountPage(UnitsPage);
+    await flushPromises();
+    await wrapper.get('[data-testid="new-unit"]').trigger('click');
+    await flushPromises();
+
+    const input = (label: string) =>
+      wrapper.findAllComponents(QInput).find((component) => component.props('label') === label)!;
+    await input('Número').setValue('42');
+    await input('Complemento').setValue('Fundos');
+    input('CEP').vm.$emit('update:modelValue', '13465-000');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://viacep.com.br/ws/13465000/json/',
+      expect.objectContaining({ credentials: 'omit' }),
+    );
+    expect(input('Endereço').props('modelValue')).toBe('Rua das Flores');
+    expect(input('Bairro').props('modelValue')).toBe('Centro');
+    expect(input('Cidade').props('modelValue')).toBe('Americana');
+    expect(input('Número').props('modelValue')).toBe('42');
+    expect(input('Complemento').props('modelValue')).toBe('Fundos');
+
+    await input('Endereço').setValue('Rua ajustada manualmente');
+    expect(input('Endereço').props('modelValue')).toBe('Rua ajustada manualmente');
+    wrapper.unmount();
   });
 
   it('mantém erro de salvamento dentro do modal e associa issue ao campo', async () => {

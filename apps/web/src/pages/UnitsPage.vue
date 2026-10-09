@@ -19,8 +19,10 @@ import {
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import StatusChip from '@/components/StatusChip.vue';
+import CepLookupInput from '@/components/CepLookupInput.vue';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
 import ModalHeader from '@/components/ModalHeader.vue';
+import { applyViaCepAddress, type ViaCepAddress } from '@/services/cep.service';
 import { fieldError, formError } from '@/services/form-errors';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
@@ -46,6 +48,7 @@ const totalPages = ref(1);
 const search = ref('');
 const typeFilter = ref<string | null>(null);
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active');
+const numberInput = ref<{ focus: () => void } | null>(null);
 const canCreate = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
 const canDelete = canCreate;
 const canEdit = computed(() => sessionStore.state.user?.perfil !== 'OPERADOR');
@@ -153,6 +156,11 @@ function openEdit(row: UnitRecord): void {
 
 function addPhone(): void {
   form.telefones.push({ numero: '', tipo: 'CELULAR' });
+}
+
+function applyCepAddress(address: ViaCepAddress): void {
+  applyViaCepAddress(form, address);
+  queueMicrotask(() => numberInput.value?.focus());
 }
 
 async function save(): Promise<void> {
@@ -356,18 +364,17 @@ onMounted(load);
           />
           <QInput v-model="form.codigoInep" outlined label="Código INEP (opcional)" />
           <QInput v-model="form.poloRegiao" outlined label="Polo/região (opcional)" />
+          <CepLookupInput
+            v-model="form.cep"
+            :error="Boolean(issue('cep'))"
+            :error-message="issue('cep')"
+            @address-found="applyCepAddress"
+          />
           <QInput v-model="form.endereco" outlined label="Endereço" />
-          <QInput v-model="form.numero" outlined label="Número" />
+          <QInput ref="numberInput" v-model="form.numero" outlined label="Número" />
           <QInput v-model="form.complemento" outlined label="Complemento" />
           <QInput v-model="form.bairro" outlined label="Bairro" />
           <QInput v-model="form.cidade" outlined label="Cidade" />
-          <QInput
-            v-model="form.cep"
-            outlined
-            label="CEP"
-            :error="Boolean(issue('cep'))"
-            :error-message="issue('cep')"
-          />
           <QSelect
             v-model="form.ativo"
             outlined

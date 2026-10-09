@@ -26,8 +26,10 @@ import {
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import StatusChip from '@/components/StatusChip.vue';
+import CepLookupInput from '@/components/CepLookupInput.vue';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog.vue';
 import ModalHeader from '@/components/ModalHeader.vue';
+import { applyViaCepAddress, type ViaCepAddress } from '@/services/cep.service';
 import { fieldError, formError } from '@/services/form-errors';
 import { registryApi } from '@/services/registry.service';
 import { sessionStore } from '@/stores/session.store';
@@ -63,6 +65,7 @@ const cargoFilter = ref<string | null>(null);
 const activeFilter = ref<'all' | 'active' | 'inactive'>('active');
 const removalFilter = ref<'all' | 'yes' | 'no'>('all');
 const exchangeFilter = ref<'all' | 'yes' | 'no'>('all');
+const numberInput = ref<{ focus: () => void } | null>(null);
 const profile = computed(() => sessionStore.state.user?.perfil);
 const canCreate = computed(() => profile.value === 'ADMINISTRADOR');
 const canDelete = canCreate;
@@ -194,6 +197,11 @@ function resetForm(): void {
     remocao: false,
     telefones: [],
   });
+}
+
+function applyCepAddress(address: ViaCepAddress): void {
+  applyViaCepAddress(form, address);
+  queueMicrotask(() => numberInput.value?.focus());
 }
 
 function openCreate(): void {
@@ -687,7 +695,9 @@ onMounted(load);
               ]"
               label="Status"
             />
+            <CepLookupInput v-model="form.cep" @address-found="applyCepAddress" />
             <QInput v-model="form.endereco" outlined label="Endereço" /><QInput
+              ref="numberInput"
               v-model="form.numero"
               outlined
               label="Número"
@@ -696,7 +706,7 @@ onMounted(load);
               v-model="form.cidade"
               outlined
               label="Cidade"
-            /><QInput v-model="form.cep" outlined label="CEP" />
+            />
             <div class="manifestations full-span">
               <QCheckbox v-model="form.remocao" label="Manifestação prévia de Remoção" /><QCheckbox
                 v-model="form.permuta"
