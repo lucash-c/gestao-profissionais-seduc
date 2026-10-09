@@ -292,6 +292,11 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
 
   it('encerra Permuta atendida com auditoria, sem movimento novo, e preserva regressão de tipos', async () => {
     const pair = await validPair('Encerramento');
+    const outsideProfessional = await professional('Fora da Permuta');
+    await database.client.profissional.updateMany({
+      data: { remocao: true },
+      where: { id: { in: [pair.first.id, pair.second.id, outsideProfessional.id] } },
+    });
     const pendingEvent = await exchangeEvent({
       participants: [{ id: pair.first.id }, { id: pair.second.id }],
     });
@@ -317,6 +322,22 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
     expect(
       await database.client.movimentacao.count({ where: { eventoId: closable.eventId } }),
     ).toBe(movementsBefore);
+    expect(
+      await database.client.profissional.findMany({
+        orderBy: { id: 'asc' },
+        select: { id: true, permuta: true, remocao: true },
+        where: { id: { in: [pair.first.id, pair.second.id, outsideProfessional.id] } },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: pair.first.id, permuta: false, remocao: true }),
+        expect.objectContaining({ id: pair.second.id, permuta: false, remocao: true }),
+        expect.objectContaining({ id: outsideProfessional.id, permuta: true, remocao: true }),
+      ]),
+    );
+    expect(
+      await database.client.eventoParticipante.count({ where: { eventoId: closable.eventId } }),
+    ).toBe(2);
     const audit = await database.client.auditoria.findFirstOrThrow({
       where: { acao: 'UPDATE', entidade: 'EVENTO', registroId: closable.eventId },
     });
@@ -333,6 +354,24 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
         segundoParticipanteId: closable.participantIds[1],
       })
       .expect(409);
+
+    const futureEvent = await exchangeEvent({ participants: [], status: 'RASCUNHO' });
+    const afterClose = await operator.get(`/eventos/${futureEvent.eventId}/preparacao`).expect(200);
+    expect(
+      afterClose.body.profissionais.find(
+        ({ profissionalId }: { profissionalId: string }) => profissionalId === pair.first.id,
+      ),
+    ).toMatchObject({ elegivel: false, permuta: false });
+    await database.client.profissional.update({
+      data: { permuta: true },
+      where: { id: pair.first.id },
+    });
+    const reenabled = await operator.get(`/eventos/${futureEvent.eventId}/preparacao`).expect(200);
+    expect(
+      reenabled.body.profissionais.find(
+        ({ profissionalId }: { profissionalId: string }) => profissionalId === pair.first.id,
+      ),
+    ).toMatchObject({ elegivel: true, permuta: true });
 
     for (const type of ['REMOCAO', 'LISTAO'] as const) {
       const regression = await exchangeEvent({

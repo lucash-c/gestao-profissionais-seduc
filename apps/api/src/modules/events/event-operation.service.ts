@@ -330,6 +330,34 @@ async function lockParticipant(transaction: Prisma.TransactionClient, id: string
   }
 }
 
+async function clearParticipantManifestations(
+  transaction: Prisma.TransactionClient,
+  event: EventPayload,
+): Promise<void> {
+  if (!['REMOCAO', 'PERMUTA'].includes(event.tipo)) return;
+
+  const participantIds = (
+    await transaction.eventoParticipante.findMany({
+      select: { profissionalId: true },
+      where: { eventoId: event.id },
+    })
+  ).map(({ profissionalId }) => profissionalId);
+  if (participantIds.length === 0) return;
+
+  if (event.tipo === 'REMOCAO') {
+    await transaction.profissional.updateMany({
+      data: { remocao: false },
+      where: { id: { in: participantIds } },
+    });
+    return;
+  }
+
+  await transaction.profissional.updateMany({
+    data: { permuta: false },
+    where: { id: { in: participantIds } },
+  });
+}
+
 async function loadEvent(transaction: Prisma.TransactionClient, id: string): Promise<EventPayload> {
   const event = await transaction.evento.findUnique({ include: eventInclude, where: { id } });
   if (!event) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
@@ -810,6 +838,7 @@ export function createPrismaEventOperationServices(
               where: { id },
             }),
           );
+          await clearParticipantManifestations(transaction, event);
           if (userId) {
             await writeAudit(transaction, {
               acao: 'UPDATE',

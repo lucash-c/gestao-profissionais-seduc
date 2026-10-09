@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../src/app.js';
 import { hashPassword } from '../../src/modules/auth/auth.crypto.js';
+import { createPrismaEventOperationServices } from '../../src/modules/events/event-operation.service.js';
 import { createTestEnvironment } from '../helpers/environment.js';
 
 const databaseTestUrl = process.env.DATABASE_TEST_URL;
@@ -1222,6 +1223,135 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       participanteAtual: null,
       proximos: [],
     });
+  });
+
+  it('limpa somente a manifestação de Remoção dos participantes, preserva o histórico e exige nova marcação', async () => {
+    const participant = await createProfessional('Manifestação Remoção');
+    const participantWithoutMovement = await createProfessional('Participante sem escolha');
+    const outsideProfessional = await createProfessional('Fora da Remoção');
+    await database.client.profissional.updateMany({
+      data: { permuta: true },
+      where: {
+        id: { in: [participant.id, participantWithoutMovement.id, outsideProfessional.id] },
+      },
+    });
+    const event = await createEvent({
+      participants: [
+        { professionalId: participant.id, status: 'ATENDIDO' },
+        { professionalId: participantWithoutMovement.id, status: 'ATENDIDO' },
+      ],
+    });
+    const operator = await authenticated();
+
+    expect(
+      await database.client.profissional.findMany({
+        orderBy: { id: 'asc' },
+        select: { id: true, permuta: true, remocao: true },
+        where: {
+          id: { in: [participant.id, participantWithoutMovement.id, outsideProfessional.id] },
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: participant.id, permuta: true, remocao: true }),
+        expect.objectContaining({
+          id: participantWithoutMovement.id,
+          permuta: true,
+          remocao: true,
+        }),
+        expect.objectContaining({ id: outsideProfessional.id, permuta: true, remocao: true }),
+      ]),
+    );
+    expect(await database.client.movimentacao.count({ where: { eventoId: event.eventId } })).toBe(
+      0,
+    );
+
+    await operator.post(`/eventos/${event.eventId}/encerrar`).expect(200);
+
+    expect(
+      await database.client.profissional.findMany({
+        orderBy: { id: 'asc' },
+        select: { id: true, permuta: true, remocao: true },
+        where: {
+          id: { in: [participant.id, participantWithoutMovement.id, outsideProfessional.id] },
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: participant.id, permuta: true, remocao: false }),
+        expect.objectContaining({
+          id: participantWithoutMovement.id,
+          permuta: true,
+          remocao: false,
+        }),
+        expect.objectContaining({ id: outsideProfessional.id, permuta: true, remocao: true }),
+      ]),
+    );
+    expect(
+      await database.client.eventoParticipante.count({ where: { eventoId: event.eventId } }),
+    ).toBe(2);
+
+    const futureEvent = await createEvent({
+      participants: [],
+      status: 'RASCUNHO',
+      type: 'REMOCAO',
+    });
+    const afterClose = await operator.get(`/eventos/${futureEvent.eventId}/preparacao`).expect(200);
+    expect(
+      afterClose.body.profissionais.find(
+        ({ profissionalId }: { profissionalId: string }) => profissionalId === participant.id,
+      ),
+    ).toMatchObject({ elegivel: false, remocao: false });
+
+    await database.client.profissional.update({
+      data: { remocao: true },
+      where: { id: participant.id },
+    });
+    const reenabled = await operator.get(`/eventos/${futureEvent.eventId}/preparacao`).expect(200);
+    expect(
+      reenabled.body.profissionais.find(
+        ({ profissionalId }: { profissionalId: string }) => profissionalId === participant.id,
+      ),
+    ).toMatchObject({ elegivel: true, remocao: true });
+  });
+
+  it('não limpa manifestações ao encerrar Listão ou Atribuição', async () => {
+    const professional = await createProfessional('Manifestações de outros eventos');
+    await database.client.profissional.update({
+      data: { permuta: true, remocao: true },
+      where: { id: professional.id },
+    });
+    const operator = await authenticated();
+
+    for (const type of ['LISTAO', 'ATRIBUICAO'] as const) {
+      const event = await createEvent({
+        participants: [{ professionalId: professional.id, status: 'ATENDIDO' }],
+        type,
+      });
+      await operator.post(`/eventos/${event.eventId}/encerrar`).expect(200);
+      expect(
+        await database.client.profissional.findUniqueOrThrow({ where: { id: professional.id } }),
+      ).toMatchObject({ permuta: true, remocao: true });
+    }
+  });
+
+  it('reverte o encerramento e a limpeza de manifestação quando a auditoria falha', async () => {
+    const professional = await createProfessional('Rollback de manifestação');
+    const event = await createEvent({
+      participants: [{ professionalId: professional.id, status: 'ATENDIDO' }],
+    });
+    const operations = createPrismaEventOperationServices(database, clock);
+
+    await expect(operations.close(event.eventId, randomUUID())).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      status: 404,
+    });
+    expect(
+      await database.client.evento.findUniqueOrThrow({ where: { id: event.eventId } }),
+    ).toMatchObject({ status: 'ATIVO' });
+    expect(
+      await database.client.profissional.findUniqueOrThrow({ where: { id: professional.id } }),
+    ).toMatchObject({ remocao: true });
   });
 
   it('expõe telão e histórico públicos paginados sem campos sensíveis', async () => {
