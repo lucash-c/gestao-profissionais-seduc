@@ -229,6 +229,10 @@ function expectButtonDisabled(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal(
+    'open',
+    vi.fn(() => null),
+  );
   setProfile('OPERADOR');
   mocks.listCargos.mockResolvedValue([cargo]);
   mocks.list.mockResolvedValue({ items: [event], page: 1, pageSize: 20, total: 1, totalPages: 1 });
@@ -445,6 +449,101 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(mocks.start).toHaveBeenCalledTimes(1);
     resolveStart!(structuredClone(preparation));
     await flushPromises();
+  });
+
+  it('abre o Telão público do evento iniciado sem sair da tela operacional', async () => {
+    let resolveStart: ((value: EventPreparationRecord) => void) | undefined;
+    mocks.start.mockReturnValue(
+      new Promise<EventPreparationRecord>((resolve) => {
+        resolveStart = resolve;
+      }),
+    );
+    const publicDisplayWindow = {
+      close: vi.fn(),
+      location: { href: '' },
+    } as unknown as Window;
+    const open = vi.fn(() => publicDisplayWindow);
+    vi.stubGlobal('open', open);
+    const { router, wrapper } = await mountPage(
+      EventPreparationPage,
+      `/eventos/${EVENT_ID}/preparacao`,
+    );
+
+    await wrapper.get('[data-testid="start-event"]').trigger('click');
+    await flushPromises();
+    const confirm = wrapper
+      .get('[data-testid="start-event-dialog"]')
+      .findAll('button')
+      .find((candidate) => candidate.text().includes('Confirmar início'))!;
+    await confirm.trigger('click');
+
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(mocks.start).toHaveBeenCalledWith(EVENT_ID);
+    expect((publicDisplayWindow as unknown as { location: { href: string } }).location.href).toBe(
+      '',
+    );
+    expect(router.currentRoute.value.fullPath).toBe(`/eventos/${EVENT_ID}/preparacao`);
+
+    resolveStart!({
+      ...structuredClone(preparation),
+      evento: { ...event, dataInicio: '2026-10-06T15:30:00.000Z', status: 'ATIVO' },
+    });
+    await flushPromises();
+
+    const expectedUrl = new URL(`/publico/eventos/${EVENT_ID}`, window.location.origin).href;
+    expect((publicDisplayWindow as unknown as { location: { href: string } }).location.href).toBe(
+      expectedUrl,
+    );
+    const manualLink = wrapper.get('[data-testid="open-public-display"]');
+    expect(manualLink.attributes('href')).toBe(expectedUrl);
+    expect(manualLink.attributes('target')).toBe('_blank');
+  });
+
+  it('fecha a guia temporária quando o início do evento falha', async () => {
+    const publicDisplayWindow = {
+      close: vi.fn(),
+      location: { href: '' },
+    } as unknown as Window;
+    vi.stubGlobal(
+      'open',
+      vi.fn(() => publicDisplayWindow),
+    );
+    mocks.start.mockRejectedValue(new Error('Conflito ao iniciar o evento.'));
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+
+    await wrapper.get('[data-testid="start-event"]').trigger('click');
+    await flushPromises();
+    const confirm = wrapper
+      .get('[data-testid="start-event-dialog"]')
+      .findAll('button')
+      .find((candidate) => candidate.text().includes('Confirmar início'))!;
+    await confirm.trigger('click');
+    await flushPromises();
+
+    expect(publicDisplayWindow.close).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('[data-testid="event-preparation-error"]').text()).toContain(
+      'Conflito ao iniciar o evento.',
+    );
+    expect(wrapper.find('[data-testid="open-public-display"]').exists()).toBe(false);
+  });
+
+  it('mantém o início quando o navegador bloqueia o pop-up e oferece abertura manual', async () => {
+    const { wrapper } = await mountPage(EventPreparationPage, `/eventos/${EVENT_ID}/preparacao`);
+
+    await wrapper.get('[data-testid="start-event"]').trigger('click');
+    await flushPromises();
+    const confirm = wrapper
+      .get('[data-testid="start-event-dialog"]')
+      .findAll('button')
+      .find((candidate) => candidate.text().includes('Confirmar início'))!;
+    await confirm.trigger('click');
+    await flushPromises();
+
+    expect(mocks.start).toHaveBeenCalledWith(EVENT_ID);
+    expect(wrapper.get('[data-testid="public-display-popup-blocked"]').text()).toContain(
+      'Evento iniciado, mas o navegador bloqueou a abertura automática do Telão.',
+    );
+    expect(wrapper.get('[data-testid="open-public-display"]').text()).toContain('Abrir Telão');
   });
 
   it('fica somente leitura quando o evento está ATIVO', async () => {

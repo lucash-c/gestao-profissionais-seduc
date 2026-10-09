@@ -22,8 +22,10 @@ const mocks = vi.hoisted(() => ({
   simulate: vi.fn(),
   vacancies: vi.fn(),
 }));
+const qrCodeMocks = vi.hoisted(() => ({ toDataURL: vi.fn() }));
 
 vi.mock('@/services/event.service', () => ({ eventApi: mocks }));
+vi.mock('qrcode', () => ({ default: { toDataURL: qrCodeMocks.toDataURL } }));
 
 const EVENT_ID = '11111111-1111-4111-8111-111111111111';
 const PARTICIPANT_A = '22222222-2222-4222-8222-222222222222';
@@ -274,6 +276,7 @@ beforeEach(() => {
     total: 1,
     totalPages: 1,
   });
+  qrCodeMocks.toDataURL.mockResolvedValue('data:image/png;base64,QR-CODE');
 });
 
 afterEach(() => {
@@ -453,6 +456,39 @@ describe('Etapa 7 frontend da Central', () => {
 });
 
 describe('Etapa 7 frontend do telão público', () => {
+  it('gera QR Code com a URL pública exata do Telão e texto de apoio', async () => {
+    const wrapper = await mountPage(PublicEventDisplayPage, `/publico/eventos/${EVENT_ID}`);
+    const expectedUrl = new URL(`/publico/eventos/${EVENT_ID}`, window.location.origin).href;
+
+    expect(qrCodeMocks.toDataURL).toHaveBeenCalledWith(
+      expectedUrl,
+      expect.objectContaining({ errorCorrectionLevel: 'M', margin: 1, width: 192 }),
+    );
+    expect(wrapper.get('[data-testid="public-event-qr-code"]').text()).toContain(
+      'Acompanhe pelo celular',
+    );
+    expect(wrapper.get('[data-testid="public-event-qr-image"]').attributes('src')).toBe(
+      'data:image/png;base64,QR-CODE',
+    );
+    wrapper.unmount();
+  });
+
+  it('atualiza o QR Code para a URL pública de cada evento', async () => {
+    const otherEventId = 'abababab-abab-4bab-8bab-abababababab';
+    mocks.publicDisplay.mockResolvedValue({
+      ...structuredClone(publicDisplay),
+      evento: { ...publicDisplay.evento, tipo: 'PERMUTA' },
+    });
+    const wrapper = await mountPage(PublicEventDisplayPage, `/publico/eventos/${otherEventId}`);
+
+    expect(qrCodeMocks.toDataURL).toHaveBeenCalledWith(
+      new URL(`/publico/eventos/${otherEventId}`, window.location.origin).href,
+      expect.any(Object),
+    );
+    expect(wrapper.find('[data-testid="public-event-qr-code"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it('mostra sessão sanitizada, vagas textuais, últimas escolhas e atualiza por polling', async () => {
     vi.useFakeTimers();
     const wrapper = await mountPage(PublicEventDisplayPage, `/publico/eventos/${EVENT_ID}`);

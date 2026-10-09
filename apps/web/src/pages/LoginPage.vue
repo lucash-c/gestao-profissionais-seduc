@@ -82,7 +82,6 @@ async function submit(): Promise<void> {
                 :src="logoSeduc"
                 alt="Prefeitura de Americana — Secretaria de Educação"
               />
-              <p class="eyebrow q-mb-sm">SEDUC AMERICANA</p>
               <h1 id="login-title">Gestão de profissionais</h1>
               <p class="login-subtitle">
                 Sistema de gestão de profissionais e eventos da Secretaria de Educação.

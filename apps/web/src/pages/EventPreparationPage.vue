@@ -16,13 +16,14 @@ import {
   QTr,
 } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
 import ModalHeader from '@/components/ModalHeader.vue';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
+const router = useRouter();
 const preparation = ref<EventPreparationRecord | null>(null);
 const selected = ref<string[]>([]);
 const search = ref('');
@@ -31,7 +32,16 @@ const saving = ref(false);
 const starting = ref(false);
 const confirmStart = ref(false);
 const error = ref('');
+const popupBlocked = ref(false);
 const eventId = computed(() => String(route.params.id));
+const publicDisplayUrl = computed(() => {
+  const publicRoute = router.resolve({
+    name: 'public-event-display',
+    params: { id: eventId.value },
+  });
+
+  return new URL(publicRoute.href, window.location.origin).href;
+});
 const readOnly = computed(() => preparation.value?.evento.status !== 'RASCUNHO');
 const hasUnsavedChanges = computed(() => {
   if (!preparation.value) return false;
@@ -103,13 +113,28 @@ async function save(): Promise<void> {
 
 async function start(): Promise<void> {
   if (starting.value || readOnly.value || hasUnsavedChanges.value) return;
+
+  let publicDisplayWindow: Window | null = null;
+  try {
+    publicDisplayWindow = window.open('', '_blank');
+  } catch {
+    // A abertura do Telão é uma conveniência: o início do evento não depende dela.
+  }
+
   starting.value = true;
   error.value = '';
+  popupBlocked.value = false;
   try {
     preparation.value = await eventApi.start(eventId.value);
     selected.value = [...preparation.value.selecionados];
+    if (publicDisplayWindow) {
+      publicDisplayWindow.location.href = publicDisplayUrl.value;
+    } else {
+      popupBlocked.value = true;
+    }
     confirmStart.value = false;
   } catch (startError) {
+    publicDisplayWindow?.close();
     error.value = startError instanceof Error ? startError.message : 'Falha ao iniciar o evento.';
     confirmStart.value = false;
   } finally {
@@ -139,9 +164,28 @@ onMounted(load);
           </p>
         </div>
       </div>
-      <QBanner v-if="readOnly" class="bg-blue-1 text-primary"
-        >Evento iniciado. A operação da sessão será disponibilizada na próxima etapa.</QBanner
+      <QBanner v-if="readOnly" class="bg-blue-1 text-primary">
+        <div class="event-started-banner">
+          <span>Evento iniciado. A operação da sessão será disponibilizada na próxima etapa.</span>
+          <QBtn
+            data-testid="open-public-display"
+            flat
+            color="primary"
+            label="Abrir Telão"
+            :href="publicDisplayUrl"
+            target="_blank"
+            rel="noopener"
+          />
+        </div>
+      </QBanner>
+      <QBanner
+        v-if="popupBlocked"
+        class="bg-amber-1 text-dark"
+        data-testid="public-display-popup-blocked"
       >
+        Evento iniciado, mas o navegador bloqueou a abertura automática do Telão. Use o botão
+        &quot;Abrir Telão&quot;.
+      </QBanner>
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="event-preparation-error">{{
         error
       }}</QBanner>
@@ -366,6 +410,13 @@ onMounted(load);
 }
 .event-search-match {
   background: var(--fluent-warning-surface);
+}
+.event-started-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 @media (max-width: 800px) {
   .event-totals {

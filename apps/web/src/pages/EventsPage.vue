@@ -303,7 +303,7 @@ onMounted(async () => {
           <QInput
             v-model="form.nome"
             outlined
-            label="Nome *"
+            label="Nome do evento*"
             :error="Boolean(issue('nome'))"
             :error-message="issue('nome')"
           />

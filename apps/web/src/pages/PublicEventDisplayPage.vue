@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { PublicEventChoice, PublicEventDisplay } from '@seduc/contracts';
+import QRCode from 'qrcode';
 import { QBanner, QBtn, QCard, QCardSection, QDialog, QPage, QPagination, QSpinner } from 'quasar';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
@@ -17,7 +18,25 @@ const historyOpen = ref(false);
 const choices = ref<PublicEventChoice[]>([]);
 const page = ref(1);
 const pages = ref(1);
+const qrCodeDataUrl = ref('');
+const publicDisplayUrl = computed(() => new URL(route.fullPath, window.location.origin).href);
 let pollId: ReturnType<typeof setInterval> | undefined;
+let qrGeneration = 0;
+
+async function generateQrCode(): Promise<void> {
+  const generation = ++qrGeneration;
+  try {
+    const dataUrl = await QRCode.toDataURL(publicDisplayUrl.value, {
+      color: { dark: '#111827', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 192,
+    });
+    if (generation === qrGeneration) qrCodeDataUrl.value = dataUrl;
+  } catch {
+    if (generation === qrGeneration) qrCodeDataUrl.value = '';
+  }
+}
 
 async function load(showLoading = false): Promise<void> {
   if (showLoading) loading.value = true;
@@ -40,29 +59,42 @@ async function loadChoices(targetPage = 1): Promise<void> {
 }
 
 onMounted(async () => {
+  void generateQrCode();
   await load(true);
   pollId = setInterval(() => void load(), 3_000);
 });
 onBeforeUnmount(() => {
   if (pollId) clearInterval(pollId);
 });
+watch(publicDisplayUrl, () => void generateQrCode());
 </script>
 
 <template>
   <QPage class="public-display" data-testid="public-event-display" aria-live="polite">
     <div v-if="loading" class="public-state"><QSpinner size="48px" /> Carregando sessão…</div>
     <template v-else-if="display">
-      <header>
-        <p class="eyebrow">SEDUC Americana · Sessão pública</p>
-        <h1>{{ display.evento.nome }}</h1>
-        <div class="row items-center q-gutter-sm">
-          <StatusChip :status="display.evento.tipo" />
-          <StatusChip
-            :status="display.evento.status === 'ENCERRADO' ? 'EVENTO ENCERRADO' : 'EM ANDAMENTO'"
-            :tone="display.evento.status === 'ENCERRADO' ? 'neutral' : 'positive'"
-          />
-          <span>{{ display.evento.ano }}</span>
+      <header class="public-header">
+        <div>
+          <p class="eyebrow">SEDUC Americana · Sessão pública</p>
+          <h1>{{ display.evento.nome }}</h1>
+          <div class="row items-center q-gutter-sm">
+            <StatusChip :status="display.evento.tipo" />
+            <StatusChip
+              :status="display.evento.status === 'ENCERRADO' ? 'EVENTO ENCERRADO' : 'EM ANDAMENTO'"
+              :tone="display.evento.status === 'ENCERRADO' ? 'neutral' : 'positive'"
+            />
+            <span>{{ display.evento.ano }}</span>
+          </div>
         </div>
+        <aside class="public-qr-code" data-testid="public-event-qr-code">
+          <img
+            v-if="qrCodeDataUrl"
+            data-testid="public-event-qr-image"
+            :src="qrCodeDataUrl"
+            alt="QR Code para acompanhar o evento pelo celular"
+          />
+          <span>Acompanhe pelo celular</span>
+        </aside>
       </header>
       <QBanner v-if="error" class="bg-red-1 text-negative">{{ error }}</QBanner>
 
@@ -149,6 +181,30 @@ onBeforeUnmount(() => {
 .public-display header {
   margin-bottom: 24px;
 }
+.public-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.public-qr-code {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 6px;
+  justify-items: center;
+  padding: 10px;
+  color: var(--fluent-text-secondary);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.public-qr-code img {
+  width: clamp(128px, 14vw, 192px);
+  height: auto;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid var(--fluent-border);
+  border-radius: 8px;
+}
 .public-main {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -175,6 +231,10 @@ onBeforeUnmount(() => {
 @media (max-width: 800px) {
   .public-main {
     grid-template-columns: 1fr;
+  }
+  .public-header {
+    align-items: center;
+    flex-direction: column;
   }
 }
 </style>
