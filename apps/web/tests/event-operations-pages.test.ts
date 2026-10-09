@@ -9,8 +9,11 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import App from '@/App.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import PublicEventDisplayPage from '@/pages/PublicEventDisplayPage.vue';
+import { createAppRouter } from '@/router';
+import type { SessionStore } from '@/stores/session.store';
 
 const mocks = vi.hoisted(() => ({
   central: vi.fn(),
@@ -236,6 +239,24 @@ async function mountPage(component: object, path: string) {
   return wrapper;
 }
 
+async function mountPublicRoute() {
+  const session: SessionStore = {
+    login: vi.fn(),
+    logout: vi.fn(),
+    restore: vi.fn(),
+    state: { status: 'guest', user: null },
+  };
+  const router = createAppRouter(session, createMemoryHistory());
+  await router.push(`/publico/eventos/${EVENT_ID}`);
+  await router.isReady();
+  const wrapper = mount(App, {
+    attachTo: document.body,
+    global: { plugins: [Quasar, router], stubs: { teleport: true } },
+  });
+  await flushPromises();
+  return { session, wrapper };
+}
+
 function button(wrapper: Awaited<ReturnType<typeof mountPage>>, label: string) {
   return wrapper.findAll('button').find((candidate) => candidate.text().includes(label));
 }
@@ -456,6 +477,16 @@ describe('Etapa 7 frontend da Central', () => {
 });
 
 describe('Etapa 7 frontend do telão público', () => {
+  it('renderiza a rota pública diretamente no layout próprio, sem login ou layout administrativo', async () => {
+    const { session, wrapper } = await mountPublicRoute();
+
+    expect(session.restore).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="public-event-layout"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="public-event-display"]').exists()).toBe(true);
+    expect(wrapper.find('.admin-layout').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('gera QR Code com a URL pública exata do Telão e texto de apoio', async () => {
     const wrapper = await mountPage(PublicEventDisplayPage, `/publico/eventos/${EVENT_ID}`);
     const expectedUrl = new URL(`/publico/eventos/${EVENT_ID}`, window.location.origin).href;
@@ -530,5 +561,24 @@ describe('Etapa 7 frontend do telão público', () => {
       'Escolha anterior',
     );
     wrapper.unmount();
+  });
+
+  it('informa indisponibilidade e evento inexistente com mensagens amigáveis', async () => {
+    mocks.publicDisplay.mockRejectedValueOnce({ status: 404 });
+    const missingEvent = await mountPage(PublicEventDisplayPage, `/publico/eventos/${EVENT_ID}`);
+    expect(missingEvent.get('[data-testid="public-event-error"]').text()).toContain(
+      'Evento não encontrado.',
+    );
+    missingEvent.unmount();
+
+    mocks.publicDisplay.mockRejectedValueOnce(new Error('Falha de rede'));
+    const unavailableEvent = await mountPage(
+      PublicEventDisplayPage,
+      `/publico/eventos/${EVENT_ID}`,
+    );
+    expect(unavailableEvent.get('[data-testid="public-event-error"]').text()).toContain(
+      'Não foi possível carregar as informações do evento.',
+    );
+    unavailableEvent.unmount();
   });
 });

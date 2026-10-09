@@ -324,11 +324,15 @@ async function save(): Promise<void> {
   saving.value = true;
   dialogError.value = '';
   saveFailure.value = null;
+  const professionalPayload = {
+    ...form,
+    cpf: form.cpf.replace(/\D/g, ''),
+  };
   try {
     if (!editing.value) {
-      await registryApi.createProfessional(form);
+      await registryApi.createProfessional(professionalPayload);
     } else {
-      await registryApi.updateProfessional(editing.value.id, form);
+      await registryApi.updateProfessional(editing.value.id, professionalPayload);
     }
     dialogOpen.value = false;
     await load();
@@ -645,6 +649,10 @@ onMounted(load);
               v-model="form.cpf"
               outlined
               label="CPF *"
+              mask="###.###.###-##"
+              unmasked-value
+              inputmode="numeric"
+              data-testid="professional-cpf"
               :error="Boolean(issue('cpf'))"
               :error-message="issue('cpf')"
             /><QSelect

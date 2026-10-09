@@ -325,12 +325,12 @@ onMounted(async () => {
     </QCard>
 
     <QCard v-if="selectedProfessional" flat bordered class="q-mt-md">
-      <QCardSection>
+      <QCardSection class="manual-professional-summary">
         <h2>{{ selectedProfessional.nomeCompleto }}</h2>
-        <p>
-          {{ selectedProfessional.cargoFuncao.nome }} ·
+        <div class="manual-professional-summary__meta">
+          <span>{{ selectedProfessional.cargoFuncao.nome }}</span>
           <StatusChip :status="selectedProfessional.afastado ? 'AFASTADO' : 'ATIVO'" />
-        </p>
+        </div>
       </QCardSection>
       <QCardSection
         v-if="
@@ -340,12 +340,14 @@ onMounted(async () => {
         class="administrative-actions"
         data-testid="manual-administrative-actions"
       >
-        <p class="eyebrow">Controle administrativo</p>
-        <h3>Ações administrativas</h3>
-        <p class="text-caption text-grey-7">
-          Titularidade e exercício são tratados separadamente e preservam o histórico.
-        </p>
-        <div class="row q-gutter-sm q-mt-sm">
+        <div class="administrative-actions__header">
+          <div>
+            <p class="eyebrow">Controle administrativo</p>
+            <h3>Ações administrativas</h3>
+          </div>
+          <p>Titularidade e exercício são tratados separadamente e preservam o histórico.</p>
+        </div>
+        <div class="administrative-actions__buttons">
           <QBtn
             v-if="selectedProfessional.sedeAtual"
             outline
@@ -537,3 +539,65 @@ onMounted(async () => {
     </QDialog>
   </QPage>
 </template>
+
+<style scoped>
+.manual-professional-summary {
+  padding-bottom: 14px;
+}
+
+.manual-professional-summary h2,
+.administrative-actions h3 {
+  margin: 0;
+}
+
+.manual-professional-summary__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--fluent-text-secondary);
+}
+
+.administrative-actions {
+  padding-top: 14px;
+  padding-bottom: 16px;
+  border-top: 1px solid var(--fluent-border);
+  background: color-mix(in srgb, var(--fluent-surface) 84%, var(--fluent-background));
+}
+
+.administrative-actions__header {
+  display: grid;
+  gap: 4px;
+}
+
+.administrative-actions__header p:not(.eyebrow) {
+  max-width: 66ch;
+  margin: 0;
+  color: var(--fluent-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.administrative-actions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.administrative-actions__buttons :deep(.q-btn) {
+  min-height: 34px;
+}
+
+@media (max-width: 599px) {
+  .administrative-actions {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .administrative-actions__buttons :deep(.q-btn) {
+    width: 100%;
+  }
+}
+</style>

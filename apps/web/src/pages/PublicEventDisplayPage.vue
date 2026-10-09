@@ -23,6 +23,18 @@ const publicDisplayUrl = computed(() => new URL(route.fullPath, window.location.
 let pollId: ReturnType<typeof setInterval> | undefined;
 let qrGeneration = 0;
 
+function publicErrorMessage(loadError: unknown): string {
+  if (
+    typeof loadError === 'object' &&
+    loadError !== null &&
+    'status' in loadError &&
+    loadError.status === 404
+  ) {
+    return 'Evento não encontrado.';
+  }
+  return 'Não foi possível carregar as informações do evento.';
+}
+
 async function generateQrCode(): Promise<void> {
   const generation = ++qrGeneration;
   try {
@@ -44,7 +56,7 @@ async function load(showLoading = false): Promise<void> {
     display.value = await eventApi.publicDisplay(eventId.value);
     error.value = '';
   } catch (loadError) {
-    error.value = loadError instanceof Error ? loadError.message : 'Falha ao atualizar o telão.';
+    error.value = publicErrorMessage(loadError);
   } finally {
     loading.value = false;
   }
@@ -53,9 +65,14 @@ async function load(showLoading = false): Promise<void> {
 async function loadChoices(targetPage = 1): Promise<void> {
   historyOpen.value = true;
   page.value = targetPage;
-  const result = await eventApi.publicChoices(eventId.value, targetPage, 20);
-  choices.value = result.items;
-  pages.value = Math.max(result.totalPages, 1);
+  try {
+    const result = await eventApi.publicChoices(eventId.value, targetPage, 20);
+    choices.value = result.items;
+    pages.value = Math.max(result.totalPages, 1);
+  } catch (loadError) {
+    historyOpen.value = false;
+    error.value = publicErrorMessage(loadError);
+  }
 }
 
 onMounted(async () => {
@@ -96,7 +113,9 @@ watch(publicDisplayUrl, () => void generateQrCode());
           <span>Acompanhe pelo celular</span>
         </aside>
       </header>
-      <QBanner v-if="error" class="bg-red-1 text-negative">{{ error }}</QBanner>
+      <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="public-event-error">{{
+        error
+      }}</QBanner>
 
       <section class="public-main">
         <QCard flat bordered data-testid="public-current-participant">
@@ -168,7 +187,9 @@ watch(publicDisplayUrl, () => void generateQrCode());
         </QCard>
       </QDialog>
     </template>
-    <QBanner v-else-if="error" class="bg-red-1 text-negative">{{ error }}</QBanner>
+    <QBanner v-else-if="error" class="bg-red-1 text-negative" data-testid="public-event-error">{{
+      error
+    }}</QBanner>
   </QPage>
 </template>
 

@@ -171,7 +171,10 @@ describe('ações administrativas da atribuição manual', () => {
     await flushPromises();
     await select(wrapper);
 
-    expect(wrapper.find('[data-testid="manual-administrative-actions"]').exists()).toBe(true);
+    const administrativeActions = wrapper.get('[data-testid="manual-administrative-actions"]');
+    expect(administrativeActions.text()).toContain('Controle administrativo');
+    expect(administrativeActions.text()).toContain('Ações administrativas');
+    expect(administrativeActions.find('.administrative-actions__buttons').exists()).toBe(true);
     await wrapper.get('[data-testid="manual-remove-seat"]').trigger('click');
     await flushPromises();
     expect(mocks.simulateSeatRemoval).toHaveBeenCalledWith({

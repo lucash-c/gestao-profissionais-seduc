@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type Router, type RouterHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import PublicLayout from '@/layouts/PublicLayout.vue';
 import AuditHistoryPage from '@/pages/AuditHistoryPage.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import EventExchangePage from '@/pages/EventExchangePage.vue';
@@ -31,10 +32,17 @@ export function createAppRouter(
         path: '/login',
       },
       {
-        component: PublicEventDisplayPage,
+        children: [
+          {
+            component: PublicEventDisplayPage,
+            meta: { publicAccess: true },
+            name: 'public-event-display',
+            path: 'eventos/:id',
+          },
+        ],
+        component: PublicLayout,
         meta: { publicAccess: true },
-        name: 'public-event-display',
-        path: '/publico/eventos/:id',
+        path: '/publico',
       },
       {
         children: [

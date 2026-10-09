@@ -649,6 +649,31 @@ describe('Etapa 3 Quasar pages', () => {
     expect(mocks.deleteProfessionalPhone).not.toHaveBeenCalled();
   });
 
+  it('exibe CPF formatado no formulário e envia apenas os dígitos à API', async () => {
+    const wrapper = mountPage(ProfessionalsPage);
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Editar'))!
+      .trigger('click');
+    await flushPromises();
+
+    const cpf = document.body.querySelector('[data-testid="professional-cpf"]') as HTMLInputElement;
+    expect(cpf.value).toBe('123.456.789-01');
+
+    cpf.value = '987.654.321-00';
+    cpf.dispatchEvent(new Event('input'));
+    await flushPromises();
+    (document.body.querySelector('[data-testid="save-professional"]') as HTMLElement).click();
+    await flushPromises();
+
+    expect(mocks.updateProfessional).toHaveBeenCalledWith(
+      RECORD_ID,
+      expect.objectContaining({ cpf: '98765432100' }),
+    );
+    wrapper.unmount();
+  });
+
   it('exibe menus de Usuários e Pontuações somente para Admin', () => {
     setProfile('ADMINISTRADOR');
     const admin = mountPage(AdminLayout);
