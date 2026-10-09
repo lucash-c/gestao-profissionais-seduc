@@ -20,12 +20,12 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
   });
   const suffix = randomUUID();
   const ids = {
-    cargo: randomUUID(),
-    cargoB: randomUUID(),
-    cargoIncompativel: randomUUID(),
-    periodo: randomUUID(),
+    cargo: 'PEB1_FUNDAMENTAL',
+    cargoB: 'PEB1_INFANTIL',
+    cargoIncompativel: 'SERVENTE',
+    periodo: 'MANHA',
     segmento: randomUUID(),
-    tipoUnidade: randomUUID(),
+    tipoUnidade: 'EMEF',
     unidadeA: randomUUID(),
     unidadeB: randomUUID(),
   };
@@ -39,30 +39,11 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
   let professionalSequence = 0;
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({
-      data: { id: ids.tipoUnidade, nome: `Tipo quadro ${suffix}` },
-    });
     await database.client.unidade.createMany({
       data: [
         { id: ids.unidadeA, nome: `Unidade quadro A ${suffix}`, tipoUnidadeId: ids.tipoUnidade },
         { id: ids.unidadeB, nome: `Unidade quadro B ${suffix}`, tipoUnidadeId: ids.tipoUnidade },
       ],
-    });
-    await database.client.cargoFuncao.createMany({
-      data: [
-        { id: ids.cargo, nome: `Cargo compatível ${suffix}` },
-        { id: ids.cargoB, nome: `Cargo B ${suffix}` },
-        { id: ids.cargoIncompativel, nome: `Cargo incompatível ${suffix}` },
-      ],
-    });
-    await database.client.cargoTipoUnidade.createMany({
-      data: [ids.cargo, ids.cargoB].map((cargoFuncaoId) => ({
-        cargoFuncaoId,
-        tipoUnidadeId: ids.tipoUnidade,
-      })),
-    });
-    await database.client.periodo.create({
-      data: { id: ids.periodo, nome: `Período quadro ${suffix}` },
     });
     await database.client.segmentoEnsino.create({
       data: { id: ids.segmento, nome: `Segmento quadro ${suffix}` },
@@ -114,17 +95,9 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
       where: { unidadeId: { in: [ids.unidadeA, ids.unidadeB] } },
     });
     await database.client.segmentoEnsino.deleteMany({ where: { id: ids.segmento } });
-    await database.client.periodo.deleteMany({ where: { id: ids.periodo } });
-    await database.client.cargoTipoUnidade.deleteMany({
-      where: { cargoFuncaoId: { in: [ids.cargo, ids.cargoB, ids.cargoIncompativel] } },
-    });
-    await database.client.cargoFuncao.deleteMany({
-      where: { id: { in: [ids.cargo, ids.cargoB, ids.cargoIncompativel] } },
-    });
     await database.client.unidade.deleteMany({
       where: { id: { in: [ids.unidadeA, ids.unidadeB] } },
     });
-    await database.client.tipoUnidade.deleteMany({ where: { id: ids.tipoUnidade } });
     await database.disconnect();
   }, 30_000);
 
@@ -363,17 +336,17 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
     ).toBe(3);
   });
 
-  it('rejeita incompatibilidade, duplicidade com segmento NULL e mudança estrutural', async () => {
+  it('aceita combinações estruturais, preserva duplicidade e bloqueia mudança estrutural', async () => {
     const admin = await authenticated(credentials.admin);
     await admin
       .post('/quadros')
       .send(payload(2033, 1, { cargoFuncaoId: ids.cargoIncompativel }))
-      .expect(409);
+      .expect(201);
     expect(
       await database.client.quadroNecessidade.count({
         where: { anoLetivo: 2033, cargoFuncaoId: ids.cargoIncompativel },
       }),
-    ).toBe(0);
+    ).toBe(1);
 
     const created = await admin.post('/quadros').send(payload(2034, 1)).expect(201);
     await admin.post('/quadros').send(payload(2034, 2)).expect(409);
@@ -511,6 +484,6 @@ describeWithPostgres('Etapa 4 quadro e postos no PostgreSQL', () => {
     });
     expect(positions).toHaveLength(8);
     expect(new Set(positions.map(({ codigo }) => codigo)).size).toBe(8);
-    expect(positions.every(({ codigo }) => /^CARG-\d{10}$/.test(codigo))).toBe(true);
+    expect(positions.every(({ codigo }) => /^PEB1-\d{10}$/.test(codigo))).toBe(true);
   });
 });

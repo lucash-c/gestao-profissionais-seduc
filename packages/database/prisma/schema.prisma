@@ -76,21 +76,9 @@ enum AcaoAuditoria {
   @@map("acao_auditoria")
 }
 
-model TipoUnidade {
-  id           String             @id @default(uuid()) @db.Uuid
-  nome         String             @unique(map: "tipo_unidade_nome_key") @db.VarChar(120)
-  ativo        Boolean            @default(true)
-  criadoEm     DateTime           @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime           @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  unidades     Unidade[]
-  cargos       CargoTipoUnidade[]
-
-  @@map("tipo_unidade")
-}
-
 model Unidade {
   id            String              @id @default(uuid()) @db.Uuid
-  tipoUnidadeId String              @map("tipo_unidade_id") @db.Uuid
+  tipoUnidadeId String              @map("tipo_unidade_id") @db.VarChar(40)
   nome          String              @db.VarChar(200)
   endereco      String?             @db.VarChar(200)
   numero        String?             @db.VarChar(20)
@@ -104,7 +92,6 @@ model Unidade {
   poloRegiao    String?             @map("polo_regiao") @db.VarChar(120)
   criadoEm      DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm  DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  tipoUnidade   TipoUnidade         @relation(fields: [tipoUnidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   telefones     UnidadeTelefone[]
   quadros       QuadroNecessidade[]
   usuarios      UsuarioUnidade[]
@@ -126,47 +113,6 @@ model UnidadeTelefone {
   @@map("unidade_telefone")
 }
 
-model CargoFuncao {
-  id                         String              @id @default(uuid()) @db.Uuid
-  nome                       String              @unique(map: "cargo_funcao_nome_key") @db.VarChar(160)
-  ehProfessor                Boolean             @default(false) @map("eh_professor")
-  usaPontuacao               Boolean             @default(false) @map("usa_pontuacao")
-  permiteMultiplosExercicios Boolean             @default(false) @map("permite_multiplos_exercicios")
-  ativo                      Boolean             @default(true)
-  criadoEm                   DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm               DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  tiposUnidade               CargoTipoUnidade[]
-  profissionais              Profissional[]
-  quadros                    QuadroNecessidade[]
-  eventos                    Evento[]
-
-  @@index([ativo], map: "cargo_funcao_ativo_idx")
-  @@map("cargo_funcao")
-}
-
-model CargoTipoUnidade {
-  cargoFuncaoId String      @map("cargo_funcao_id") @db.Uuid
-  tipoUnidadeId String      @map("tipo_unidade_id") @db.Uuid
-  criadoEm      DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
-  cargoFuncao   CargoFuncao @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  tipoUnidade   TipoUnidade @relation(fields: [tipoUnidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-
-  @@id([cargoFuncaoId, tipoUnidadeId], map: "cargo_tipo_unidade_pkey")
-  @@index([tipoUnidadeId], map: "cargo_tipo_unidade_tipo_idx")
-  @@map("cargo_tipo_unidade")
-}
-
-model Periodo {
-  id           String              @id @default(uuid()) @db.Uuid
-  nome         String              @unique(map: "periodo_nome_key") @db.VarChar(60)
-  ativo        Boolean             @default(true)
-  criadoEm     DateTime            @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime            @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  quadros      QuadroNecessidade[]
-
-  @@map("periodo")
-}
-
 model SegmentoEnsino {
   id           String              @id @default(uuid()) @db.Uuid
   nome         String              @unique(map: "segmento_ensino_nome_key") @db.VarChar(120)
@@ -183,7 +129,7 @@ model Profissional {
   matricula                    String                            @unique(map: "profissional_matricula_key") @db.VarChar(50)
   nomeCompleto                 String                            @map("nome_completo") @db.VarChar(200)
   cpf                          String                            @db.VarChar(11)
-  cargoFuncaoId                String                            @map("cargo_funcao_id") @db.Uuid
+  cargoFuncaoId                String                            @map("cargo_funcao_id") @db.VarChar(40)
   pontuacao                    Decimal                           @default(0) @db.Decimal(12, 2)
   remocao                      Boolean                           @default(false)
   permuta                      Boolean                           @default(false)
@@ -202,7 +148,6 @@ model Profissional {
   ativo                        Boolean                           @default(true)
   criadoEm                     DateTime                          @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm                 DateTime                          @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  cargoFuncao                  CargoFuncao                       @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   telefones                    ProfissionalTelefone[]
   lotacoesSede                 LotacaoSede[]
   exercicios                   ExercicioProfissional[]           @relation("ExercicioOcupante")
@@ -234,16 +179,14 @@ model QuadroNecessidade {
   id               String          @id @default(uuid()) @db.Uuid
   unidadeId        String          @map("unidade_id") @db.Uuid
   anoLetivo        Int             @map("ano_letivo")
-  cargoFuncaoId    String          @map("cargo_funcao_id") @db.Uuid
-  periodoId        String          @map("periodo_id") @db.Uuid
+  cargoFuncaoId    String          @map("cargo_funcao_id") @db.VarChar(40)
+  periodoId        String          @map("periodo_id") @db.VarChar(40)
   segmentoEnsinoId String?         @map("segmento_ensino_id") @db.Uuid
   quantidade       Int
   observacoes      String?
   criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime        @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
   unidade          Unidade         @relation(fields: [unidadeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  cargoFuncao      CargoFuncao     @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  periodo          Periodo         @relation(fields: [periodoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   segmentoEnsino   SegmentoEnsino? @relation(fields: [segmentoEnsinoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   postos           PostoTrabalho[]
 
@@ -259,8 +202,8 @@ model PostoTrabalho {
   id                  String                  @id @default(uuid()) @db.Uuid
   quadroNecessidadeId String                  @map("quadro_necessidade_id") @db.Uuid
   unidadeId           String                  @map("unidade_id") @db.Uuid
-  cargoFuncaoId       String                  @map("cargo_funcao_id") @db.Uuid
-  periodoId           String                  @map("periodo_id") @db.Uuid
+  cargoFuncaoId       String                  @map("cargo_funcao_id") @db.VarChar(40)
+  periodoId           String                  @map("periodo_id") @db.VarChar(40)
   anoLetivo           Int                     @map("ano_letivo")
   codigo              String                  @db.VarChar(80)
   ativo               Boolean                 @default(true)
@@ -411,14 +354,13 @@ model Evento {
   tipo                 TipoEvento
   nome                 String               @db.VarChar(200)
   ano                  Int
-  cargoFuncaoId        String               @map("cargo_funcao_id") @db.Uuid
+  cargoFuncaoId        String               @map("cargo_funcao_id") @db.VarChar(40)
   status               StatusEvento         @default(RASCUNHO)
   iniciadoPorUsuarioId String?              @map("iniciado_por_usuario_id") @db.Uuid
   dataInicio           DateTime?            @map("data_inicio") @db.Timestamptz(3)
   dataFim              DateTime?            @map("data_fim") @db.Timestamptz(3)
   criadoEm             DateTime             @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm         DateTime             @default(now()) @updatedAt @map("atualizado_em") @db.Timestamptz(3)
-  cargoFuncao          CargoFuncao          @relation(fields: [cargoFuncaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   iniciadoPorUsuario   Usuario?             @relation(fields: [iniciadoPorUsuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   participantes        EventoParticipante[]
   movimentacoes        Movimentacao[]

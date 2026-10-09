@@ -1,12 +1,16 @@
+import { isPeriodCode } from '@seduc/contracts';
 import { z } from 'zod';
 
 import { databaseIdSchema } from '../../validation/database-id.js';
 
 const uuid = databaseIdSchema;
+const periodCode = z
+  .string()
+  .refine(isPeriodCode, { message: 'Selecione um período reconhecido.' });
 
 export const eventVacancyQuerySchema = z
   .object({
-    periodoId: uuid.optional(),
+    periodoId: periodCode.optional(),
     tipo: z.enum(['SEDE', 'SEM_SEDE']).optional(),
     unidadeId: uuid.optional(),
   })

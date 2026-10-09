@@ -34,8 +34,8 @@ const UNIT_A = '11111111-1111-4111-8111-111111111111';
 const UNIT_B = '22222222-2222-4222-8222-222222222222';
 const RECORD_ID = '33333333-3333-4333-8333-333333333333';
 const PHONE_ID = '44444444-4444-4444-8444-444444444444';
-const CARGO_ID = '55555555-5555-4555-8555-555555555555';
-const TYPE_ID = '66666666-6666-4666-8666-666666666666';
+const CARGO_ID = 'PEB1_FUNDAMENTAL';
+const TYPE_ID = 'EMEF';
 const PASSWORD = 'Senha administrativa 2026!';
 
 class AuthMemory implements AuthRepository {
@@ -243,7 +243,7 @@ describe('Etapa 3 registry API and RBAC', () => {
     expect(services.units.addPhone).toHaveBeenCalled();
   });
 
-  it('retorna issues seguras por campo e aceita UUID PostgreSQL sem bits RFC', async () => {
+  it('retorna issues seguras por campo e aceita código estrutural de unidade', async () => {
     const { agent, services } = await scenario('ADMINISTRADOR');
     const invalid = await agent
       .post('/unidades')
@@ -262,10 +262,10 @@ describe('Etapa 3 registry API and RBAC', () => {
 
     await agent
       .post('/unidades')
-      .send({ nome: 'UUID PostgreSQL', tipoUnidadeId: '10000000-0000-0000-0000-000000000001' })
+      .send({ nome: 'Centro de Inclusão', tipoUnidadeId: 'CENTRO_DE_INCLUSAO' })
       .expect(201);
     expect(services.units.create).toHaveBeenLastCalledWith(
-      expect.objectContaining({ tipoUnidadeId: '10000000-0000-0000-0000-000000000001' }),
+      expect.objectContaining({ tipoUnidadeId: 'CENTRO_DE_INCLUSAO' }),
       expect.anything(),
     );
   });

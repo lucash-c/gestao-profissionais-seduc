@@ -1,4 +1,4 @@
-import { USER_PROFILES } from '@seduc/contracts';
+import { USER_PROFILES, isPositionCode, isUnitTypeCode } from '@seduc/contracts';
 import { z } from 'zod';
 
 import { databaseIdSchema } from '../../validation/database-id.js';
@@ -63,10 +63,13 @@ const activeQuery = z
   .transform((value) => value === 'true')
   .optional();
 
+const positionCode = z.string().refine(isPositionCode, 'Selecione um cargo/função reconhecido.');
+const unitTypeCode = z.string().refine(isUnitTypeCode, 'Selecione um tipo de unidade reconhecido.');
+
 export const unitQuerySchema = paginationSchema.extend({
   ativo: activeQuery,
   nome: z.string().trim().max(200).optional(),
-  tipoUnidadeId: databaseIdSchema.optional(),
+  tipoUnidadeId: unitTypeCode.optional(),
 });
 
 export const unitCreateSchema = z
@@ -83,7 +86,7 @@ export const unitCreateSchema = z
     observacoes: nullableText(10_000).default(null),
     poloRegiao: nullableText(120).default(null),
     telefones: z.array(phoneInputSchema).max(20).default([]),
-    tipoUnidadeId: databaseIdSchema,
+    tipoUnidadeId: unitTypeCode,
   })
   .strict();
 
@@ -95,7 +98,7 @@ export const unitUpdateSchema = unitCreateSchema
 
 export const professionalQuerySchema = paginationSchema.extend({
   ativo: activeQuery,
-  cargoFuncaoId: databaseIdSchema.optional(),
+  cargoFuncaoId: positionCode.optional(),
   matricula: z.string().trim().max(50).optional(),
   nome: z.string().trim().max(200).optional(),
   permuta: activeQuery,
@@ -107,7 +110,7 @@ export const professionalQuerySchema = paginationSchema.extend({
 const professionalFields = {
   ativo: z.boolean().default(true),
   bairro: nullableText(120).default(null),
-  cargoFuncaoId: databaseIdSchema,
+  cargoFuncaoId: positionCode,
   cep: nullableCep.default(null),
   cidade: nullableText(120).default(null),
   complemento: nullableText(120).default(null),

@@ -24,11 +24,11 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
     environment: createTestEnvironment({ DATABASE_URL: databaseTestUrl }),
   });
   const ids = {
-    cargo: randomUUID(),
-    cargoOther: randomUUID(),
-    periodAfternoon: randomUUID(),
-    periodMorning: randomUUID(),
-    type: randomUUID(),
+    cargo: 'PEB1_FUNDAMENTAL',
+    cargoOther: 'PEB1_INFANTIL',
+    periodAfternoon: 'TARDE',
+    periodMorning: 'MANHA',
+    type: 'EMEF',
     unitA: randomUUID(),
     unitB: randomUUID(),
     unitC: randomUUID(),
@@ -44,31 +44,10 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
   let positionSequence = 0;
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({
-      data: { id: ids.type, nome: `Tipo Permuta ${suffix}` },
-    });
     await database.client.unidade.createMany({
       data: [ids.unitA, ids.unitB, ids.unitC].map((id, index) => ({
         id,
         nome: `Unidade Permuta ${index + 1} ${suffix}`,
-        tipoUnidadeId: ids.type,
-      })),
-    });
-    await database.client.periodo.createMany({
-      data: [
-        { id: ids.periodMorning, nome: `Manhã Permuta ${suffix}` },
-        { id: ids.periodAfternoon, nome: `Tarde Permuta ${suffix}` },
-      ],
-    });
-    await database.client.cargoFuncao.createMany({
-      data: [
-        { id: ids.cargo, nome: `Cargo Permuta ${suffix}` },
-        { id: ids.cargoOther, nome: `Outro Cargo Permuta ${suffix}` },
-      ],
-    });
-    await database.client.cargoTipoUnidade.createMany({
-      data: [ids.cargo, ids.cargoOther].map((cargoFuncaoId) => ({
-        cargoFuncaoId,
         tipoUnidadeId: ids.type,
       })),
     });

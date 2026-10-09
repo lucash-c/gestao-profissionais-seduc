@@ -24,12 +24,12 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     environment: createTestEnvironment({ DATABASE_URL: databaseTestUrl }),
   });
   const ids = {
-    cargo: randomUUID(),
-    cargoOther: randomUUID(),
-    periodAfternoon: randomUUID(),
-    periodIntegral: randomUUID(),
-    periodMorning: randomUUID(),
-    type: randomUUID(),
+    cargo: 'DIRETOR',
+    cargoOther: 'MONITOR',
+    periodAfternoon: 'TARDE',
+    periodIntegral: 'INTEGRAL',
+    periodMorning: 'MANHA',
+    type: 'EMEF',
     unitA: randomUUID(),
     unitB: randomUUID(),
     unitC: randomUUID(),
@@ -45,38 +45,12 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
   let positionSequence = 0;
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({
-      data: { id: ids.type, nome: `Tipo Central ${suffix}` },
-    });
     await database.client.unidade.createMany({
       data: [
         { id: ids.unitA, nome: `Unidade A Central ${suffix}`, tipoUnidadeId: ids.type },
         { id: ids.unitB, nome: `Unidade B Central ${suffix}`, tipoUnidadeId: ids.type },
         { id: ids.unitC, nome: `Unidade C Central ${suffix}`, tipoUnidadeId: ids.type },
       ],
-    });
-    await database.client.periodo.createMany({
-      data: [
-        { id: ids.periodMorning, nome: `Manhã Central ${suffix}` },
-        { id: ids.periodAfternoon, nome: `Tarde Central ${suffix}` },
-        { id: ids.periodIntegral, nome: `Integral Central ${suffix}` },
-      ],
-    });
-    await database.client.cargoFuncao.createMany({
-      data: [
-        {
-          id: ids.cargo,
-          nome: `Cargo Central ${suffix}`,
-          permiteMultiplosExercicios: true,
-        },
-        { id: ids.cargoOther, nome: `Outro Cargo Central ${suffix}` },
-      ],
-    });
-    await database.client.cargoTipoUnidade.createMany({
-      data: [ids.cargo, ids.cargoOther].map((cargoFuncaoId) => ({
-        cargoFuncaoId,
-        tipoUnidadeId: ids.type,
-      })),
     });
     const senhaHash = await hashPassword(password);
     await database.client.usuario.createMany({
@@ -444,7 +418,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       .send({ participanteEsperadoId: event.participantIds[0], postoTrabalhoId: integral.id })
       .expect(200);
     expect(choice.body.movimentacao).toMatchObject({
-      periodo: `Integral Central ${suffix}`,
+      periodo: 'Integral',
       postoDestinoId: integral.id,
       postoOrigemId: null,
       tipoDestino: 'SEDE',
@@ -473,7 +447,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       })
       .expect(200);
     expect(choice.body.movimentacao).toMatchObject({
-      periodo: `Tarde Central ${suffix}`,
+      periodo: 'Tarde',
       tipoDestino: 'SEM_SEDE',
     });
     expect(

@@ -19,14 +19,16 @@ import {
 
 const ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_ID = '22222222-2222-4222-8222-222222222222';
+const CARGO_ID = 'PEB1_FUNDAMENTAL';
+const PERIOD_ID = 'INTEGRAL';
 const plan = {
   anoLetivo: 2026,
-  cargoFuncao: { ativo: true, id: ID, nome: 'Professor' },
-  cargoFuncaoId: ID,
+  cargoFuncao: { ativo: true, id: CARGO_ID, nome: 'PEB1 - Fundamental' },
+  cargoFuncaoId: CARGO_ID,
   id: ID,
   observacoes: null,
-  periodo: { ativo: true, id: ID, nome: 'Integral' },
-  periodoId: ID,
+  periodo: { ativo: true, id: PERIOD_ID, nome: 'Integral' },
+  periodoId: PERIOD_ID,
   quantidade: 5,
   quantidadePostosAtivos: 5,
   segmentoEnsino: null,
@@ -38,7 +40,7 @@ const position = {
   anoLetivo: 2026,
   ativo: true,
   cargoFuncao: plan.cargoFuncao,
-  cargoFuncaoId: ID,
+  cargoFuncaoId: CARGO_ID,
   codigo: 'PEB1-0000000001',
   disponibilidade: 'DISPONIVEL_COM_SEDE' as const,
   estadoEstrutural: 'DISPONIVEL_COM_SEDE' as const,
@@ -47,7 +49,7 @@ const position = {
   motivosLiberacao: [],
   ocupanteAtual: null,
   periodo: plan.periodo,
-  periodoId: ID,
+  periodoId: PERIOD_ID,
   quadroNecessidadeId: ID,
   titularAtual: null,
   unidade: plan.unidade,
@@ -116,8 +118,8 @@ describe('Etapa 4 staffing API and RBAC', () => {
       .post('/quadros')
       .send({
         anoLetivo: 2026,
-        cargoFuncaoId: ID,
-        periodoId: ID,
+        cargoFuncaoId: CARGO_ID,
+        periodoId: PERIOD_ID,
         quantidade: 5,
         segmentoEnsinoId: null,
         unidadeId: ID,
@@ -151,8 +153,8 @@ describe('Etapa 4 staffing API and RBAC', () => {
     expect(
       staffingPlanCreateSchema.parse({
         anoLetivo: 2026,
-        cargoFuncaoId: ID,
-        periodoId: ID,
+        cargoFuncaoId: CARGO_ID,
+        periodoId: PERIOD_ID,
         quantidade: 5,
         segmentoEnsinoId: null,
         unidadeId: ID,
@@ -161,8 +163,8 @@ describe('Etapa 4 staffing API and RBAC', () => {
     expect(
       staffingPlanCreateSchema.parse({
         anoLetivo: 2026,
-        cargoFuncaoId: ID,
-        periodoId: ID,
+        cargoFuncaoId: CARGO_ID,
+        periodoId: PERIOD_ID,
         quantidade: 0,
         segmentoEnsinoId: null,
         unidadeId: ID,

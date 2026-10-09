@@ -254,13 +254,13 @@ describe('Etapa 6 API e RBAC', () => {
       .post('/eventos')
       .send({
         ano: 2026,
-        cargoFuncaoId: '30000000-0000-0000-0000-000000000001',
+        cargoFuncaoId: 'PEB1_FUNDAMENTAL',
         nome: 'Evento',
         tipo: 'REMOCAO',
       })
       .expect(201);
     expect(service.create).toHaveBeenCalledWith(
-      expect.objectContaining({ cargoFuncaoId: '30000000-0000-0000-0000-000000000001' }),
+      expect.objectContaining({ cargoFuncaoId: 'PEB1_FUNDAMENTAL' }),
       expect.anything(),
     );
     await operator.patch(`/eventos/${ID}`).send({ nome: 'Evento revisto' }).expect(200);

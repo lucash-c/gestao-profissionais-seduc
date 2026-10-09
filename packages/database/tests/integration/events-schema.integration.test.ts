@@ -27,7 +27,7 @@ describeDatabase('Etapa 6 migration e congelamento da fila', () => {
   if (!databaseTestUrl) return;
   const pool = new Pool({ connectionString: databaseTestUrl, max: 3 });
   const suffix = randomUUID();
-  const cargoId = randomUUID();
+  const cargoId = 'PEB1_FUNDAMENTAL';
   const professionalId = randomUUID();
   const secondProfessionalId = randomUUID();
   const userId = randomUUID();
@@ -35,11 +35,6 @@ describeDatabase('Etapa 6 migration e congelamento da fila', () => {
   let participantId: string;
 
   beforeAll(async () => {
-    await pool.query(
-      `INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao")
-       VALUES ($1, $2, TRUE, TRUE)`,
-      [cargoId, `Cargo evento schema ${suffix}`],
-    );
     await pool.query(
       `INSERT INTO "profissional"
         ("id", "matricula", "nome_completo", "cpf", "cargo_funcao_id", "pontuacao",
@@ -68,10 +63,19 @@ describeDatabase('Etapa 6 migration e congelamento da fila', () => {
   });
 
   afterAll(async () => {
+    await pool.query(
+      `TRUNCATE TABLE
+        "auditoria", "movimentacao_item", "movimentacao", "evento_participante", "evento",
+        "sessao_usuario", "usuario_identificador", "usuario_unidade", "usuario",
+        "afastamento_profissional", "exercicio_profissional_limite_ativo", "exercicio_profissional",
+        "lotacao_sede", "posto_trabalho", "quadro_necessidade", "profissional_telefone",
+        "profissional", "segmento_ensino", "unidade_telefone", "unidade"
+       CASCADE`,
+    );
     await pool.end();
   });
 
-  it('cria cargo obrigatório, snapshot de filhos, índice e FK RESTRICT/CASCADE', async () => {
+  it('cria código de cargo obrigatório, snapshot de filhos e índice', async () => {
     const columns = await pool.query<{ column_name: string; is_nullable: string }>(
       `SELECT "column_name", "is_nullable"
        FROM "information_schema"."columns"
@@ -91,12 +95,12 @@ describeDatabase('Etapa 6 migration e congelamento da fila', () => {
        WHERE "schemaname" = 'public' AND "indexname" = 'evento_cargo_funcao_idx'`,
     );
     expect(index.rowCount).toBe(1);
-    const foreignKey = await pool.query<{ confdeltype: string; confupdtype: string }>(
-      `SELECT "confdeltype", "confupdtype"
-       FROM "pg_constraint"
-       WHERE "conname" = 'evento_cargo_funcao_id_fkey'`,
+    await expectConstraint(
+      pool.query(`UPDATE "evento" SET "cargo_funcao_id" = 'CARGO_INEXISTENTE' WHERE "id" = $1`, [
+        eventId,
+      ]),
+      'evento_cargo_funcao_codigo_check',
     );
-    expect(foreignKey.rows[0]).toEqual({ confdeltype: 'r', confupdtype: 'c' });
   });
 
   it('rejeita numero_filhos_snapshot negativo', async () => {

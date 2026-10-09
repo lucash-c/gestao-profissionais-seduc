@@ -22,11 +22,11 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
   });
   const suffix = randomUUID();
   const ids = {
-    cargoOther: randomUUID(),
-    cargoScore: randomUUID(),
-    cargoWithoutScore: randomUUID(),
-    period: randomUUID(),
-    type: randomUUID(),
+    cargoOther: 'PEB1_INFANTIL',
+    cargoScore: 'PEB1_FUNDAMENTAL',
+    cargoWithoutScore: 'MONITOR',
+    period: 'MANHA',
+    type: 'EMEF',
     unit: randomUUID(),
   };
   const password = 'Senha Etapa 6 2026!';
@@ -93,32 +93,8 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
   }
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({
-      data: { id: ids.type, nome: `Tipo eventos ${suffix}` },
-    });
     await database.client.unidade.create({
       data: { id: ids.unit, nome: `Unidade eventos ${suffix}`, tipoUnidadeId: ids.type },
-    });
-    await database.client.periodo.create({
-      data: { id: ids.period, nome: `Período eventos ${suffix}` },
-    });
-    await database.client.cargoFuncao.createMany({
-      data: [
-        {
-          ehProfessor: true,
-          id: ids.cargoScore,
-          nome: `Professor eventos ${suffix}`,
-          usaPontuacao: true,
-        },
-        { id: ids.cargoWithoutScore, nome: `Agente eventos ${suffix}` },
-        { id: ids.cargoOther, nome: `Outro cargo eventos ${suffix}` },
-      ],
-    });
-    await database.client.cargoTipoUnidade.createMany({
-      data: [ids.cargoScore, ids.cargoWithoutScore].map((cargoFuncaoId) => ({
-        cargoFuncaoId,
-        tipoUnidadeId: ids.type,
-      })),
     });
 
     const senhaHash = await hashPassword(password);

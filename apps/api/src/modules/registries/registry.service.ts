@@ -1,10 +1,21 @@
 import type {
   AuthenticatedUser,
   LookupRecord,
+  PositionCode,
+  UnitTypeCode,
   PaginatedResponse,
   ProfessionalRecord,
   UnitRecord,
   UserRecord,
+} from '@seduc/contracts';
+import {
+  PERIODS,
+  POSITIONS,
+  UNIT_TYPES,
+  periodLookup,
+  positionDefinition,
+  positionLookup,
+  unitTypeLookup,
 } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
@@ -85,7 +96,6 @@ export interface RegistryServices {
 
 const unitInclude = {
   telefones: { orderBy: { tipo: 'asc' as const } },
-  tipoUnidade: { select: { ativo: true, id: true, nome: true } },
 } as const;
 
 const professionalInclude = {
@@ -93,16 +103,6 @@ const professionalInclude = {
     orderBy: { dataInicio: 'desc' as const },
     take: 1,
     where: { dataFim: null },
-  },
-  cargoFuncao: {
-    select: {
-      ativo: true,
-      ehProfessor: true,
-      id: true,
-      nome: true,
-      permiteMultiplosExercicios: true,
-      usaPontuacao: true,
-    },
   },
   exercicios: {
     include: {
@@ -150,7 +150,7 @@ function mapUnit(unit: Prisma.UnidadeGetPayload<{ include: typeof unitInclude }>
     observacoes: unit.observacoes,
     poloRegiao: unit.poloRegiao,
     telefones: unit.telefones,
-    tipoUnidade: unit.tipoUnidade,
+    tipoUnidade: unitTypeLookup(unit.tipoUnidadeId as UnitTypeCode),
     tipoUnidadeId: unit.tipoUnidadeId,
   };
 }
@@ -176,7 +176,7 @@ function mapProfessional(
   return {
     ativo: professional.ativo,
     bairro: professional.bairro,
-    cargoFuncao: professional.cargoFuncao,
+    cargoFuncao: positionLookup(professional.cargoFuncaoId as PositionCode),
     cargoFuncaoId: professional.cargoFuncaoId,
     cep: professional.cep,
     cidade: professional.cidade,
@@ -471,18 +471,10 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
   return {
     lookups: {
       async cargos() {
-        return client.cargoFuncao.findMany({
-          orderBy: { nome: 'asc' },
-          select: { ativo: true, id: true, nome: true },
-          where: { ativo: true },
-        });
+        return POSITIONS.map((position) => positionLookup(position.code));
       },
       async periodos() {
-        return client.periodo.findMany({
-          orderBy: { nome: 'asc' },
-          select: { ativo: true, id: true, nome: true },
-          where: { ativo: true },
-        });
+        return PERIODS.map((period) => periodLookup(period.code));
       },
       async segmentos() {
         return client.segmentoEnsino.findMany({
@@ -492,11 +484,7 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
         });
       },
       async tiposUnidade() {
-        return client.tipoUnidade.findMany({
-          orderBy: { nome: 'asc' },
-          select: { ativo: true, id: true, nome: true },
-          where: { ativo: true },
-        });
+        return UNIT_TYPES.map((unitType) => unitTypeLookup(unitType.code));
       },
       async unidades(user) {
         const unitIds = scopedUnitIds(user);
@@ -622,7 +610,13 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
           ...(query.usaPontuacao === undefined
             ? {}
             : {
-                cargoFuncao: { ehProfessor: query.usaPontuacao, usaPontuacao: query.usaPontuacao },
+                cargoFuncaoId: {
+                  in: POSITIONS.filter(
+                    (position) =>
+                      position.ehProfessor === query.usaPontuacao &&
+                      position.usaPontuacao === query.usaPontuacao,
+                  ).map((position) => position.code),
+                },
               }),
           ...(unitIds ? administrativeUnitScope(unitIds) : {}),
         };
@@ -718,11 +712,12 @@ export function createPrismaRegistryServices(database: DatabaseConnection): Regi
       },
       async updateScore(id, score, user) {
         const target = await client.profissional.findUnique({
-          select: { cargoFuncao: { select: { ehProfessor: true, usaPontuacao: true } } },
+          select: { cargoFuncaoId: true },
           where: { id },
         });
         if (!target) throw new HttpError(404, 'NOT_FOUND', 'Profissional não encontrado.');
-        if (!target.cargoFuncao.ehProfessor || !target.cargoFuncao.usaPontuacao) {
+        const position = positionDefinition(target.cargoFuncaoId as PositionCode);
+        if (!position.ehProfessor || !position.usaPontuacao) {
           throw new HttpError(
             409,
             'SCORE_NOT_APPLICABLE',

@@ -10,10 +10,13 @@ import type {
   EventPeriodRuleStatus,
   EventRecord,
   PaginatedResponse,
+  PeriodCode,
+  PositionCode,
   PublicEventChoice,
   PublicEventDisplay,
   WorkPositionRecord,
 } from '@seduc/contracts';
+import { periodLookup, positionDefinition } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
@@ -38,12 +41,11 @@ const participantInclude = {
 } as const;
 
 const positionLinkInclude = {
-  quadroNecessidade: { include: { periodo: true, unidade: true } },
+  quadroNecessidade: { include: { unidade: true } },
 } as const;
 
 const professionalSituationInclude = {
   afastamentos: { select: { id: true }, where: { dataFim: null } },
-  cargoFuncao: { select: { permiteMultiplosExercicios: true } },
   exercicios: {
     include: {
       postoTrabalho: { include: positionLinkInclude },
@@ -120,13 +122,12 @@ function mapLink(position: {
   id: string;
   periodoId: string;
   quadroNecessidade: {
-    periodo: { ativo: boolean; id: string; nome: string };
     unidade: { ativo: boolean; id: string; nome: string };
   };
   unidadeId: string;
 }): EventOperationalLink {
   return {
-    periodo: asLookup(position.quadroNecessidade.periodo),
+    periodo: periodLookup(position.periodoId as PeriodCode),
     periodoId: position.periodoId,
     postoId: position.id,
     unidade: asLookup(position.quadroNecessidade.unidade),
@@ -197,7 +198,7 @@ function mapMovement(movement: MovementPayload): EventOperationalMovement {
     dataHora: movement.dataHora.toISOString(),
     id: movement.id,
     origem: item.postoOrigem ? mapLink(item.postoOrigem) : null,
-    periodo: item.postoDestino.quadroNecessidade.periodo.nome,
+    periodo: periodLookup(item.postoDestino.periodoId as PeriodCode).nome,
     postoDestinoId: item.postoDestinoId,
     postoOrigemId: item.postoOrigemId,
     profissional: item.profissional.nomeCompleto,
@@ -579,9 +580,11 @@ async function buildCentral(
   assertActiveEvent(event);
   const { current, queue } = await loadQueue(transaction, event);
   const mappedQueue = queue.map((participant) =>
-    mapParticipant(participant, event.cargoFuncao.nome),
+    mapParticipant(participant, positionDefinition(event.cargoFuncaoId as PositionCode).label),
   );
-  const currentMapped = current ? mapParticipant(current, event.cargoFuncao.nome) : null;
+  const currentMapped = current
+    ? mapParticipant(current, positionDefinition(event.cargoFuncaoId as PositionCode).label)
+    : null;
   let situation: EventOperationalSituation | null = null;
   let rule: EventPeriodRuleStatus | null = null;
   let vacancies: WorkPositionRecord[] = [];
@@ -767,7 +770,10 @@ export function createPrismaEventOperationServices(
           });
           return {
             atendido: {
-              ...mapParticipant(expected, event.cargoFuncao.nome),
+              ...mapParticipant(
+                expected,
+                positionDefinition(event.cargoFuncaoId as PositionCode).label,
+              ),
               status: 'ATENDIDO' as const,
             },
             movimentacao: mapMovement(movement),

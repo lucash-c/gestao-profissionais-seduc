@@ -29,6 +29,7 @@ describe('componentes semânticos Fluent', () => {
     expect(wrapper.get('[data-testid="data-comparison"]').text()).toContain('Nome anterior');
     expect(wrapper.get('[data-testid="data-comparison"]').text()).toContain('Nome corrigido');
     expect(wrapper.findAll('.data-comparison__row--changed')).toHaveLength(1);
-    expect(wrapper.text()).toContain('Ver JSON técnico');
+    expect(wrapper.text()).toContain('Ver detalhes técnicos (JSON)');
+    expect(wrapper.get('pre').text()).toContain('"nomeCompleto": "Nome anterior"');
   });
 });

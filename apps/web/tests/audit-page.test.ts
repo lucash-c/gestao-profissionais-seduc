@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe('histórico de auditoria', () => {
-  it('lista, filtra, pagina no servidor e abre detalhes ANTES/DEPOIS', async () => {
+  it('lista o resumo administrativo e preserva os detalhes técnicos no mesmo registro', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [{ component: { template: '<div />' }, path: '/:pathMatch(.*)*' }],
@@ -44,18 +44,15 @@ describe('histórico de auditoria', () => {
       { attachTo: document.body, global: { plugins: [Quasar, router], stubs: { teleport: true } } },
     );
     await flushPromises();
-    expect(wrapper.get('[data-testid="audit-table"]').text()).toContain('PROFISSIONAL');
+    const table = wrapper.get('[data-testid="audit-table"]');
+    expect(table.text()).toContain('Cadastro de profissional atualizado');
+    expect(table.text()).toContain('Nome alterado');
+    expect(table.text()).toContain('Responsável');
+    expect(table.text()).toContain('Diretor');
+    expect(table.text()).toContain('Ver detalhes técnicos (JSON)');
     await wrapper.get('[data-testid="audit-filter"]').trigger('click');
     await flushPromises();
     expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, pageSize: 20 }));
-    await wrapper
-      .findAll('button')
-      .find((item) => item.text().includes('Detalhes'))!
-      .trigger('click');
-    await flushPromises();
-    const details = wrapper.get('[data-testid="audit-details"]');
-    expect(details.text()).toContain('ANTES');
-    expect(details.text()).toContain('DEPOIS');
     wrapper.unmount();
   });
 

@@ -20,12 +20,12 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
   });
   const suffix = randomUUID();
   const ids = {
-    cargo: randomUUID(),
-    directorCargo: randomUUID(),
-    period: randomUUID(),
+    cargo: 'PEB1_FUNDAMENTAL',
+    directorCargo: 'DIRETOR',
+    period: 'MANHA',
     quadroA: randomUUID(),
     quadroB: randomUUID(),
-    type: randomUUID(),
+    type: 'EMEF',
     unitA: randomUUID(),
     unitB: randomUUID(),
     unitC: randomUUID(),
@@ -42,7 +42,6 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
   };
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({ data: { id: ids.type, nome: `Tipo ${suffix}` } });
     await database.client.unidade.createMany({
       data: [
         { id: ids.unitA, nome: `Unidade A ${suffix}`, tipoUnidadeId: ids.type },
@@ -50,19 +49,6 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
         { id: ids.unitC, nome: `Unidade C ${suffix}`, tipoUnidadeId: ids.type },
       ],
     });
-    await database.client.cargoFuncao.create({
-      data: { ehProfessor: true, id: ids.cargo, nome: `Professor ${suffix}`, usaPontuacao: true },
-    });
-    await database.client.cargoFuncao.create({
-      data: {
-        ehProfessor: false,
-        id: ids.directorCargo,
-        nome: `Diretor ${suffix}`,
-        permiteMultiplosExercicios: true,
-        usaPontuacao: false,
-      },
-    });
-    await database.client.periodo.create({ data: { id: ids.period, nome: `Período ${suffix}` } });
     const senhaHash = await hashPassword(password);
     await database.client.$transaction(async (transaction) => {
       await transaction.usuario.createMany({
@@ -154,11 +140,6 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       where: { unidade: { nome: { contains: suffix } } },
     });
     await database.client.unidade.deleteMany({ where: { nome: { contains: suffix } } });
-    await database.client.periodo.deleteMany({ where: { id: ids.period } });
-    await database.client.cargoFuncao.deleteMany({
-      where: { id: { in: [ids.cargo, ids.directorCargo] } },
-    });
-    await database.client.tipoUnidade.deleteMany({ where: { id: ids.type } });
     await database.disconnect();
   });
 
@@ -167,6 +148,35 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
     await agent.post('/auth/login').send({ identifier: login, password }).expect(200);
     return agent;
   }
+
+  it('expõe tipos, cargos e períodos fixos a partir do código compartilhado', async () => {
+    const admin = await authenticated(credentials.admin);
+    const [unitTypes, positions, periods] = await Promise.all([
+      admin.get('/dominios/tipos-unidade').expect(200),
+      admin.get('/dominios/cargos').expect(200),
+      admin.get('/dominios/periodos').expect(200),
+    ]);
+    expect(unitTypes.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'CMEA', nome: 'CMEA' }),
+        expect.objectContaining({ id: 'CENTRO_DE_INCLUSAO', nome: 'CENTRO DE INCLUSÃO' }),
+      ]),
+    );
+    expect(positions.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'PEB1_FUNDAMENTAL', nome: 'PEB1 - Fundamental' }),
+        expect.objectContaining({ id: 'DIRETOR', nome: 'Diretor(a)' }),
+      ]),
+    );
+    expect(periods.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'INTEGRAL', nome: 'Integral' }),
+        expect.objectContaining({ id: 'MANHA', nome: 'Manhã' }),
+        expect.objectContaining({ id: 'TARDE', nome: 'Tarde' }),
+        expect.objectContaining({ id: 'NOITE', nome: 'Noite' }),
+      ]),
+    );
+  });
 
   function createProfessional(
     agent: ReturnType<typeof request.agent>,
@@ -395,11 +405,11 @@ describeWithPostgres('Etapa 3 registries on PostgreSQL', () => {
       ]),
     );
     expect(priorityRecord.body.exerciciosAtuais).toHaveLength(2);
-    const incompatibleCargoChange = await admin
+    const structuralCargoChange = await admin
       .patch(`/profissionais/${priority.body.id}`)
       .send({ cargoFuncaoId: ids.cargo })
       .expect(409);
-    expect(incompatibleCargoChange.body).toMatchObject({ error: 'BUSINESS_RULE_CONFLICT' });
+    expect(structuralCargoChange.body).toMatchObject({ error: 'BUSINESS_RULE_CONFLICT' });
 
     const globalList = await admin.get('/profissionais').query({ pageSize: 100 }).expect(200);
     expect(globalList.body.items.map((item: { id: string }) => item.id)).toContain(

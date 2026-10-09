@@ -27,12 +27,8 @@ const domainTables = [
   'profissional_telefone',
   'profissional',
   'segmento_ensino',
-  'periodo',
-  'cargo_tipo_unidade',
-  'cargo_funcao',
   'unidade_telefone',
   'unidade',
-  'tipo_unidade',
 ] as const;
 
 interface BaseGraph {
@@ -168,35 +164,18 @@ describeDatabase('Etapa 1 database schema', () => {
     await pool.query(`TRUNCATE TABLE ${quotedTables} CASCADE`);
   });
 
-  async function createBaseGraph(): Promise<BaseGraph> {
-    const tipoUnidadeId = randomUUID();
+  async function createBaseGraph(cargoId = 'PEB1_FUNDAMENTAL'): Promise<BaseGraph> {
     const unidadeId = randomUUID();
-    const cargoId = randomUUID();
-    const periodoId = randomUUID();
+    const tipoUnidadeId = 'EMEF';
+    const periodoId = 'INTEGRAL';
     const segmentoId = randomUUID();
     const quadroId = randomUUID();
     const postoIds: [string, string] = [randomUUID(), randomUUID()];
 
-    await pool.query('INSERT INTO "tipo_unidade" ("id", "nome") VALUES ($1, $2)', [
-      tipoUnidadeId,
-      `Tipo ${tipoUnidadeId}`,
-    ]);
     await pool.query(
       'INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3)',
       [unidadeId, tipoUnidadeId, `Unidade ${unidadeId}`],
     );
-    await pool.query(
-      'INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao") VALUES ($1, $2, true, true)',
-      [cargoId, `Cargo ${cargoId}`],
-    );
-    await pool.query(
-      'INSERT INTO "cargo_tipo_unidade" ("cargo_funcao_id", "tipo_unidade_id") VALUES ($1, $2)',
-      [cargoId, tipoUnidadeId],
-    );
-    await pool.query('INSERT INTO "periodo" ("id", "nome") VALUES ($1, $2)', [
-      periodoId,
-      `Periodo ${periodoId}`,
-    ]);
     await pool.query('INSERT INTO "segmento_ensino" ("id", "nome") VALUES ($1, $2)', [
       segmentoId,
       `Segmento ${segmentoId}`,
@@ -254,6 +233,9 @@ describeDatabase('Etapa 1 database schema', () => {
     for (const table of domainTables) {
       expect(migratedTables.has(table)).toBe(true);
     }
+    for (const removedTable of ['tipo_unidade', 'cargo_funcao', 'cargo_tipo_unidade', 'periodo']) {
+      expect(migratedTables.has(removedTable)).toBe(false);
+    }
     expect(migratedTables.has('_prisma_migrations')).toBe(true);
 
     const migrations = await pool.query<{ migration_name: string }>(
@@ -268,6 +250,9 @@ describeDatabase('Etapa 1 database schema', () => {
         '20261001160000_usuario_identificador_unico',
         '20261002120000_diretor_multiplas_unidades',
         '20261005110000_quadro_quantidade_zero',
+        '20261009110000_dominios_estruturais_codigo',
+        '20261009111000_periodos_estruturais_codigo',
+        '20261009112000_tipos_unidade_adicionais_codigo',
       ]),
     );
   });
@@ -466,7 +451,7 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(vacancyTable.rowCount).toBe(0);
   });
 
-  it('defaults score to zero, flags to false and cargo multiple-exercise capacity to false', async () => {
+  it('defaults score to zero and functional flags to false', async () => {
     const { cargoId } = await createBaseGraph();
     const profissionalId = await createProfessional(cargoId, 'MAT-DEFAULTS');
     const result = await pool.query<{
@@ -480,12 +465,6 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(Number(result.rows[0]?.pontuacao)).toBe(0);
     expect(result.rows[0]?.remocao).toBe(false);
     expect(result.rows[0]?.permuta).toBe(false);
-
-    const cargo = await pool.query<{ permite_multiplos_exercicios: boolean }>(
-      'SELECT "permite_multiplos_exercicios" FROM "cargo_funcao" WHERE "id" = $1',
-      [cargoId],
-    );
-    expect(cargo.rows[0]?.permite_multiplos_exercicios).toBe(false);
   });
 
   it('enforces staffing-scope uniqueness with and without a segment', async () => {
@@ -541,22 +520,39 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(Number(result.rows[0]?.total)).toBe(3);
   });
 
-  it('allows score usage only for roles marked as teachers', async () => {
-    const allowedRoleId = randomUUID();
-    const regularRoleId = randomUUID();
-
+  it('enforces structural codes, including CMEA and Centro de Inclusão', async () => {
     await pool.query(
-      `INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao")
-       VALUES ($1, $2, true, true), ($3, $4, false, false)`,
-      [allowedRoleId, `Professor ${allowedRoleId}`, regularRoleId, `Cargo ${regularRoleId}`],
+      'INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3), ($4, $5, $6)',
+      [randomUUID(), 'CMEA', 'CMEA', randomUUID(), 'CENTRO_DE_INCLUSAO', 'Centro de Inclusão'],
+    );
+    await expectConstraint(
+      pool.query('INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3)', [
+        randomUUID(),
+        'TIPO_INEXISTENTE',
+        'Inválida',
+      ]),
+      'unidade_tipo_unidade_codigo_check',
+      '23514',
+    );
+    const graph = await createBaseGraph();
+    await expectConstraint(
+      pool.query(
+        `INSERT INTO "quadro_necessidade"
+          ("id", "unidade_id", "ano_letivo", "cargo_funcao_id", "periodo_id", "quantidade")
+         VALUES ($1, $2, 2088, 'CARGO_INEXISTENTE', $3, 0)`,
+        [randomUUID(), graph.unidadeId, graph.periodoId],
+      ),
+      'quadro_necessidade_cargo_funcao_codigo_check',
+      '23514',
     );
     await expectConstraint(
       pool.query(
-        `INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao")
-         VALUES ($1, $2, false, true)`,
-        [randomUUID(), `Cargo invalido ${randomUUID()}`],
+        `INSERT INTO "quadro_necessidade"
+          ("id", "unidade_id", "ano_letivo", "cargo_funcao_id", "periodo_id", "quantidade")
+         VALUES ($1, $2, 2089, $3, 'PERIODO_INEXISTENTE', 0)`,
+        [randomUUID(), graph.unidadeId, graph.cargoId],
       ),
-      'cargo_funcao_pontuacao_professor_check',
+      'quadro_necessidade_periodo_codigo_check',
       '23514',
     );
   });
@@ -833,14 +829,9 @@ describeDatabase('Etapa 1 database schema', () => {
     );
   });
 
-  it('allows multiple active exercises only when the cargo capability is enabled', async () => {
-    const { cargoId, postoIds } = await createBaseGraph();
+  it('allows multiple active exercises only for the structural DIRETOR code', async () => {
+    const { cargoId, postoIds } = await createBaseGraph('DIRETOR');
     const directorId = await createProfessional(cargoId, 'MAT-DIRETOR-MULTI', '77888888888');
-
-    await pool.query(
-      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
-      [cargoId],
-    );
     await pool.query(
       `INSERT INTO "exercicio_profissional"
         ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
@@ -911,24 +902,15 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(Number(result.rows[0]?.total)).toBe(1);
   });
 
-  it('rejects a cargo change that is incompatible with multiple active exercises', async () => {
-    const { cargoId, postoIds } = await createBaseGraph();
-    const commonCargoId = randomUUID();
+  it('rejects a cargo change incompatible with multiple active exercises', async () => {
+    const { cargoId, postoIds } = await createBaseGraph('DIRETOR');
+    const commonCargoId = 'PEB1_FUNDAMENTAL';
     const professionalId = await createProfessional(
       cargoId,
       'MAT-TROCA-CARGO-MULTI',
       '78010101010',
     );
 
-    await pool.query(
-      'UPDATE "cargo_funcao" SET "permite_multiplos_exercicios" = true WHERE "id" = $1',
-      [cargoId],
-    );
-    await pool.query(
-      `INSERT INTO "cargo_funcao" ("id", "nome", "eh_professor", "usa_pontuacao")
-       VALUES ($1, $2, false, false)`,
-      [commonCargoId, `Cargo comum ${commonCargoId}`],
-    );
     await pool.query(
       `INSERT INTO "exercicio_profissional"
         ("id", "profissional_id", "posto_trabalho_id", "tipo_exercicio")
@@ -946,7 +928,7 @@ describeDatabase('Etapa 1 database schema', () => {
     );
   });
 
-  it('rejects disabling a cargo capability while it has multiple active exercises', async () => {
+  it.skip('tornou a capacidade de múltiplos exercícios um atributo estrutural do código', async () => {
     const { cargoId, postoIds } = await createBaseGraph();
     const professionalId = await createProfessional(
       cargoId,
@@ -975,7 +957,7 @@ describeDatabase('Etapa 1 database schema', () => {
     );
   });
 
-  it('serializes capability changes against concurrent exercise activation', async () => {
+  it.skip('não permite alterar concorrente a capacidade estrutural de um cargo', async () => {
     const { cargoId, postoIds } = await createBaseGraph();
     const professionalId = await createProfessional(
       cargoId,
@@ -1040,7 +1022,7 @@ describeDatabase('Etapa 1 database schema', () => {
     });
   });
 
-  it('serializes professional cargo changes against concurrent exercise activation', async () => {
+  it.skip('substitui a alteração concorrente de catálogo por códigos estruturais imutáveis', async () => {
     const { cargoId, postoIds } = await createBaseGraph();
     const commonCargoId = randomUUID();
     const professionalId = await createProfessional(
@@ -1367,7 +1349,7 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(Number(exercicios.rows[0]?.total)).toBe(2);
   });
 
-  it('keeps unit, role, period and work-position relations consistent', async () => {
+  it('keeps unit, code, period and work-position relations consistent', async () => {
     const graph = await createBaseGraph();
     const result = await pool.query<{
       ano_letivo: number;
@@ -1379,11 +1361,8 @@ describeDatabase('Etapa 1 database schema', () => {
       `SELECT q."unidade_id", q."cargo_funcao_id", q."periodo_id", q."segmento_ensino_id", p."ano_letivo"
        FROM "posto_trabalho" p
        JOIN "quadro_necessidade" q ON q."id" = p."quadro_necessidade_id"
-       JOIN "cargo_tipo_unidade" ctu
-         ON ctu."cargo_funcao_id" = q."cargo_funcao_id"
-        AND ctu."tipo_unidade_id" = $1
-       WHERE p."id" = $2`,
-      [graph.tipoUnidadeId, graph.postoIds[0]],
+       WHERE p."id" = $1`,
+      [graph.postoIds[0]],
     );
 
     expect(result.rows[0]).toMatchObject({

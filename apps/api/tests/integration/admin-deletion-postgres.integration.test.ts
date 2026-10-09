@@ -20,9 +20,9 @@ describeWithPostgres('Etapa 11 exclusões administrativas protegidas', () => {
   const suffix = randomUUID();
   const ids = {
     admin: randomUUID(),
-    cargo: randomUUID(),
-    period: randomUUID(),
-    type: randomUUID(),
+    cargo: 'PEB1_FUNDAMENTAL',
+    period: 'MANHA',
+    type: 'EMEF',
     unit: randomUUID(),
   };
   const login = `delete-admin-${suffix}`;
@@ -30,18 +30,8 @@ describeWithPostgres('Etapa 11 exclusões administrativas protegidas', () => {
   let agent: ReturnType<typeof request.agent>;
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({ data: { id: ids.type, nome: `Delete ${suffix}` } });
     await database.client.unidade.create({
       data: { id: ids.unit, nome: `Delete unit ${suffix}`, tipoUnidadeId: ids.type },
-    });
-    await database.client.cargoFuncao.create({
-      data: { id: ids.cargo, nome: `Delete cargo ${suffix}` },
-    });
-    await database.client.cargoTipoUnidade.create({
-      data: { cargoFuncaoId: ids.cargo, tipoUnidadeId: ids.type },
-    });
-    await database.client.periodo.create({
-      data: { id: ids.period, nome: `Delete period ${suffix}` },
     });
     await database.client.usuario.create({
       data: {
@@ -85,13 +75,7 @@ describeWithPostgres('Etapa 11 exclusões administrativas protegidas', () => {
     await database.client.usuario.deleteMany({
       where: { OR: [{ id: ids.admin }, { login: { contains: suffix } }] },
     });
-    await database.client.periodo.delete({ where: { id: ids.period } });
-    await database.client.cargoTipoUnidade.delete({
-      where: { cargoFuncaoId_tipoUnidadeId: { cargoFuncaoId: ids.cargo, tipoUnidadeId: ids.type } },
-    });
-    await database.client.cargoFuncao.delete({ where: { id: ids.cargo } });
     await database.client.unidade.delete({ where: { id: ids.unit } });
-    await database.client.tipoUnidade.delete({ where: { id: ids.type } });
     await database.disconnect();
   });
 

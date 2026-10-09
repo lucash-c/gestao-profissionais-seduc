@@ -19,7 +19,7 @@ describeWithPostgres('Etapa 11 auditoria de CRUD e remoção da correção admin
     environment: createTestEnvironment({ DATABASE_URL: databaseTestUrl }),
   });
   const suffix = randomUUID();
-  const typeId = randomUUID();
+  const typeId = 'EMEF';
   const unitId = randomUUID();
   const adminId = randomUUID();
   const secondAdminId = randomUUID();
@@ -32,7 +32,6 @@ describeWithPostgres('Etapa 11 auditoria de CRUD e remoção da correção admin
   };
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({ data: { id: typeId, nome: `Audit ${suffix}` } });
     await database.client.unidade.create({
       data: { id: unitId, nome: `Unidade auditada ${suffix}`, tipoUnidadeId: typeId },
     });
@@ -73,8 +72,7 @@ describeWithPostgres('Etapa 11 auditoria de CRUD e remoção da correção admin
     await database.client.usuario.deleteMany({
       where: { id: { in: [adminId, secondAdminId, directorId] } },
     });
-    await database.client.unidade.deleteMany({ where: { tipoUnidadeId: typeId } });
-    await database.client.tipoUnidade.delete({ where: { id: typeId } });
+    await database.client.unidade.deleteMany({ where: { nome: { contains: suffix } } });
     await database.disconnect();
   });
 

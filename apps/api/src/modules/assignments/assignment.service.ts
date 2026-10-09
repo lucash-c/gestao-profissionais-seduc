@@ -4,10 +4,13 @@ import type {
   ProfessionalExerciseHistory,
   ProfessionalPlacementHistory,
   ProfessionalRelationshipsRecord,
+  PeriodCode,
+  PositionCode,
   WorkPositionProfessional,
   WorkPositionRecord,
   WorkPositionReleaseReason,
 } from '@seduc/contracts';
+import { periodLookup, positionDefinition, positionLookup } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
@@ -50,8 +53,6 @@ export const positionAvailabilityInclude = {
   },
   quadroNecessidade: {
     include: {
-      cargoFuncao: { select: { ativo: true, id: true, nome: true } },
-      periodo: { select: { ativo: true, id: true, nome: true } },
       unidade: { select: { ativo: true, id: true, nome: true, tipoUnidadeId: true } },
     },
   },
@@ -158,7 +159,7 @@ export function mapWorkPosition(position: PositionAvailabilityPayload): WorkPosi
   return {
     anoLetivo: position.anoLetivo,
     ativo: position.ativo,
-    cargoFuncao: position.quadroNecessidade.cargoFuncao,
+    cargoFuncao: positionLookup(position.cargoFuncaoId as PositionCode),
     cargoFuncaoId: position.cargoFuncaoId,
     codigo: position.codigo,
     disponibilidade,
@@ -176,7 +177,7 @@ export function mapWorkPosition(position: PositionAvailabilityPayload): WorkPosi
     id: position.id,
     motivosLiberacao,
     ocupanteAtual: occupant ? mapProfessional(occupant) : null,
-    periodo: position.quadroNecessidade.periodo,
+    periodo: periodLookup(position.periodoId as PeriodCode),
     periodoId: position.periodoId,
     quadroNecessidadeId: position.quadroNecessidadeId,
     reservadoParaEvento: position.reservadoParaEvento,
@@ -571,7 +572,6 @@ export function createPrismaAssignmentServices(
               transaction.profissional.findUnique({
                 include: {
                   afastamentos: { select: { id: true }, where: { dataFim: null } },
-                  cargoFuncao: { select: { permiteMultiplosExercicios: true } },
                   lotacoesSede: { select: { id: true }, take: 1, where: { dataFim: null } },
                   _count: { select: { exercicios: { where: { dataFim: null } } } },
                 },
@@ -615,7 +615,8 @@ export function createPrismaAssignmentServices(
               );
             }
             if (
-              !professional.cargoFuncao.permiteMultiplosExercicios &&
+              !positionDefinition(professional.cargoFuncaoId as PositionCode)
+                .permiteMultiplosExercicios &&
               professional._count.exercicios > 0
             ) {
               throw new HttpError(

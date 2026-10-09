@@ -9,10 +9,10 @@ import { createTestEnvironment } from '../helpers/environment.js';
 
 const databaseTestUrl = process.env.DATABASE_TEST_URL;
 const describeWithPostgres = databaseTestUrl ? describe : describe.skip;
-const TYPE_ID = '10000000-0000-0000-0000-000000000001';
-const CARGO_ID = '30000000-0000-0000-0000-000000000001';
+const TYPE_ID = 'EMEF';
+const CARGO_ID = 'PEB1_FUNDAMENTAL';
 
-describeWithPostgres('UUIDs canônicos do PostgreSQL em cadastros reais', () => {
+describeWithPostgres('códigos estruturais em cadastros reais', () => {
   if (!databaseTestUrl) return;
   const database = createDatabaseConnection(databaseTestUrl);
   const app = createApp({
@@ -25,12 +25,6 @@ describeWithPostgres('UUIDs canônicos do PostgreSQL em cadastros reais', () => 
   const operatorLogin = `uuid-operator-${suffix}`;
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({
-      data: { id: TYPE_ID, nome: `UUID tipo ${suffix}` },
-    });
-    await database.client.cargoFuncao.create({
-      data: { id: CARGO_ID, nome: `UUID cargo ${suffix}` },
-    });
     const senhaHash = await hashPassword(password);
     await database.client.usuario.createMany({
       data: [
@@ -44,17 +38,15 @@ describeWithPostgres('UUIDs canônicos do PostgreSQL em cadastros reais', () => 
     await database.client.auditoria.deleteMany({
       where: { usuario: { login: { contains: suffix } } },
     });
-    await database.client.evento.deleteMany({ where: { cargoFuncaoId: CARGO_ID } });
+    await database.client.evento.deleteMany({ where: { nome: { contains: suffix } } });
     await database.client.unidadeTelefone.deleteMany({
-      where: { unidade: { tipoUnidadeId: TYPE_ID } },
+      where: { unidade: { nome: { contains: suffix } } },
     });
-    await database.client.unidade.deleteMany({ where: { tipoUnidadeId: TYPE_ID } });
+    await database.client.unidade.deleteMany({ where: { nome: { contains: suffix } } });
     await database.client.sessaoUsuario.deleteMany({
       where: { usuario: { login: { contains: suffix } } },
     });
     await database.client.usuario.deleteMany({ where: { login: { contains: suffix } } });
-    await database.client.cargoFuncao.delete({ where: { id: CARGO_ID } });
-    await database.client.tipoUnidade.delete({ where: { id: TYPE_ID } });
     await database.disconnect();
   });
 
@@ -64,7 +56,7 @@ describeWithPostgres('UUIDs canônicos do PostgreSQL em cadastros reais', () => 
     return agent;
   }
 
-  it('cria unidade e normaliza CEP/telefone usando o tipo 1000…', async () => {
+  it('cria unidade e normaliza CEP/telefone usando tipo estrutural', async () => {
     const admin = await authenticated(adminLogin);
     const response = await admin
       .post('/unidades')
@@ -80,7 +72,7 @@ describeWithPostgres('UUIDs canônicos do PostgreSQL em cadastros reais', () => 
     expect(response.body.telefones[0].numero).toBe('1934001000');
   });
 
-  it('cria evento usando o cargo 3000…', async () => {
+  it('cria evento usando cargo estrutural', async () => {
     const operator = await authenticated(operatorLogin);
     const response = await operator
       .post('/eventos')

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isPeriodCode, isPositionCode } from '@seduc/contracts';
 
 import { databaseIdSchema } from '../../validation/database-id.js';
 
@@ -16,18 +17,21 @@ const nullableText = z
   .union([z.string().trim().max(10_000), z.null()])
   .transform((value) => (value === '' ? null : value));
 
+const periodCode = z.string().refine(isPeriodCode, 'Selecione um período reconhecido.');
+const positionCode = z.string().refine(isPositionCode, 'Selecione um cargo/função reconhecido.');
+
 const scopeFields = {
   anoLetivo: z.number().int().positive(),
-  cargoFuncaoId: databaseIdSchema,
-  periodoId: databaseIdSchema,
+  cargoFuncaoId: positionCode,
+  periodoId: periodCode,
   segmentoEnsinoId: z.union([databaseIdSchema, z.null()]),
   unidadeId: databaseIdSchema,
 };
 
 export const staffingPlanQuerySchema = paginationSchema.extend({
   anoLetivo: z.coerce.number().int().positive().optional(),
-  cargoFuncaoId: databaseIdSchema.optional(),
-  periodoId: databaseIdSchema.optional(),
+  cargoFuncaoId: positionCode.optional(),
+  periodoId: periodCode.optional(),
   segmentoEnsinoId: databaseIdSchema.optional(),
   unidadeId: databaseIdSchema.optional(),
 });
@@ -56,8 +60,8 @@ export const staffingPlanUpdateSchema = z
 export const workPositionQuerySchema = paginationSchema.extend({
   anoLetivo: z.coerce.number().int().positive().optional(),
   ativo: activeQuery,
-  cargoFuncaoId: databaseIdSchema.optional(),
-  periodoId: databaseIdSchema.optional(),
+  cargoFuncaoId: positionCode.optional(),
+  periodoId: periodCode.optional(),
   unidadeId: databaseIdSchema.optional(),
 });
 

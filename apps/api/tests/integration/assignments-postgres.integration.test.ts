@@ -25,11 +25,11 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
   });
   const suffix = randomUUID();
   const ids = {
-    cargoComum: randomUUID(),
-    cargoIncompativel: randomUUID(),
-    cargoMultiplo: randomUUID(),
-    periodo: randomUUID(),
-    tipoUnidade: randomUUID(),
+    cargoComum: 'PEB1_FUNDAMENTAL',
+    cargoIncompativel: 'PEB1_INFANTIL',
+    cargoMultiplo: 'DIRETOR',
+    periodo: 'INTEGRAL',
+    tipoUnidade: 'EMEF',
     unidadeA: randomUUID(),
     unidadeB: randomUUID(),
     unidadeC: randomUUID(),
@@ -45,35 +45,12 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
   let positionSequence = 0;
 
   beforeAll(async () => {
-    await database.client.tipoUnidade.create({
-      data: { id: ids.tipoUnidade, nome: `Tipo vínculos ${suffix}` },
-    });
     await database.client.unidade.createMany({
       data: [
         { id: ids.unidadeA, nome: `Unidade vínculos A ${suffix}`, tipoUnidadeId: ids.tipoUnidade },
         { id: ids.unidadeB, nome: `Unidade vínculos B ${suffix}`, tipoUnidadeId: ids.tipoUnidade },
         { id: ids.unidadeC, nome: `Unidade vínculos C ${suffix}`, tipoUnidadeId: ids.tipoUnidade },
       ],
-    });
-    await database.client.cargoFuncao.createMany({
-      data: [
-        { id: ids.cargoComum, nome: `Cargo comum ${suffix}` },
-        { id: ids.cargoIncompativel, nome: `Cargo incompatível ${suffix}` },
-        {
-          id: ids.cargoMultiplo,
-          nome: `Cargo múltiplo ${suffix}`,
-          permiteMultiplosExercicios: true,
-        },
-      ],
-    });
-    await database.client.cargoTipoUnidade.createMany({
-      data: [ids.cargoComum, ids.cargoIncompativel, ids.cargoMultiplo].map((cargoFuncaoId) => ({
-        cargoFuncaoId,
-        tipoUnidadeId: ids.tipoUnidade,
-      })),
-    });
-    await database.client.periodo.create({
-      data: { id: ids.periodo, nome: `Integral vínculos ${suffix}` },
     });
     const senhaHash = await hashPassword(password);
     await database.client.usuario.createMany({
@@ -128,19 +105,9 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     await database.client.quadroNecessidade.deleteMany({
       where: { unidadeId: { in: [ids.unidadeA, ids.unidadeB, ids.unidadeC] } },
     });
-    await database.client.periodo.deleteMany({ where: { id: ids.periodo } });
-    await database.client.cargoTipoUnidade.deleteMany({
-      where: {
-        cargoFuncaoId: { in: [ids.cargoComum, ids.cargoIncompativel, ids.cargoMultiplo] },
-      },
-    });
-    await database.client.cargoFuncao.deleteMany({
-      where: { id: { in: [ids.cargoComum, ids.cargoIncompativel, ids.cargoMultiplo] } },
-    });
     await database.client.unidade.deleteMany({
       where: { id: { in: [ids.unidadeA, ids.unidadeB, ids.unidadeC] } },
     });
-    await database.client.tipoUnidade.deleteMany({ where: { id: ids.tipoUnidade } });
     await database.disconnect();
   }, 30_000);
 
@@ -572,12 +539,6 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
       database.client.profissional.update({
         data: { cargoFuncaoId: ids.cargoComum },
         where: { id: multiple.id },
-      }),
-    ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
-    await expect(
-      database.client.cargoFuncao.update({
-        data: { permiteMultiplosExercicios: false },
-        where: { id: ids.cargoMultiplo },
       }),
     ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
   });

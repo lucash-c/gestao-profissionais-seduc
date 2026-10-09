@@ -1,9 +1,12 @@
 import type {
   AuthenticatedUser,
   PaginatedResponse,
+  PeriodCode,
+  PositionCode,
   StaffingPlanRecord,
   WorkPositionRecord,
 } from '@seduc/contracts';
+import { periodLookup, positionDefinition, positionLookup } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
@@ -39,8 +42,6 @@ export interface StaffingServices {
 
 const planInclude = {
   _count: { select: { postos: { where: { ativo: true } } } },
-  cargoFuncao: { select: { ativo: true, id: true, nome: true } },
-  periodo: { select: { ativo: true, id: true, nome: true } },
   segmentoEnsino: { select: { ativo: true, id: true, nome: true } },
   unidade: { select: { ativo: true, id: true, nome: true, tipoUnidadeId: true } },
 } as const;
@@ -50,11 +51,11 @@ type PlanPayload = Prisma.QuadroNecessidadeGetPayload<{ include: typeof planIncl
 function mapPlan(plan: PlanPayload): StaffingPlanRecord {
   return {
     anoLetivo: plan.anoLetivo,
-    cargoFuncao: plan.cargoFuncao,
+    cargoFuncao: positionLookup(plan.cargoFuncaoId as PositionCode),
     cargoFuncaoId: plan.cargoFuncaoId,
     id: plan.id,
     observacoes: plan.observacoes,
-    periodo: plan.periodo,
+    periodo: periodLookup(plan.periodoId as PeriodCode),
     periodoId: plan.periodoId,
     quantidade: plan.quantidade,
     quantidadePostosAtivos: plan._count.postos,
@@ -100,33 +101,6 @@ async function lockPlan(transaction: Prisma.TransactionClient, id: string): Prom
   if (rows.length === 0) throw new HttpError(404, 'NOT_FOUND', 'Quadro não encontrado.');
 }
 
-async function assertCompatible(
-  transaction: Prisma.TransactionClient,
-  unidadeId: string,
-  cargoFuncaoId: string,
-): Promise<void> {
-  const unit = await transaction.unidade.findUnique({
-    select: { tipoUnidadeId: true },
-    where: { id: unidadeId },
-  });
-  if (!unit) throw new HttpError(404, 'NOT_FOUND', 'Unidade não encontrada.');
-  const compatible = await transaction.cargoTipoUnidade.findUnique({
-    where: {
-      cargoFuncaoId_tipoUnidadeId: {
-        cargoFuncaoId,
-        tipoUnidadeId: unit.tipoUnidadeId,
-      },
-    },
-  });
-  if (!compatible) {
-    throw new HttpError(
-      409,
-      'INCOMPATIBLE_UNIT_TYPE',
-      'O cargo/função não é compatível com o tipo da unidade.',
-    );
-  }
-}
-
 export function workPositionCodePrefix(cargoName: string): string {
   const prefix = cargoName
     .normalize('NFD')
@@ -146,12 +120,7 @@ async function allocateWorkPositionCodes(
   quantity: number,
 ): Promise<string[]> {
   if (quantity <= 0) return [];
-  const cargo = await transaction.cargoFuncao.findUnique({
-    select: { nome: true },
-    where: { id: cargoFuncaoId },
-  });
-  if (!cargo) throw new HttpError(404, 'NOT_FOUND', 'Cargo/função não encontrado.');
-  const prefix = workPositionCodePrefix(cargo.nome);
+  const prefix = workPositionCodePrefix(positionDefinition(cargoFuncaoId as PositionCode).label);
   const rows = await transaction.$queryRaw<{ ultimoValor: bigint }[]>(Prisma.sql`
     INSERT INTO "posto_codigo_contador" ("prefixo", "ultimo_valor")
     VALUES (${prefix}, ${quantity})
@@ -209,7 +178,6 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
       async create(input, user) {
         try {
           return await client.$transaction(async (transaction) => {
-            await assertCompatible(transaction, input.unidadeId, input.cargoFuncaoId);
             const plan = await transaction.quadroNecessidade.create({
               data: input,
             });
@@ -284,8 +252,8 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
             orderBy: [
               { anoLetivo: 'desc' },
               { unidade: { nome: 'asc' } },
-              { cargoFuncao: { nome: 'asc' } },
-              { periodo: { nome: 'asc' } },
+              { cargoFuncaoId: 'asc' },
+              { periodoId: 'asc' },
             ],
             skip: (query.page - 1) * query.pageSize,
             take: query.pageSize,
@@ -322,10 +290,6 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
                 'O escopo do quadro não pode ser alterado depois da geração dos postos.',
               );
             }
-
-            const unidadeId = input.unidadeId ?? current.unidadeId;
-            const cargoFuncaoId = input.cargoFuncaoId ?? current.cargoFuncaoId;
-            if (changedStructure) await assertCompatible(transaction, unidadeId, cargoFuncaoId);
 
             const targetQuantity = input.quantidade ?? current.quantidade;
             if (input.quantidade !== undefined) {
@@ -541,12 +505,6 @@ export function createPrismaStaffingServices(database: DatabaseConnection): Staf
                   'O posto não pode ser inativado enquanto possuir sede ou exercício ativo.',
                 );
               }
-            } else {
-              await assertCompatible(
-                transaction,
-                current.quadroNecessidade.unidadeId,
-                current.quadroNecessidade.cargoFuncaoId,
-              );
             }
 
             await transaction.postoTrabalho.update({ data: { ativo }, where: { id } });

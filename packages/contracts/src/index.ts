@@ -71,6 +71,136 @@ export interface LookupRecord {
   nome: string;
 }
 
+export const UNIT_TYPES = [
+  { code: 'EMEI', label: 'EMEI' },
+  { code: 'EMEF', label: 'EMEF' },
+  { code: 'CIEP', label: 'CIEP' },
+  { code: 'CRECHE', label: 'CRECHE' },
+  { code: 'CASA_DA_CRIANCA', label: 'CASA DA CRIANÇA' },
+  { code: 'CMEA', label: 'CMEA' },
+  { code: 'CENTRO_DE_INCLUSAO', label: 'CENTRO DE INCLUSÃO' },
+] as const;
+
+export type UnitTypeCode = (typeof UNIT_TYPES)[number]['code'];
+
+export const PERIODS = [
+  { code: 'INTEGRAL', label: 'Integral' },
+  { code: 'MANHA', label: 'Manhã' },
+  { code: 'TARDE', label: 'Tarde' },
+  { code: 'NOITE', label: 'Noite' },
+] as const;
+
+export type PeriodCode = (typeof PERIODS)[number]['code'];
+
+export const POSITIONS = [
+  {
+    code: 'PEB1_FUNDAMENTAL',
+    ehProfessor: true,
+    label: 'PEB1 - Fundamental',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: true,
+  },
+  {
+    code: 'PEB1_INFANTIL',
+    ehProfessor: true,
+    label: 'PEB1 - Infantil',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: true,
+  },
+  {
+    code: 'PEB2_MEDIO',
+    ehProfessor: true,
+    label: 'PEB2 - Médio',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: true,
+  },
+  {
+    code: 'ESCRITURARIO',
+    ehProfessor: false,
+    label: 'Escriturário(a)',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: false,
+  },
+  {
+    code: 'SERVENTE',
+    ehProfessor: false,
+    label: 'Servente',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: false,
+  },
+  {
+    code: 'INSPETOR',
+    ehProfessor: false,
+    label: 'Inspetor(a)',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: false,
+  },
+  {
+    code: 'MONITOR',
+    ehProfessor: false,
+    label: 'Monitor(a)',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: false,
+  },
+  {
+    code: 'DIRETOR',
+    ehProfessor: false,
+    label: 'Diretor(a)',
+    permiteMultiplosExercicios: true,
+    usaPontuacao: false,
+  },
+  {
+    code: 'VICE_DIRETOR',
+    ehProfessor: false,
+    label: 'Vice-diretor(a)',
+    permiteMultiplosExercicios: false,
+    usaPontuacao: false,
+  },
+] as const;
+
+export type PositionCode = (typeof POSITIONS)[number]['code'];
+export type PositionDefinition = (typeof POSITIONS)[number];
+
+export function isUnitTypeCode(value: string): value is UnitTypeCode {
+  return UNIT_TYPES.some((unitType) => unitType.code === value);
+}
+
+export function isPositionCode(value: string): value is PositionCode {
+  return POSITIONS.some((position) => position.code === value);
+}
+
+export function isPeriodCode(value: string): value is PeriodCode {
+  return PERIODS.some((period) => period.code === value);
+}
+
+export function unitTypeLookup(code: UnitTypeCode): LookupRecord {
+  const unitType = UNIT_TYPES.find((item) => item.code === code)!;
+  return { ativo: true, id: unitType.code, nome: unitType.label };
+}
+
+export function positionDefinition(code: PositionCode): PositionDefinition {
+  return POSITIONS.find((item) => item.code === code)!;
+}
+
+export function periodLookup(code: PeriodCode): LookupRecord {
+  const period = PERIODS.find((item) => item.code === code)!;
+  return { ativo: true, id: period.code, nome: period.label };
+}
+
+export function positionLookup(
+  code: PositionCode,
+): LookupRecord & Omit<PositionDefinition, 'code' | 'label'> {
+  const position = positionDefinition(code);
+  return {
+    ativo: true,
+    ehProfessor: position.ehProfessor,
+    id: position.code,
+    nome: position.label,
+    permiteMultiplosExercicios: position.permiteMultiplosExercicios,
+    usaPontuacao: position.usaPontuacao,
+  };
+}
+
 export interface UnitRecord {
   ativo: boolean;
   bairro: string | null;

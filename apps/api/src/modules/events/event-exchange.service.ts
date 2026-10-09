@@ -6,7 +6,10 @@ import type {
   EventExchangeSimulation,
   EventOperationalLink,
   EventOperationalParticipant,
+  PeriodCode,
+  PositionCode,
 } from '@seduc/contracts';
+import { periodLookup, positionDefinition } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
@@ -19,7 +22,7 @@ const participantInclude = {
 } as const;
 
 const positionScopeInclude = {
-  quadroNecessidade: { include: { periodo: true, unidade: true } },
+  quadroNecessidade: { include: { unidade: true } },
 } as const;
 
 const exchangeProfessionalInclude = {
@@ -92,13 +95,12 @@ function mapLink(position: {
   id: string;
   periodoId: string;
   quadroNecessidade: {
-    periodo: { ativo: boolean; id: string; nome: string };
     unidade: { ativo: boolean; id: string; nome: string };
   };
   unidadeId: string;
 }): EventOperationalLink {
   return {
-    periodo: lookup(position.quadroNecessidade.periodo),
+    periodo: periodLookup(position.periodoId as PeriodCode),
     periodoId: position.periodoId,
     postoId: position.id,
     unidade: lookup(position.quadroNecessidade.unidade),
@@ -392,7 +394,9 @@ async function buildCentral(
     throw new HttpError(409, 'EVENT_CANCELLED', 'O evento está cancelado.');
   }
   const queue = await loadQueue(transaction, id);
-  const mapped = queue.map((participant) => mapParticipant(participant, event.cargoFuncao.nome));
+  const mapped = queue.map((participant) =>
+    mapParticipant(participant, positionDefinition(event.cargoFuncaoId as PositionCode).label),
+  );
   const currentPayload = queue.find(({ status }) => status === 'AGUARDANDO') ?? null;
   const waiting = queue.filter(({ status }) => status === 'AGUARDANDO');
   const professionals = await loadProfessionals(
@@ -405,7 +409,7 @@ async function buildCentral(
     );
     const seat = professional?.lotacoesSede[0]?.postoTrabalho;
     return {
-      ...mapParticipant(participant, event.cargoFuncao.nome),
+      ...mapParticipant(participant, positionDefinition(event.cargoFuncaoId as PositionCode).label),
       sedeAtual: seat ? mapLink(seat) : null,
     };
   };

@@ -21,21 +21,21 @@ describe('validação compartilhada de banco e formulários', () => {
     (id) => expect(() => databaseIdSchema.parse(id)).toThrow(),
   );
 
-  it('aceita os IDs reais de exemplo na criação de unidade e evento', () => {
+  it('aceita códigos estruturais na criação de unidade e evento', () => {
     expect(
       unitCreateSchema.parse({
         nome: 'Unidade de exemplo',
-        tipoUnidadeId: '10000000-0000-0000-0000-000000000001',
+        tipoUnidadeId: 'CENTRO_DE_INCLUSAO',
       }).tipoUnidadeId,
-    ).toBe('10000000-0000-0000-0000-000000000001');
+    ).toBe('CENTRO_DE_INCLUSAO');
     expect(
       eventCreateSchema.parse({
         ano: 2026,
-        cargoFuncaoId: '30000000-0000-0000-0000-000000000001',
+        cargoFuncaoId: 'PEB1_FUNDAMENTAL',
         nome: 'Evento de exemplo',
         tipo: 'REMOCAO',
       }).cargoFuncaoId,
-    ).toBe('30000000-0000-0000-0000-000000000001');
+    ).toBe('PEB1_FUNDAMENTAL');
   });
 
   it('aplica os limites 12 e 72 na redefinição de senha', () => {

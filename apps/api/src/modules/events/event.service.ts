@@ -6,7 +6,9 @@ import type {
   EventTieGroup,
   EventType,
   PaginatedResponse,
+  PositionCode,
 } from '@seduc/contracts';
+import { isPositionCode, positionDefinition, positionLookup } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
@@ -44,16 +46,13 @@ export interface EventServices {
   update(id: string, input: EventUpdateInput, user?: AuthenticatedUser): Promise<EventRecord>;
 }
 
-export const eventInclude = {
-  cargoFuncao: { select: { ativo: true, id: true, nome: true, usaPontuacao: true } },
-} as const;
+export const eventInclude = {} as const;
 
 export type EventPayload = Prisma.EventoGetPayload<{ include: typeof eventInclude }>;
 
 const participantInclude = {
   profissional: {
     include: {
-      cargoFuncao: { select: { nome: true, usaPontuacao: true } },
       lotacoesSede: { select: { id: true }, take: 1, where: { dataFim: null } },
     },
   },
@@ -127,7 +126,7 @@ export function rankCandidates(
 export function mapEvent(event: EventPayload): EventRecord {
   return {
     ano: event.ano,
-    cargoFuncao: event.cargoFuncao,
+    cargoFuncao: positionLookup(event.cargoFuncaoId as PositionCode),
     cargoFuncaoId: event.cargoFuncaoId,
     dataFim: event.dataFim?.toISOString() ?? null,
     dataInicio: event.dataInicio?.toISOString() ?? null,
@@ -218,15 +217,8 @@ async function lockEvent(transaction: Prisma.TransactionClient, id: string): Pro
   if (rows.length === 0) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
 }
 
-async function assertActiveCargo(
-  client: Pick<Prisma.TransactionClient, 'cargoFuncao'>,
-  cargoFuncaoId: string,
-): Promise<void> {
-  const cargo = await client.cargoFuncao.findUnique({
-    select: { ativo: true },
-    where: { id: cargoFuncaoId },
-  });
-  if (!cargo?.ativo) {
+function assertActiveCargo(cargoFuncaoId: string): void {
+  if (!isPositionCode(cargoFuncaoId)) {
     throw new HttpError(409, 'INVALID_EVENT_CARGO', 'Selecione um cargo/função ativo.');
   }
 }
@@ -246,13 +238,11 @@ export function createPrismaEventServices(
   async function preparation(id: string): Promise<EventPreparationRecord> {
     const event = await client.evento.findUnique({ include: eventInclude, where: { id } });
     if (!event) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
+    const cargo = positionDefinition(event.cargoFuncaoId as PositionCode);
 
     const [professionals, participants] = await client.$transaction([
       client.profissional.findMany({
-        include: {
-          cargoFuncao: { select: { nome: true, usaPontuacao: true } },
-          lotacoesSede: { select: { id: true }, take: 1, where: { dataFim: null } },
-        },
+        include: { lotacoesSede: { select: { id: true }, take: 1, where: { dataFim: null } } },
         orderBy: { nomeCompleto: 'asc' },
         where: { ativo: true, cargoFuncaoId: event.cargoFuncaoId },
       }),
@@ -276,7 +266,7 @@ export function createPrismaEventServices(
         }
       : rankCandidates(
           participants.map((participant) => participantCandidate(participant, false)),
-          event.cargoFuncao.usaPontuacao,
+          cargo.usaPontuacao,
         );
     const rankById = new Map(
       ranking.ranked.map((candidate) => [candidate.profissionalId, candidate] as const),
@@ -286,7 +276,7 @@ export function createPrismaEventServices(
       const eligible = eligibility(event.tipo, professional);
       const ranked = rankById.get(professional.id);
       return {
-        cargo: professional.cargoFuncao.nome,
+        cargo: cargo.label,
         dataEntradaPrefeitura: civilDate(professional.dataEntradaPrefeitura),
         dataNascimento: civilDate(professional.dataNascimento),
         elegivel: eligible.elegivel,
@@ -297,7 +287,7 @@ export function createPrismaEventServices(
         numeroFilhos: professional.numeroFilhos,
         ordemPrevia: ranked?.posicao ?? null,
         permuta: professional.permuta,
-        pontuacao: event.cargoFuncao.usaPontuacao ? professional.pontuacao.toFixed(2) : null,
+        pontuacao: cargo.usaPontuacao ? professional.pontuacao.toFixed(2) : null,
         possuiSedeAtual: professional.lotacoesSede.length > 0,
         profissionalId: professional.id,
         remocao: professional.remocao,
@@ -308,9 +298,7 @@ export function createPrismaEventServices(
     return {
       evento: mapEvent(event),
       gruposEmpate: ranking.gruposEmpate,
-      preview: ranking.ranked.map((candidate) =>
-        previewItem(candidate, event.cargoFuncao.usaPontuacao),
-      ),
+      preview: ranking.ranked.map((candidate) => previewItem(candidate, cargo.usaPontuacao)),
       profissionais: visibleProfessionals,
       selecionados: [...selectedIds],
       totais: {
@@ -326,7 +314,7 @@ export function createPrismaEventServices(
     async create(input, user) {
       try {
         return await client.$transaction(async (transaction) => {
-          await assertActiveCargo(transaction, input.cargoFuncaoId);
+          assertActiveCargo(input.cargoFuncaoId);
           const event = await transaction.evento.create({ data: input, include: eventInclude });
           const mapped = mapEvent(event);
           if (user) {
@@ -482,13 +470,11 @@ export function createPrismaEventServices(
         await client.$transaction(async (transaction) => {
           await lockEvent(transaction, id);
           const event = await transaction.evento.findUnique({
-            include: {
-              cargoFuncao: { select: { usaPontuacao: true } },
-              participantes: { include: participantInclude },
-            },
+            include: { participantes: { include: participantInclude } },
             where: { id },
           });
           if (!event) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
+          const cargo = positionDefinition(event.cargoFuncaoId as PositionCode);
           if (event.status !== 'RASCUNHO') {
             throw new HttpError(409, 'EVENT_NOT_DRAFT', 'O evento já foi iniciado ou encerrado.');
           }
@@ -514,7 +500,7 @@ export function createPrismaEventServices(
           }
           const ranking = rankCandidates(
             event.participantes.map((participant) => participantCandidate(participant, false)),
-            event.cargoFuncao.usaPontuacao,
+            cargo.usaPontuacao,
           );
           if (ranking.gruposEmpate.length > 0) {
             const names = ranking.gruposEmpate
@@ -546,9 +532,7 @@ export function createPrismaEventServices(
                 dataEntradaSnapshot: participant.profissional.dataEntradaPrefeitura,
                 dataNascimentoSnapshot: participant.profissional.dataNascimento,
                 numeroFilhosSnapshot: participant.profissional.numeroFilhos,
-                pontuacaoSnapshot: event.cargoFuncao.usaPontuacao
-                  ? participant.profissional.pontuacao
-                  : null,
+                pontuacaoSnapshot: cargo.usaPontuacao ? participant.profissional.pontuacao : null,
                 posicao: ranked.posicao,
                 status: 'AGUARDANDO',
               },
@@ -598,7 +582,7 @@ export function createPrismaEventServices(
               'Limpe a preparação antes de alterar tipo ou cargo do evento.',
             );
           }
-          if (input.cargoFuncaoId) await assertActiveCargo(transaction, input.cargoFuncaoId);
+          if (input.cargoFuncaoId) assertActiveCargo(input.cargoFuncaoId);
           const updated = await transaction.evento.update({
             data: {
               ...(input.ano === undefined ? {} : { ano: input.ano }),

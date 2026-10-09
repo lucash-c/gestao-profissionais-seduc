@@ -7,10 +7,12 @@ import type {
   ManualAssignmentResult,
   ManualAssignmentSimulation,
   ManualExerciseEndSimulation,
+  PositionCode,
   ManualSeatRemovalSimulation,
   PaginatedResponse,
   WorkPositionRecord,
 } from '@seduc/contracts';
+import { POSITIONS, positionLookup } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
@@ -40,7 +42,6 @@ const positionLinkInclude = {
 
 const professionalInclude = {
   afastamentos: { select: { id: true }, where: { dataFim: null } },
-  cargoFuncao: { select: { ativo: true, id: true, nome: true } },
   exercicios: {
     include: {
       postoTrabalho: { include: positionLinkInclude },
@@ -117,7 +118,7 @@ function mapProfessional(professional: ProfessionalPayload): ManualAssignmentPro
   return {
     afastado: professional.afastamentos.length > 0,
     ativo: professional.ativo,
-    cargoFuncao: professional.cargoFuncao,
+    cargoFuncao: positionLookup(professional.cargoFuncaoId as PositionCode),
     cargoFuncaoId: professional.cargoFuncaoId,
     exerciciosAtuais: professional.exercicios.map((exercise) => ({
       dataFim: null,
@@ -714,12 +715,19 @@ export function createPrismaManualAssignmentServices(
     async listProfessionals(query, user) {
       return client.$transaction(async (transaction) => {
         await assertAccessible(transaction, user);
+        const matchingPositionCodes = query.busca
+          ? POSITIONS.filter(({ label }) =>
+              label.toLocaleLowerCase('pt-BR').includes(query.busca!.toLocaleLowerCase('pt-BR')),
+            ).map(({ code }) => code)
+          : [];
         const where: Prisma.ProfissionalWhereInput = query.busca
           ? {
               OR: [
                 { nomeCompleto: { contains: query.busca, mode: 'insensitive' } },
                 { matricula: { contains: query.busca, mode: 'insensitive' } },
-                { cargoFuncao: { nome: { contains: query.busca, mode: 'insensitive' } } },
+                ...(matchingPositionCodes.length
+                  ? [{ cargoFuncaoId: { in: matchingPositionCodes } }]
+                  : []),
               ],
             }
           : {};

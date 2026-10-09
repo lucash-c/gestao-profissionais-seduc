@@ -13,6 +13,8 @@ import {
 const ID = '11111111-1111-4111-8111-111111111111';
 const UNIT_ID = '22222222-2222-4222-8222-222222222222';
 const OTHER_UNIT_ID = '33333333-3333-4333-8333-333333333333';
+const POSITION_CODE = 'PEB1_FUNDAMENTAL';
+const PERIOD_CODE = 'INTEGRAL';
 
 function position(options: {
   active?: boolean;
@@ -41,7 +43,7 @@ function position(options: {
   return {
     anoLetivo: 2026,
     ativo: options.active ?? true,
-    cargoFuncaoId: ID,
+    cargoFuncaoId: POSITION_CODE,
     codigo: 'PEB1-0000000001',
     criadoEm: new Date(),
     atualizadoEm: new Date(),
@@ -77,17 +79,17 @@ function position(options: {
           },
         ]
       : [],
-    periodoId: ID,
+    periodoId: PERIOD_CODE,
     quadroNecessidade: {
       anoLetivo: 2026,
       atualizadoEm: new Date(),
-      cargoFuncao: { ativo: true, id: ID, nome: 'Professor' },
-      cargoFuncaoId: ID,
+      cargoFuncao: { ativo: true, id: POSITION_CODE, nome: 'PEB1 - Fundamental' },
+      cargoFuncaoId: POSITION_CODE,
       criadoEm: new Date(),
       id: ID,
       observacoes: null,
-      periodo: { ativo: true, id: ID, nome: 'Integral' },
-      periodoId: ID,
+      periodo: { ativo: true, id: PERIOD_CODE, nome: 'Integral' },
+      periodoId: PERIOD_CODE,
       quantidade: 1,
       segmentoEnsinoId: null,
       unidade: { ativo: true, id: UNIT_ID, nome: 'Unidade', tipoUnidadeId: ID },
