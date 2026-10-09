@@ -642,7 +642,7 @@ describe('Ata de eventos', () => {
     expect(wrapper.text()).toContain('PEB1 - Fundamental');
     expect(wrapper.text()).toContain('Ana');
     expect(wrapper.text()).toContain('EMEF A → EMEF B');
-    expect(wrapper.get('[data-testid="print-minutes"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="print-minutes"]').exists()).toBe(true);
     expect(wrapper.find('details').attributes('open')).toBeUndefined();
     await wrapper.get('[data-testid="print-minutes"]').trigger('click');
     expect(print).toHaveBeenCalledOnce();
