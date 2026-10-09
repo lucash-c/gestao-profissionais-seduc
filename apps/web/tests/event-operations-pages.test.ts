@@ -1,6 +1,7 @@
 import type {
   EventCentralRecord,
   EventChoiceSimulation,
+  EventMinutes,
   PublicEventDisplay,
   WorkPositionRecord,
 } from '@seduc/contracts';
@@ -11,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '@/App.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
+import EventMinutesPage from '@/pages/EventMinutesPage.vue';
 import PublicEventDisplayPage from '@/pages/PublicEventDisplayPage.vue';
 import { createAppRouter } from '@/router';
 import type { SessionStore } from '@/stores/session.store';
@@ -20,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   choose: vi.fn(),
   close: vi.fn(),
   movements: vi.fn(),
+  minutes: vi.fn(),
   publicChoices: vi.fn(),
   publicDisplay: vi.fn(),
   simulate: vi.fn(),
@@ -198,21 +201,66 @@ const simulation: EventChoiceSimulation = {
 };
 
 const publicDisplay: PublicEventDisplay = {
-  evento: { ano: 2027, nome: 'Remoção 2027', status: 'ATIVO', tipo: 'REMOCAO' },
+  evento: {
+    ano: 2027,
+    cargoFuncao: 'PEB1 - Fundamental',
+    nome: 'Remoção 2027',
+    status: 'ATIVO',
+    tipo: 'REMOCAO',
+  },
   participanteAtual: { nome: 'Ana Atual', posicao: 1 },
   proximos: [{ nome: 'Bruno Próximo', posicao: 2 }],
   ultimasEscolhas: [
     {
       dataHora: '2026-10-07T11:00:00.000Z',
+      especie: 'MOVIMENTACAO',
       periodo: 'Manhã',
       profissional: 'Escolha anterior',
       tipoDestino: 'SEDE',
       unidadeDestino: 'EMEF A',
+      unidadeOrigem: null,
     },
   ],
   vagas: [
     { periodo: 'Manhã', quantidade: 2, tipo: 'SEDE', unidade: 'EMEF A' },
     { periodo: 'Manhã', quantidade: 1, tipo: 'SEM_SEDE', unidade: 'EMEF B' },
+  ],
+};
+
+const minutes: EventMinutes = {
+  evento: {
+    ano: 2027,
+    cargoFuncao: 'PEB1 - Fundamental',
+    dataFim: '2026-10-07T12:00:00.000Z',
+    dataInicio: '2026-10-07T11:00:00.000Z',
+    nome: 'Permuta 2027',
+    responsavel: 'Operador João',
+    status: 'ENCERRADO',
+    tipo: 'PERMUTA',
+  },
+  movimentacoes: [
+    {
+      dataHora: '2026-10-07T11:30:00.000Z',
+      especie: 'PERMUTA',
+      itens: [
+        {
+          periodo: 'Manhã',
+          profissional: 'Ana',
+          unidadeDestino: 'EMEF B',
+          unidadeOrigem: 'EMEF A',
+        },
+        {
+          periodo: 'Manhã',
+          profissional: 'Bruno',
+          unidadeDestino: 'EMEF A',
+          unidadeOrigem: 'EMEF B',
+        },
+      ],
+    },
+  ],
+  participantes: [
+    { nome: 'Ana', posicao: 1, status: 'ATENDIDO' },
+    { nome: 'Bruno', posicao: 2, status: 'ATENDIDO' },
   ],
 };
 
@@ -284,6 +332,7 @@ beforeEach(() => {
     total: 1,
     totalPages: 1,
   });
+  mocks.minutes.mockResolvedValue(structuredClone(minutes));
   mocks.close.mockResolvedValue({
     ...central.evento,
     dataFim: '2026-10-07T12:00:00.000Z',
@@ -580,5 +629,23 @@ describe('Etapa 7 frontend do telão público', () => {
       'Não foi possível carregar as informações do evento.',
     );
     unavailableEvent.unmount();
+  });
+});
+
+describe('Ata de eventos', () => {
+  it('apresenta Permuta bilateral, detalhes técnicos recolhidos e impressão', async () => {
+    const print = vi.fn();
+    Object.defineProperty(window, 'print', { configurable: true, value: print });
+    const wrapper = await mountPage(EventMinutesPage, `/eventos/${EVENT_ID}/central`);
+
+    expect(wrapper.get('[data-testid="event-minutes-document"]').text()).toContain('ATA DO EVENTO');
+    expect(wrapper.text()).toContain('PEB1 - Fundamental');
+    expect(wrapper.text()).toContain('Ana');
+    expect(wrapper.text()).toContain('EMEF A → EMEF B');
+    expect(wrapper.get('[data-testid="print-minutes"]').exists()).toBe(true);
+    expect(wrapper.find('details').attributes('open')).toBeUndefined();
+    await wrapper.get('[data-testid="print-minutes"]').trigger('click');
+    expect(print).toHaveBeenCalledOnce();
+    wrapper.unmount();
   });
 });

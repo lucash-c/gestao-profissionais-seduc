@@ -116,6 +116,15 @@ onMounted(() => load());
               <dd>{{ entry.summary.evento }}</dd>
             </div>
           </dl>
+          <QBtn
+            v-if="entry.item.entidade === 'EVENTO'"
+            class="q-mb-md"
+            flat
+            color="primary"
+            icon="description"
+            label="Ver ata do evento"
+            :to="{ name: 'event-minutes', params: { id: entry.item.registroId } }"
+          />
           <section class="audit-record__change" aria-label="Alteração registrada">
             <h3>Alteração registrada</h3>
             <DataComparison :antes="entry.item.dadosAnteriores" :depois="entry.item.dadosNovos" />

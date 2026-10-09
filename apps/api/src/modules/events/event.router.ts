@@ -84,6 +84,12 @@ export function createEventRouter(
     eventReader(request);
     response.json(await service.get(eventId(request)));
   });
+  if (operations) {
+    router.get('/:id/ata', async (request, response) => {
+      operator(request, AUTHORIZATION_ACTIONS.READ_EVENT_MINUTES);
+      response.json(await operations.minutes(eventId(request)));
+    });
+  }
   router.patch('/:id', async (request, response) => {
     const user = operator(request);
     response.json(

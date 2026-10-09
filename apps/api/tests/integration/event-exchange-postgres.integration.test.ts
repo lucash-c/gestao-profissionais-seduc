@@ -716,6 +716,49 @@ describeWithPostgres('Etapa 8 Permuta atômica no PostgreSQL', () => {
     ).toBe(1);
   });
 
+  it('expõe uma Permuta bilateral no Telão, no histórico público e na Ata de leitura', async () => {
+    const pair = await validPair('Telão e ata');
+    const event = await exchangeEvent({
+      participants: [{ id: pair.first.id }, { id: pair.second.id }],
+    });
+    const operator = await authenticated();
+    const payload = await simulationAndPayload(operator, event.eventId, event.participantIds[1]!);
+    await operator.post(`/eventos/${event.eventId}/confirmar-permuta`).send(payload).expect(200);
+
+    const display = await request(app).get(`/public/eventos/${event.eventId}/telao`).expect(200);
+    expect(display.body.evento).toMatchObject({ tipo: 'PERMUTA' });
+    expect(display.body.ultimasEscolhas).toMatchObject([
+      {
+        especie: 'PERMUTA',
+        itens: [{ profissional: expect.any(String) }, { profissional: expect.any(String) }],
+      },
+    ]);
+
+    const history = await request(app)
+      .get(`/public/eventos/${event.eventId}/escolhas?page=1&pageSize=20`)
+      .expect(200);
+    expect(history.body.items[0]).toMatchObject({ especie: 'PERMUTA' });
+    expect(history.body.items[0].itens).toHaveLength(2);
+
+    const minutes = await operator.get(`/eventos/${event.eventId}/ata`).expect(200);
+    expect(minutes.body).toMatchObject({
+      evento: { tipo: 'PERMUTA' },
+      movimentacoes: [{ especie: 'PERMUTA' }],
+    });
+    expect(minutes.body.movimentacoes[0].itens).toHaveLength(2);
+
+    await authenticated(logins.admin).then((agent) =>
+      agent.get(`/eventos/${event.eventId}/ata`).expect(200),
+    );
+    await authenticated(logins.director).then((agent) =>
+      agent.get(`/eventos/${event.eventId}/ata`).expect(403),
+    );
+    await authenticated(logins.secretary).then((agent) =>
+      agent.get(`/eventos/${event.eventId}/ata`).expect(403),
+    );
+    await request(app).get(`/eventos/${event.eventId}/ata`).expect(401);
+  });
+
   it('permite um único vencedor quando dois eventos disputam as mesmas sedes', async () => {
     const pair = await validPair('Concorrência eventos');
     const eventA = await exchangeEvent({

@@ -213,6 +213,12 @@ onMounted(async () => {
             }}</QTd>
             <QTd key="acoes" :props="props">
               <QBtn
+                flat
+                dense
+                label="Ver ata"
+                :to="{ name: 'event-minutes', params: { id: props.row.id } }"
+              />
+              <QBtn
                 v-if="isOperator && props.row.status === 'RASCUNHO'"
                 flat
                 dense

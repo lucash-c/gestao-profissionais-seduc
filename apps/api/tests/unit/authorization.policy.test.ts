@@ -140,6 +140,7 @@ describe('central authorization policy', () => {
     for (const perfil of ['OPERADOR', 'DIRETOR', 'SECRETARIO'] as const) {
       const user = createUser(perfil, perfil === 'OPERADOR' ? [] : ['unidade-a']);
       expect(isAuthorized({ action: ACTION.READ_AUDIT, user })).toBe(false);
+      expect(isAuthorized({ action: ACTION.READ_EVENT_MINUTES, user })).toBe(perfil === 'OPERADOR');
       expect(isAuthorized({ action: ACTION.DELETE_RECORD, user })).toBe(false);
       expect(isAuthorized({ action: ACTION.MANAGE_USERS, user })).toBe(false);
     }
@@ -147,6 +148,9 @@ describe('central authorization policy', () => {
     expect(isAuthorized({ action: ACTION.READ_AUDIT, user: createUser('ADMINISTRADOR') })).toBe(
       true,
     );
+    expect(
+      isAuthorized({ action: ACTION.READ_EVENT_MINUTES, user: createUser('ADMINISTRADOR') }),
+    ).toBe(true);
     expect(isAuthorized({ action: ACTION.MANAGE_USERS, user: createUser('ADMINISTRADOR') })).toBe(
       true,
     );

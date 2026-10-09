@@ -310,7 +310,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       type: 'PERMUTA',
     });
     const unsupported = await operator.get(`/eventos/${exchange.eventId}/central`).expect(409);
-    expect(unsupported.body.error).toBe('EVENT_TYPE_NOT_SUPPORTED_IN_STAGE_7');
+    expect(unsupported.body.error).toBe('EVENT_TYPE_REQUIRES_EXCHANGE_FLOW');
   });
 
   it('usa a menor posição AGUARDANDO, mantém ATENDIDO fora da vez e ordena os próximos', async () => {
@@ -1392,6 +1392,23 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     expect(history.body.items).toHaveLength(1);
     expectNoSensitiveKeys(history.body);
   });
+
+  it.each(['REMOCAO', 'ATRIBUICAO', 'LISTAO', 'PERMUTA'] as const)(
+    'expõe o Telão público para %s sem autenticação',
+    async (type) => {
+      const event = await createEvent({ participants: [], type });
+
+      const display = await request(app).get(`/public/eventos/${event.eventId}/telao`).expect(200);
+      expect(display.body.evento).toMatchObject({ tipo: type });
+      expect(display.body.evento.cargoFuncao).toEqual(expect.any(String));
+      expectNoSensitiveKeys(display.body);
+
+      const history = await request(app)
+        .get(`/public/eventos/${event.eventId}/escolhas?page=1&pageSize=20`)
+        .expect(200);
+      expect(history.body.items).toEqual([]);
+    },
+  );
 
   it('permite que evento formal preencha e consuma uma sede reservada administrativamente', async () => {
     const candidate = await createProfessional('Destino reservado');

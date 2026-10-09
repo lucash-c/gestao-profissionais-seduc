@@ -4,6 +4,7 @@ import { HttpError } from '../../http/http-error.js';
 
 export const AUTHORIZATION_ACTIONS = {
   READ_AUDIT: 'auditoria:consultar',
+  READ_EVENT_MINUTES: 'evento:ata:consultar',
   CREATE_PROFESSIONAL: 'profissional:criar',
   CREATE_UNIT: 'unidade:criar',
   DELETE_RECORD: 'cadastro:excluir',
@@ -32,6 +33,7 @@ type AuthorizationScope = 'GLOBAL' | 'OWN_UNIT';
 const grants: Record<UserProfile, Partial<Record<AuthorizationAction, AuthorizationScope>>> = {
   ADMINISTRADOR: {
     [AUTHORIZATION_ACTIONS.READ_AUDIT]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.READ_EVENT_MINUTES]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.CREATE_PROFESSIONAL]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.CREATE_UNIT]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.DELETE_RECORD]: 'GLOBAL',
@@ -62,6 +64,7 @@ const grants: Record<UserProfile, Partial<Record<AuthorizationAction, Authorizat
     [AUTHORIZATION_ACTIONS.OPERATE_EVENT]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.READ_REGISTRIES]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.READ_EVENTS]: 'GLOBAL',
+    [AUTHORIZATION_ACTIONS.READ_EVENT_MINUTES]: 'GLOBAL',
     [AUTHORIZATION_ACTIONS.READ_STAFFING]: 'GLOBAL',
   },
   SECRETARIO: {

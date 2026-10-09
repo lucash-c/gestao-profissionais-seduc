@@ -5,6 +5,7 @@ import type {
   EventExchangeCentralRecord,
   EventExchangeResult,
   EventExchangeSimulation,
+  EventMinutes,
   EventOperationalMovement,
   EventPreparationRecord,
   EventRecord,
@@ -80,6 +81,9 @@ export const eventApi = {
   },
   getPreparation(id: string) {
     return request<EventPreparationRecord>(`/eventos/${id}/preparacao`);
+  },
+  minutes(id: string) {
+    return request<EventMinutes>(`/eventos/${id}/ata`);
   },
   list(page = 1) {
     return request<PaginatedResponse<EventRecord>>(`/eventos?page=${page}&pageSize=20`);

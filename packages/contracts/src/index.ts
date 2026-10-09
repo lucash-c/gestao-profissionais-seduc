@@ -686,20 +686,36 @@ export interface AuditRecord {
   usuarioId: string;
 }
 
-export interface PublicEventChoice {
+export interface PublicSimpleEventMovement {
   dataHora: string;
+  especie: 'MOVIMENTACAO';
   periodo: string;
   profissional: string;
   tipoDestino: EventDestinationType;
   unidadeDestino: string;
+  unidadeOrigem: string | null;
 }
+
+export interface PublicExchangeEventMovement {
+  dataHora: string;
+  especie: 'PERMUTA';
+  itens: Array<{
+    periodo: string;
+    profissional: string;
+    unidadeDestino: string;
+    unidadeOrigem: string;
+  }>;
+}
+
+export type PublicEventChoice = PublicSimpleEventMovement | PublicExchangeEventMovement;
 
 export interface PublicEventDisplay {
   evento: {
     ano: number;
+    cargoFuncao: string;
     nome: string;
     status: 'ATIVO' | 'ENCERRADO';
-    tipo: 'REMOCAO' | 'LISTAO' | 'ATRIBUICAO';
+    tipo: EventType;
   };
   participanteAtual: { nome: string; posicao: number } | null;
   proximos: Array<{ nome: string; posicao: number }>;
@@ -710,4 +726,19 @@ export interface PublicEventDisplay {
     tipo: EventDestinationType;
     unidade: string;
   }>;
+}
+
+export interface EventMinutes {
+  evento: {
+    ano: number;
+    cargoFuncao: string;
+    dataFim: string | null;
+    dataInicio: string | null;
+    nome: string;
+    responsavel: string | null;
+    status: EventStatus;
+    tipo: EventType;
+  };
+  movimentacoes: PublicEventChoice[];
+  participantes: Array<{ nome: string; posicao: number | null; status: string }>;
 }

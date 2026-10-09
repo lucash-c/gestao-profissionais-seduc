@@ -9,6 +9,7 @@ import type {
   EventOperationalSituation,
   EventPeriodRuleStatus,
   EventRecord,
+  EventMinutes,
   PaginatedResponse,
   PeriodCode,
   PositionCode,
@@ -106,6 +107,7 @@ export interface EventOperationServices {
     query: EventMovementQuery,
   ): Promise<PaginatedResponse<PublicEventChoice>>;
   publicDisplay(id: string): Promise<PublicEventDisplay>;
+  minutes(id: string): Promise<EventMinutes>;
   simulate(id: string, postoTrabalhoId: string): Promise<EventChoiceSimulation>;
   vacancies(id: string, query: EventVacancyQuery): Promise<WorkPositionRecord[]>;
 }
@@ -207,28 +209,45 @@ function mapMovement(movement: MovementPayload): EventOperationalMovement {
   };
 }
 
-function toPublicChoice(movement: EventOperationalMovement): PublicEventChoice {
+function mapPublicMovement(movement: MovementPayload): PublicEventChoice {
+  if (movement.itens.length === 2) {
+    const items = movement.itens.map((item) => {
+      if (!item.postoOrigem) {
+        throw new HttpError(409, 'EXCHANGE_MOVEMENT_INVALID', 'A permuta exige origem bilateral.');
+      }
+      return {
+        periodo: periodLookup(item.postoDestino.periodoId as PeriodCode).nome,
+        profissional: item.profissional.nomeCompleto,
+        unidadeDestino: item.postoDestino.quadroNecessidade.unidade.nome,
+        unidadeOrigem: item.postoOrigem.quadroNecessidade.unidade.nome,
+      };
+    });
+    return { dataHora: movement.dataHora.toISOString(), especie: 'PERMUTA', itens: items };
+  }
+  const mapped = mapMovement(movement);
   return {
-    dataHora: movement.dataHora,
-    periodo: movement.periodo,
-    profissional: movement.profissional,
-    tipoDestino: movement.tipoDestino,
-    unidadeDestino: movement.unidadeDestino,
+    dataHora: mapped.dataHora,
+    especie: 'MOVIMENTACAO',
+    periodo: mapped.periodo,
+    profissional: mapped.profissional,
+    tipoDestino: mapped.tipoDestino,
+    unidadeDestino: mapped.unidadeDestino,
+    unidadeOrigem: mapped.origem?.unidade.nome ?? null,
   };
 }
 
-function assertSupportedType(event: EventPayload): void {
+function assertStandardMovementEvent(event: EventPayload): void {
   if (event.tipo === 'PERMUTA') {
     throw new HttpError(
       409,
-      'EVENT_TYPE_NOT_SUPPORTED_IN_STAGE_7',
-      'A operação de Permuta será disponibilizada na Etapa 8.',
+      'EVENT_TYPE_REQUIRES_EXCHANGE_FLOW',
+      'As movimentações de Permuta são consultadas pelo fluxo próprio de Permuta.',
     );
   }
 }
 
 function assertActiveEvent(event: EventPayload): void {
-  assertSupportedType(event);
+  assertStandardMovementEvent(event);
   assertClosableActiveEvent(event);
 }
 
@@ -858,7 +877,7 @@ export function createPrismaEventOperationServices(
     async movements(id, query) {
       return client.$transaction(async (transaction) => {
         const event = await loadEvent(transaction, id);
-        assertSupportedType(event);
+        assertStandardMovementEvent(event);
         if (event.status === 'RASCUNHO') {
           throw new HttpError(409, 'EVENT_NOT_ACTIVE', 'O evento ainda não foi iniciado.');
         }
@@ -886,7 +905,6 @@ export function createPrismaEventOperationServices(
     async publicChoices(id, query) {
       return client.$transaction(async (transaction) => {
         const event = await loadEvent(transaction, id);
-        assertSupportedType(event);
         if (!['ATIVO', 'ENCERRADO'].includes(event.status)) {
           throw new HttpError(404, 'NOT_FOUND', 'Evento público não encontrado.');
         }
@@ -900,7 +918,7 @@ export function createPrismaEventOperationServices(
         });
         const total = await transaction.movimentacao.count({ where });
         return {
-          items: movements.map(mapMovement).map(toPublicChoice),
+          items: movements.map(mapPublicMovement),
           page: query.page,
           pageSize: query.pageSize,
           total,
@@ -911,14 +929,13 @@ export function createPrismaEventOperationServices(
     async publicDisplay(id) {
       return client.$transaction(async (transaction) => {
         const event = await loadEvent(transaction, id);
-        assertSupportedType(event);
         if (!['ATIVO', 'ENCERRADO'].includes(event.status)) {
           throw new HttpError(404, 'NOT_FOUND', 'Evento público não encontrado.');
         }
         const { current, queue } = await loadQueue(transaction, event);
         const waiting = queue.filter(({ status }) => status === 'AGUARDANDO');
         let positions: WorkPositionRecord[] = [];
-        if (event.status === 'ATIVO' && current) {
+        if (event.tipo !== 'PERMUTA' && event.status === 'ATIVO' && current) {
           const situation = mapSituation(
             await loadProfessionalSituation(transaction, current.profissionalId),
           );
@@ -945,9 +962,10 @@ export function createPrismaEventOperationServices(
         return {
           evento: {
             ano: event.ano,
+            cargoFuncao: positionDefinition(event.cargoFuncaoId as PositionCode).label,
             nome: event.nome,
             status: event.status as 'ATIVO' | 'ENCERRADO',
-            tipo: event.tipo as 'REMOCAO' | 'LISTAO' | 'ATRIBUICAO',
+            tipo: event.tipo,
           },
           participanteAtual: current
             ? { nome: current.profissional.nomeCompleto, posicao: current.posicao! }
@@ -956,8 +974,53 @@ export function createPrismaEventOperationServices(
             nome: participant.profissional.nomeCompleto,
             posicao: participant.posicao!,
           })),
-          ultimasEscolhas: (await latestMovements(transaction, id, 5)).map(toPublicChoice),
+          ultimasEscolhas: (
+            await transaction.movimentacao.findMany({
+              include: movementInclude,
+              orderBy: { dataHora: 'desc' },
+              take: 5,
+              where: { eventoId: id },
+            })
+          ).map(mapPublicMovement),
           vagas: [...grouped.values()],
+        };
+      });
+    },
+    async minutes(id) {
+      return client.$transaction(async (transaction) => {
+        const event = await transaction.evento.findUnique({
+          include: {
+            iniciadoPorUsuario: { select: { nome: true } },
+            participantes: {
+              include: { profissional: { select: { nomeCompleto: true } } },
+              orderBy: { posicao: 'asc' },
+            },
+          },
+          where: { id },
+        });
+        if (!event) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
+        const movements = await transaction.movimentacao.findMany({
+          include: movementInclude,
+          orderBy: { dataHora: 'asc' },
+          where: { eventoId: id },
+        });
+        return {
+          evento: {
+            ano: event.ano,
+            cargoFuncao: positionDefinition(event.cargoFuncaoId as PositionCode).label,
+            dataFim: event.dataFim?.toISOString() ?? null,
+            dataInicio: event.dataInicio?.toISOString() ?? null,
+            nome: event.nome,
+            responsavel: event.iniciadoPorUsuario?.nome ?? null,
+            status: event.status,
+            tipo: event.tipo,
+          },
+          movimentacoes: movements.map(mapPublicMovement),
+          participantes: event.participantes.map((participant) => ({
+            nome: participant.profissional.nomeCompleto,
+            posicao: participant.posicao,
+            status: participant.status,
+          })),
         };
       });
     },

@@ -148,6 +148,16 @@ onMounted(async () => {
           <QItemSection avatar><span class="material-icons">event</span></QItemSection>
           <QItemSection>Eventos</QItemSection>
         </QItem>
+        <QItem
+          v-if="canReadEvents"
+          data-testid="event-minutes-menu"
+          clickable
+          :to="{ name: 'events' }"
+          active-class="nav-active"
+        >
+          <QItemSection avatar><span class="material-icons">description</span></QItemSection>
+          <QItemSection>Atas de eventos</QItemSection>
+        </QItem>
         <div v-if="canSeeManualAssignment" class="nav-section-label">Implantação</div>
         <QItem
           v-if="canSeeManualAssignment"

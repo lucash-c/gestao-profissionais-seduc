@@ -7,6 +7,7 @@ import { useRoute } from 'vue-router';
 
 import StatusChip from '@/components/StatusChip.vue';
 import ModalHeader from '@/components/ModalHeader.vue';
+import logoSeduc from '@/assets/branding/logo-seduc-americana.png';
 import { eventApi } from '@/services/event.service';
 
 const route = useRoute();
@@ -33,6 +34,14 @@ function publicErrorMessage(loadError: unknown): string {
     return 'Evento não encontrado.';
   }
   return 'Não foi possível carregar as informações do evento.';
+}
+
+function movementKey(choice: PublicEventChoice): string {
+  return `${choice.dataHora}-${choice.especie}-${
+    choice.especie === 'PERMUTA'
+      ? choice.itens.map((item) => item.profissional).join('-')
+      : choice.profissional
+  }`;
 }
 
 async function generateQrCode(): Promise<void> {
@@ -91,16 +100,22 @@ watch(publicDisplayUrl, () => void generateQrCode());
     <div v-if="loading" class="public-state"><QSpinner size="48px" /> Carregando sessão…</div>
     <template v-else-if="display">
       <header class="public-header">
-        <div>
-          <p class="eyebrow">SEDUC Americana · Sessão pública</p>
-          <h1>{{ display.evento.nome }}</h1>
-          <div class="row items-center q-gutter-sm">
-            <StatusChip :status="display.evento.tipo" />
-            <StatusChip
-              :status="display.evento.status === 'ENCERRADO' ? 'EVENTO ENCERRADO' : 'EM ANDAMENTO'"
-              :tone="display.evento.status === 'ENCERRADO' ? 'neutral' : 'positive'"
-            />
-            <span>{{ display.evento.ano }}</span>
+        <div class="public-event-brand">
+          <img :src="logoSeduc" alt="Secretaria de Educação de Americana" />
+          <div>
+            <p class="eyebrow">SEDUC AMERICANA · SESSÃO PÚBLICA</p>
+            <h1>{{ display.evento.nome }}</h1>
+            <div class="row items-center q-gutter-sm">
+              <StatusChip :status="display.evento.tipo" />
+              <StatusChip
+                :status="
+                  display.evento.status === 'ENCERRADO' ? 'EVENTO ENCERRADO' : 'EM ANDAMENTO'
+                "
+                :tone="display.evento.status === 'ENCERRADO' ? 'neutral' : 'positive'"
+              />
+              <span>Cargo: {{ display.evento.cargoFuncao }}</span>
+              <span>{{ display.evento.ano }}</span>
+            </div>
           </div>
         </div>
         <aside class="public-qr-code" data-testid="public-event-qr-code">
@@ -138,50 +153,87 @@ watch(publicDisplayUrl, () => void generateQrCode());
         </QCard>
       </section>
 
-      <h2>Vagas compatíveis</h2>
-      <section class="public-vacancies" data-testid="public-vacancies">
-        <QCard
-          v-for="vacancy in display.vagas"
-          :key="`${vacancy.unidade}-${vacancy.periodo}-${vacancy.tipo}`"
-          flat
-          bordered
-        >
-          <QCardSection>
-            <h3>{{ vacancy.unidade }}</h3>
-            <p>{{ vacancy.periodo }}</p>
-            <StatusChip
-              :status="vacancy.tipo === 'SEDE' ? 'SEDE FIXA / COM SEDE' : 'SEM SEDE / SUBSTITUIÇÃO'"
-              tone="info"
-            />
-            <strong>{{ vacancy.quantidade }} vaga(s)</strong>
-          </QCardSection>
-        </QCard>
-        <p v-if="display.vagas.length === 0">Nenhuma vaga compatível disponível.</p>
-      </section>
+      <template v-if="display.evento.tipo !== 'PERMUTA'">
+        <h2>Vagas compatíveis</h2>
+        <section class="public-vacancies" data-testid="public-vacancies">
+          <QCard
+            v-for="vacancy in display.vagas"
+            :key="`${vacancy.unidade}-${vacancy.periodo}-${vacancy.tipo}`"
+            flat
+            bordered
+          >
+            <QCardSection>
+              <h3>{{ vacancy.unidade }}</h3>
+              <p>{{ vacancy.periodo }}</p>
+              <StatusChip
+                :status="
+                  vacancy.tipo === 'SEDE' ? 'SEDE FIXA / COM SEDE' : 'SEM SEDE / SUBSTITUIÇÃO'
+                "
+                tone="info"
+              />
+              <strong>{{ vacancy.quantidade }} vaga(s)</strong>
+            </QCardSection>
+          </QCard>
+          <p v-if="display.vagas.length === 0">Nenhuma vaga compatível disponível.</p>
+        </section>
+      </template>
+      <QBanner v-else class="q-mt-md bg-blue-1 text-primary" data-testid="public-exchange-info">
+        As permutas realizadas são apresentadas como operações bilaterais no histórico abaixo.
+      </QBanner>
 
       <QCard flat bordered class="q-mt-lg" data-testid="public-recent-choices">
         <QCardSection>
-          <p class="eyebrow">Últimas escolhas</p>
-          <p
-            v-for="choice in display.ultimasEscolhas"
-            :key="`${choice.dataHora}-${choice.profissional}`"
-          >
-            {{ choice.profissional }} → {{ choice.unidadeDestino }} · {{ choice.periodo }} ·
-            {{ choice.tipoDestino }}
+          <p class="eyebrow">
+            {{ display.evento.tipo === 'PERMUTA' ? 'Últimas permutas' : 'Últimas escolhas' }}
           </p>
-          <p v-if="display.ultimasEscolhas.length === 0">Nenhuma escolha registrada.</p>
-          <QBtn flat label="Ver escolhas anteriores" @click="loadChoices()" />
+          <template v-for="choice in display.ultimasEscolhas" :key="movementKey(choice)">
+            <template v-if="choice.especie === 'PERMUTA'">
+              <p class="public-movement-title">Permuta realizada</p>
+              <p v-for="item in choice.itens" :key="item.profissional">
+                {{ item.profissional }} · {{ item.unidadeOrigem }} → {{ item.unidadeDestino }} ·
+                {{ item.periodo }}
+              </p>
+            </template>
+            <p v-else>
+              {{ choice.profissional }} → {{ choice.unidadeDestino }} · {{ choice.periodo }} ·
+              {{ choice.tipoDestino }}
+            </p>
+          </template>
+          <p v-if="display.ultimasEscolhas.length === 0">Nenhuma movimentação registrada.</p>
+          <QBtn
+            flat
+            :label="
+              display.evento.tipo === 'PERMUTA'
+                ? 'Ver permutas anteriores'
+                : 'Ver escolhas anteriores'
+            "
+            @click="loadChoices()"
+          />
         </QCardSection>
       </QCard>
 
       <QDialog v-model="historyOpen">
         <QCard class="registry-dialog public-history" data-testid="public-choice-history">
-          <ModalHeader title="Escolhas anteriores" @close="historyOpen = false" />
+          <ModalHeader
+            :title="
+              display?.evento.tipo === 'PERMUTA' ? 'Permutas anteriores' : 'Escolhas anteriores'
+            "
+            @close="historyOpen = false"
+          />
           <QCardSection class="modal-scroll-body">
-            <p v-for="choice in choices" :key="`${choice.dataHora}-${choice.profissional}`">
-              {{ choice.profissional }} · {{ choice.unidadeDestino }} · {{ choice.periodo }} ·
-              {{ choice.tipoDestino }}
-            </p>
+            <template v-for="choice in choices" :key="movementKey(choice)">
+              <template v-if="choice.especie === 'PERMUTA'">
+                <p class="public-movement-title">Permuta realizada</p>
+                <p v-for="item in choice.itens" :key="item.profissional">
+                  {{ item.profissional }} · {{ item.unidadeOrigem }} → {{ item.unidadeDestino }} ·
+                  {{ item.periodo }}
+                </p>
+              </template>
+              <p v-else>
+                {{ choice.profissional }} · {{ choice.unidadeDestino }} · {{ choice.periodo }} ·
+                {{ choice.tipoDestino }}
+              </p>
+            </template>
             <QPagination v-model="page" :max="pages" @update:model-value="loadChoices" />
           </QCardSection>
         </QCard>
@@ -207,6 +259,20 @@ watch(publicDisplayUrl, () => void generateQrCode());
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
+}
+.public-event-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.public-event-brand img {
+  width: clamp(96px, 12vw, 144px);
+  height: auto;
+  mix-blend-mode: multiply;
+}
+.public-movement-title {
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 .public-qr-code {
   display: grid;
@@ -256,6 +322,9 @@ watch(publicDisplayUrl, () => void generateQrCode());
   .public-header {
     align-items: center;
     flex-direction: column;
+  }
+  .public-event-brand {
+    align-items: center;
   }
 }
 </style>

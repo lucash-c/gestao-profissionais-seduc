@@ -4,6 +4,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import AuditHistoryPage from '@/pages/AuditHistoryPage.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
+import EventMinutesPage from '@/pages/EventMinutesPage.vue';
 import EventExchangePage from '@/pages/EventExchangePage.vue';
 import EventPreparationPage from '@/pages/EventPreparationPage.vue';
 import EventsPage from '@/pages/EventsPage.vue';
@@ -54,6 +55,12 @@ export function createAppRouter(
             meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },
             name: 'events',
             path: 'eventos',
+          },
+          {
+            component: EventMinutesPage,
+            meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },
+            name: 'event-minutes',
+            path: 'eventos/:id/ata',
           },
           {
             component: EventOperationsPage,
