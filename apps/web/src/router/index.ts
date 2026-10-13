@@ -5,6 +5,7 @@ import PublicLayout from '@/layouts/PublicLayout.vue';
 import AuditHistoryPage from '@/pages/AuditHistoryPage.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import EventMinutesPage from '@/pages/EventMinutesPage.vue';
+import EventMinutesPrintPage from '@/pages/EventMinutesPrintPage.vue';
 import EventExchangePage from '@/pages/EventExchangePage.vue';
 import EventPreparationPage from '@/pages/EventPreparationPage.vue';
 import EventsPage from '@/pages/EventsPage.vue';
@@ -31,6 +32,12 @@ export function createAppRouter(
         meta: { public: true },
         name: 'login',
         path: '/login',
+      },
+      {
+        component: EventMinutesPrintPage,
+        meta: { profiles: ['ADMINISTRADOR', 'OPERADOR'] },
+        name: 'event-minutes-print',
+        path: '/eventos/:id/ata/impressao',
       },
       {
         children: [

@@ -283,6 +283,14 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Ano *');
   });
 
+  it('mantém a Ata e os detalhes técnicos como ações separadas', async () => {
+    const { wrapper } = await mountPage(EventsPage, '/eventos');
+    expect(wrapper.text()).toContain('Ver ata');
+    await wrapper.get('[data-testid="event-technical-details"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="event-technical-dialog"]').text()).toContain('Remoção 2026');
+  });
+
   it('mantém a listagem disponível e informa inline quando o catálogo de cargos falha', async () => {
     mocks.listCargos.mockRejectedValueOnce(new Error('Catálogo indisponível'));
     const { wrapper } = await mountPage(EventsPage, '/eventos');

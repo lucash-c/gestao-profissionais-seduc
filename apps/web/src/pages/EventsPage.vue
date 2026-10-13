@@ -42,6 +42,7 @@ const dialogError = ref('');
 const saveFailure = ref<unknown>(null);
 const deleting = ref<EventRecord | null>(null);
 const deleteError = ref('');
+const technicalEvent = ref<EventRecord | null>(null);
 const isOperator = computed(() => sessionStore.state.user?.perfil === 'OPERADOR');
 const isAdmin = computed(() => sessionStore.state.user?.perfil === 'ADMINISTRADOR');
 const form = reactive({
@@ -219,6 +220,13 @@ onMounted(async () => {
                 :to="{ name: 'event-minutes', params: { id: props.row.id } }"
               />
               <QBtn
+                flat
+                dense
+                label="Ver detalhes técnicos"
+                data-testid="event-technical-details"
+                @click="technicalEvent = props.row"
+              />
+              <QBtn
                 v-if="isOperator && props.row.status === 'RASCUNHO'"
                 flat
                 dense
@@ -356,6 +364,14 @@ onMounted(async () => {
             @click="save"
           />
         </QCardActions>
+      </QCard>
+    </QDialog>
+    <QDialog :model-value="Boolean(technicalEvent)" @update:model-value="technicalEvent = null">
+      <QCard class="registry-dialog" data-testid="event-technical-dialog">
+        <ModalHeader title="Detalhes técnicos do evento" @close="technicalEvent = null" />
+        <QCardSection class="modal-scroll-body">
+          <pre>{{ JSON.stringify(technicalEvent, null, 2) }}</pre>
+        </QCardSection>
       </QCard>
     </QDialog>
     <DeleteConfirmationDialog

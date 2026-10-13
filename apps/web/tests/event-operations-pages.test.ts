@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App.vue';
 import EventOperationsPage from '@/pages/EventOperationsPage.vue';
 import EventMinutesPage from '@/pages/EventMinutesPage.vue';
+import EventMinutesPrintPage from '@/pages/EventMinutesPrintPage.vue';
 import PublicEventDisplayPage from '@/pages/PublicEventDisplayPage.vue';
 import { createAppRouter } from '@/router';
 import type { SessionStore } from '@/stores/session.store';
@@ -269,6 +270,11 @@ async function mountPage(component: object, path: string) {
     history: createMemoryHistory(),
     routes: [
       { component: { template: '<div />' }, name: 'events', path: '/eventos' },
+      {
+        component: { template: '<div />' },
+        name: 'event-minutes-print',
+        path: '/eventos/:id/ata/impressao',
+      },
       { component: { template: '<div />' }, name: 'operations', path: '/eventos/:id/central' },
       { component: { template: '<div />' }, name: 'public', path: '/publico/eventos/:id' },
     ],
@@ -633,7 +639,9 @@ describe('Etapa 7 frontend do telão público', () => {
 });
 
 describe('Ata de eventos', () => {
-  it('apresenta Permuta bilateral, detalhes técnicos recolhidos e impressão', async () => {
+  it('apresenta o documento sem JSON e abre a rota isolada de impressão', async () => {
+    const open = vi.fn();
+    vi.stubGlobal('open', open);
     const print = vi.fn();
     Object.defineProperty(window, 'print', { configurable: true, value: print });
     const wrapper = await mountPage(EventMinutesPage, `/eventos/${EVENT_ID}/central`);
@@ -643,8 +651,33 @@ describe('Ata de eventos', () => {
     expect(wrapper.text()).toContain('Ana');
     expect(wrapper.text()).toContain('EMEF A → EMEF B');
     expect(wrapper.find('[data-testid="print-minutes"]').exists()).toBe(true);
-    expect(wrapper.find('details').attributes('open')).toBeUndefined();
+    expect(wrapper.text()).not.toContain('detalhes técnicos');
     await wrapper.get('[data-testid="print-minutes"]').trigger('click');
+    expect(open).toHaveBeenCalledWith(`/eventos/${EVENT_ID}/ata/impressao`, '_blank', 'noopener');
+    expect(print).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('renderiza e imprime apenas o documento na rota sem layout administrativo', async () => {
+    const print = vi.fn();
+    Object.defineProperty(window, 'print', { configurable: true, value: print });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { component: EventMinutesPrintPage, name: 'print', path: '/eventos/:id/ata/impressao' },
+      ],
+    });
+    await router.push(`/eventos/${EVENT_ID}/ata/impressao`);
+    await router.isReady();
+    const wrapper = mount(EventMinutesPrintPage, {
+      attachTo: document.body,
+      global: { plugins: [Quasar, router] },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="event-minutes-document"]').exists()).toBe(true);
+    expect(wrapper.find('.admin-layout').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('detalhes técnicos');
     expect(print).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
