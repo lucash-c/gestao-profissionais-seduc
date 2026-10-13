@@ -251,11 +251,15 @@ describe('Etapa 6 frontend de eventos', () => {
   it('mostra o menu ao Operador e ao Administrador', async () => {
     const operator = await mountPage(AdminLayout, '/eventos');
     expect(operator.wrapper.find('[data-testid="events-menu"]').exists()).toBe(true);
+    expect(operator.wrapper.find('[data-testid="event-minutes-menu"]').exists()).toBe(false);
+    expect(operator.wrapper.text()).not.toContain('Atas de eventos');
     operator.wrapper.unmount();
 
     setProfile('ADMINISTRADOR');
     const admin = await mountPage(AdminLayout, '/unidades');
     expect(admin.wrapper.find('[data-testid="events-menu"]').exists()).toBe(true);
+    expect(admin.wrapper.find('[data-testid="event-minutes-menu"]').exists()).toBe(false);
+    expect(admin.wrapper.text()).not.toContain('Atas de eventos');
     admin.wrapper.unmount();
   });
 
@@ -283,12 +287,11 @@ describe('Etapa 6 frontend de eventos', () => {
     expect(wrapper.get('[data-testid="event-dialog"]').text()).toContain('Ano *');
   });
 
-  it('mantém a Ata e os detalhes técnicos como ações separadas', async () => {
+  it('mantém a Ata e remove o atalho técnico da tabela de Eventos', async () => {
     const { wrapper } = await mountPage(EventsPage, '/eventos');
     expect(wrapper.text()).toContain('Ver ata');
-    await wrapper.get('[data-testid="event-technical-details"]').trigger('click');
-    await flushPromises();
-    expect(wrapper.get('[data-testid="event-technical-dialog"]').text()).toContain('Remoção 2026');
+    expect(wrapper.find('[data-testid="event-technical-details"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Ver detalhes técnicos');
   });
 
   it('mantém a listagem disponível e informa inline quando o catálogo de cargos falha', async () => {
@@ -309,10 +312,16 @@ describe('Etapa 6 frontend de eventos', () => {
         { ...event, id: '77777777-7777-4777-8777-777777777777', status: 'ATIVO', tipo: 'LISTAO' },
         { ...event, id: '88888888-8888-4888-8888-888888888888', status: 'ATIVO', tipo: 'PERMUTA' },
         { ...event, id: '99999999-9999-4999-8999-999999999999', status: 'ENCERRADO' },
+        {
+          ...event,
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          status: 'ENCERRADO',
+          tipo: 'PERMUTA',
+        },
       ],
       page: 1,
       pageSize: 20,
-      total: 4,
+      total: 5,
       totalPages: 1,
     });
     const { wrapper } = await mountPage(EventsPage, '/eventos');
@@ -324,6 +333,7 @@ describe('Etapa 6 frontend de eventos', () => {
       wrapper.findAll('a').filter((item) => item.text().includes('Abrir Permuta')),
     ).toHaveLength(1);
     expect(wrapper.findAll('a').some((item) => item.text().includes('Ver resultado'))).toBe(true);
+    expect(wrapper.findAll('a').some((item) => item.text().includes('Ver histórico'))).toBe(true);
   });
 
   it('mantém a lista completa visível durante busca e exibe filhos, chips e inelegível bloqueado', async () => {
