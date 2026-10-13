@@ -768,7 +768,7 @@ export function createPrismaManualAssignmentServices(
             });
             if (ended.count !== 1) seatChanged();
             await transaction.postoTrabalho.update({
-              data: { reservadoParaEvento: true },
+              data: { reservadoParaEvento: false },
               where: { id: state.placement.postoTrabalhoId },
             });
           },

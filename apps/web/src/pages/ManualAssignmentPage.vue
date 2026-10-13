@@ -473,7 +473,14 @@ onMounted(async () => {
             {{ seatRemovalSimulation.ocupanteAtual?.nomeCompleto ?? 'Nenhum' }}
           </p>
           <QBanner class="bg-blue-1 text-primary q-mt-md">
-            A sede ficará sem titular e será reservada para realocação em evento formal.
+            <template v-if="seatRemovalSimulation.ocupanteAtual">
+              A sede ficará sem titular. O ocupante temporário será preservado e o posto só poderá
+              ser reutilizado quando estiver efetivamente disponível.
+            </template>
+            <template v-else>
+              A sede ficará sem titular e o posto ficará disponível para nova atribuição
+              administrativa.
+            </template>
           </QBanner>
         </QCardSection>
         <QCardActions align="right">

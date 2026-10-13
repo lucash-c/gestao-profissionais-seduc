@@ -792,6 +792,26 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
         where: { dataFim: null, profissionalId: derivedHolder.id },
       }),
     ).toBe(0);
+    const immediatelyAssignable = await admin
+      .get(`/atribuicao-manual/postos?profissionalId=${derivedHolder.id}`)
+      .expect(200);
+    expect(immediatelyAssignable.body.map(({ id }: { id: string }) => id)).toContain(
+      derivedSeat.id,
+    );
+    const replacement = await createProfessional();
+    await admin
+      .post('/atribuicao-manual/confirmar')
+      .send({
+        postoTrabalhoId: derivedSeat.id,
+        profissionalId: replacement.id,
+        tipoDestino: 'COM_SEDE',
+      })
+      .expect(200);
+    await expect(staffing.workPositions.get(derivedSeat.id)).resolves.toMatchObject({
+      titularAtual: { id: replacement.id },
+      ocupanteAtual: { id: replacement.id },
+      disponibilidade: 'INDISPONIVEL',
+    });
 
     const ownSeat = await createPosition(ids.unidadeA);
     const external = await makeTemporaryPosition();
@@ -849,7 +869,7 @@ describeWithPostgres('Etapa 5 vínculos e disponibilidade no PostgreSQL', () => 
     expect(
       await database.client.postoTrabalho.findUniqueOrThrow({ where: { id: ownSeat.id } }),
     ).toMatchObject({
-      reservadoParaEvento: true,
+      reservadoParaEvento: false,
     });
     await expect(staffing.workPositions.get(ownSeat.id)).resolves.toMatchObject({
       ocupanteAtual: { id: substitute.id },
