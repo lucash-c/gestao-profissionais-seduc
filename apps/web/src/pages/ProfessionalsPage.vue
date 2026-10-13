@@ -50,6 +50,7 @@ const deleting = ref<ProfessionalRecord | null>(null);
 const deleteError = ref('');
 const dialogError = ref('');
 const relationshipsError = ref('');
+const manifestationError = ref('');
 const saveFailure = ref<unknown>(null);
 const relationships = ref<ProfessionalRelationshipsRecord | null>(null);
 const absenceCreateOpen = ref(false);
@@ -175,6 +176,7 @@ async function load(): Promise<void> {
 }
 
 function resetForm(): void {
+  manifestationError.value = '';
   Object.assign(form, {
     ativo: true,
     bairro: '',
@@ -205,6 +207,7 @@ function applyCepAddress(address: ViaCepAddress): void {
 }
 
 function openCreate(): void {
+  manifestationError.value = '';
   dialogError.value = '';
   relationshipsError.value = '';
   saveFailure.value = null;
@@ -214,6 +217,7 @@ function openCreate(): void {
   dialogOpen.value = true;
 }
 async function openEdit(row: ProfessionalRecord): Promise<void> {
+  manifestationError.value = '';
   dialogError.value = '';
   relationshipsError.value = '';
   saveFailure.value = null;
@@ -250,6 +254,16 @@ async function openEdit(row: ProfessionalRecord): Promise<void> {
         ? loadError.message
         : 'Falha ao carregar vínculos do profissional.';
   }
+}
+
+function updateManifestation(field: 'permuta' | 'remocao', value: boolean): void {
+  if (value && !(relationships.value?.sedeAtual ?? editing.value?.sedeAtual)) {
+    manifestationError.value =
+      'Esta opção não pode ser marcada em profissionais que não tenha sede fixa';
+    return;
+  }
+  manifestationError.value = '';
+  form[field] = value;
 }
 
 function dateAsTimestamp(value: string): string {
@@ -716,10 +730,18 @@ onMounted(load);
               label="Cidade"
             />
             <div class="manifestations full-span">
-              <QCheckbox v-model="form.remocao" label="Manifestação prévia de Remoção" /><QCheckbox
-                v-model="form.permuta"
+              <QCheckbox
+                :model-value="form.remocao"
+                label="Manifestação prévia de Remoção"
+                @update:model-value="updateManifestation('remocao', $event)"
+              /><QCheckbox
+                :model-value="form.permuta"
                 label="Manifestação prévia de Permuta"
+                @update:model-value="updateManifestation('permuta', $event)"
               />
+              <QBanner v-if="manifestationError" class="bg-orange-1 text-orange-10 full-span">
+                {{ manifestationError }}
+              </QBanner>
             </div>
             <QInput
               v-model="form.observacoes"
