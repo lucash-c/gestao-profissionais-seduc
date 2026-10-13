@@ -14,7 +14,6 @@ import {
   QCardSection,
   QDialog,
   QInput,
-  QIcon,
   QPage,
   QPagination,
   QSpinner,
@@ -354,25 +353,23 @@ onMounted(async () => {
             outline
             color="secondary"
             class="administrative-action-btn"
+            icon="home_off"
+            label="Retirar sede"
             data-testid="manual-remove-seat"
             @click="openSeatRemoval"
-          >
-            <QIcon name="home_off" aria-hidden="true" />
-            <span>Retirar sede</span>
-          </QBtn>
+          />
           <QBtn
             v-for="exercise in selectedProfessional.exerciciosAtuais"
             :key="exercise.id"
             outline
             color="secondary"
             class="administrative-action-btn"
+            icon="work_off"
+            label="Encerrar exercício atual"
             :aria-label="`Encerrar exercício atual em ${exercise.unidadeNome}`"
             data-testid="manual-end-exercise"
             @click="openExerciseEnd(exercise.id)"
-          >
-            <QIcon name="work_off" aria-hidden="true" />
-            <span>Encerrar exercício atual</span>
-          </QBtn>
+          />
         </div>
       </QCardSection>
       <div v-if="positions.length === 0" class="registry-state">
@@ -610,7 +607,16 @@ onMounted(async () => {
 
 .administrative-actions__buttons :deep(.administrative-action-btn .q-icon) {
   flex: 0 0 auto;
-  position: static;
+  left: auto;
+  position: static !important;
+  top: auto;
+  transform: none;
+}
+
+.modal-scroll-body h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+  margin: 16px 0 8px;
 }
 
 @media (max-width: 599px) {
