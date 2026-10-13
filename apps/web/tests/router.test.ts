@@ -100,4 +100,17 @@ describe('proteção de rotas', () => {
       expect(schoolRouter.currentRoute.value.name).toBe('units');
     }
   });
+
+  it('mantém a impressão da Ata disponível para Administrador e Operador', async () => {
+    for (const profile of ['ADMINISTRADOR', 'OPERADOR'] as const) {
+      const router = createAppRouter(
+        createSession('authenticated', profile),
+        createMemoryHistory(),
+      );
+
+      await router.push('/eventos/evento-1/ata/impressao');
+
+      expect(router.currentRoute.value.name).toBe('event-minutes-print');
+    }
+  });
 });

@@ -315,6 +315,12 @@ function button(wrapper: Awaited<ReturnType<typeof mountPage>>, label: string) {
   return wrapper.findAll('button').find((candidate) => candidate.text().includes(label));
 }
 
+function markMinutesLogoAsLoaded(wrapper: ReturnType<typeof mount>) {
+  wrapper
+    .get('[data-testid="event-minutes-document"] img')
+    .element.dispatchEvent(new Event('load'));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.central.mockResolvedValue(structuredClone(central));
@@ -650,10 +656,75 @@ describe('Ata de eventos', () => {
     expect(wrapper.text()).toContain('PEB1 - Fundamental');
     expect(wrapper.text()).toContain('Ana');
     expect(wrapper.text()).toContain('EMEF A → EMEF B');
+    expect(wrapper.find('[data-testid="event-minutes-document"] img').exists()).toBe(true);
+    expect(wrapper.get('.minutes-document__header').text()).not.toContain(
+      'PREFEITURA DE AMERICANA',
+    );
+    expect(wrapper.get('.minutes-document__header').text()).not.toContain('SECRETARIA DE EDUCAÇÃO');
     expect(wrapper.find('[data-testid="print-minutes"]').exists()).toBe(true);
     expect(wrapper.text()).not.toContain('detalhes técnicos');
     await wrapper.get('[data-testid="print-minutes"]').trigger('click');
     expect(open).toHaveBeenCalledWith(`/eventos/${EVENT_ID}/ata/impressao`, '_blank', 'noopener');
+    expect(print).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('aguarda o documento sair do carregamento antes de imprimir', async () => {
+    let resolveMinutes!: (value: EventMinutes) => void;
+    mocks.minutes.mockReturnValueOnce(
+      new Promise<EventMinutes>((resolve) => {
+        resolveMinutes = resolve;
+      }),
+    );
+    const print = vi.fn();
+    Object.defineProperty(window, 'print', { configurable: true, value: print });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { component: EventMinutesPrintPage, name: 'print', path: '/eventos/:id/ata/impressao' },
+      ],
+    });
+    await router.push(`/eventos/${EVENT_ID}/ata/impressao`);
+    await router.isReady();
+    const wrapper = mount(EventMinutesPrintPage, {
+      attachTo: document.body,
+      global: { plugins: [Quasar, router] },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Carregando ata');
+    expect(print).not.toHaveBeenCalled();
+
+    resolveMinutes(structuredClone(minutes));
+    await flushPromises();
+    markMinutesLogoAsLoaded(wrapper);
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="event-minutes-document"]').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('Carregando ata');
+    expect(print).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('não imprime quando a Ata falha ao carregar', async () => {
+    mocks.minutes.mockRejectedValueOnce(new Error('Não foi possível carregar a ata.'));
+    const print = vi.fn();
+    Object.defineProperty(window, 'print', { configurable: true, value: print });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { component: EventMinutesPrintPage, name: 'print', path: '/eventos/:id/ata/impressao' },
+      ],
+    });
+    await router.push(`/eventos/${EVENT_ID}/ata/impressao`);
+    await router.isReady();
+    const wrapper = mount(EventMinutesPrintPage, {
+      attachTo: document.body,
+      global: { plugins: [Quasar, router] },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Não foi possível carregar a ata.');
     expect(print).not.toHaveBeenCalled();
     wrapper.unmount();
   });
@@ -673,6 +744,8 @@ describe('Ata de eventos', () => {
       attachTo: document.body,
       global: { plugins: [Quasar, router] },
     });
+    await flushPromises();
+    markMinutesLogoAsLoaded(wrapper);
     await flushPromises();
 
     expect(wrapper.find('[data-testid="event-minutes-document"]').exists()).toBe(true);

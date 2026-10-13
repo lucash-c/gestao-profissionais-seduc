@@ -13,9 +13,44 @@ const loading = ref(true);
 const error = ref('');
 const eventId = computed(() => String(route.params.id));
 
+async function waitForDocumentImages(root: HTMLElement): Promise<void> {
+  const images = Array.from(root.querySelectorAll('img'));
+
+  await Promise.all(
+    images.map(
+      (image) =>
+        new Promise<void>((resolve, reject) => {
+          if (image.complete) {
+            resolve();
+            return;
+          }
+
+          image.addEventListener('load', () => resolve(), { once: true });
+          image.addEventListener(
+            'error',
+            () => reject(new Error('Não foi possível preparar a ata para impressão.')),
+            { once: true },
+          );
+        }),
+    ),
+  );
+}
+
 async function load(): Promise<void> {
   try {
     minutes.value = await eventApi.minutes(eventId.value);
+    loading.value = false;
+    await nextTick();
+
+    const documentElement = document.querySelector<HTMLElement>(
+      '[data-testid="event-minutes-document"]',
+    );
+    if (!documentElement) {
+      throw new Error('Não foi possível preparar a ata para impressão.');
+    }
+
+    await waitForDocumentImages(documentElement);
+    if (document.fonts?.ready) await document.fonts.ready;
     await nextTick();
     window.print();
   } catch (loadError) {

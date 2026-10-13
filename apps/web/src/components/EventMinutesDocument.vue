@@ -49,10 +49,6 @@ function eventStatus(value: EventMinutes['evento']['status']): string {
   <article class="event-minutes-document" data-testid="event-minutes-document">
     <header class="minutes-document__header">
       <img :src="logoSeduc" alt="Prefeitura de Americana — Secretaria de Educação" />
-      <div>
-        <p>PREFEITURA DE AMERICANA</p>
-        <p>SECRETARIA DE EDUCAÇÃO</p>
-      </div>
     </header>
 
     <div class="minutes-document__title">
@@ -186,6 +182,7 @@ function eventStatus(value: EventMinutes['evento']['status']): string {
   border-bottom: 1px solid #aeb8c4;
   display: flex;
   gap: 16px;
+  justify-content: center;
   padding-bottom: 12px;
 }
 .minutes-document__header img {
@@ -200,17 +197,19 @@ function eventStatus(value: EventMinutes['evento']['status']): string {
   margin: 0;
 }
 .minutes-document__title {
-  padding: 18px 0 12px;
+  padding: 12px 0 10px;
   text-align: center;
 }
 .minutes-document__title h1 {
   font-size: 1.25rem;
   letter-spacing: 0.04em;
+  line-height: 1.2;
   margin: 0;
 }
 .minutes-document__title p {
   font-size: 1rem;
   font-weight: 600;
+  line-height: 1.25;
   margin: 6px 0 0;
 }
 .minutes-document__details {
