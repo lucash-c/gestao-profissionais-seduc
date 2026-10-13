@@ -353,23 +353,25 @@ onMounted(async () => {
             v-if="selectedProfessional.sedeAtual"
             outline
             color="secondary"
+            class="administrative-action-btn"
             data-testid="manual-remove-seat"
             @click="openSeatRemoval"
           >
             <QIcon name="home_off" aria-hidden="true" />
-            <span class="q-ml-sm">Retirar sede</span>
+            <span>Retirar sede</span>
           </QBtn>
           <QBtn
             v-for="exercise in selectedProfessional.exerciciosAtuais"
             :key="exercise.id"
             outline
             color="secondary"
+            class="administrative-action-btn"
             :aria-label="`Encerrar exercício atual em ${exercise.unidadeNome}`"
             data-testid="manual-end-exercise"
             @click="openExerciseEnd(exercise.id)"
           >
             <QIcon name="work_off" aria-hidden="true" />
-            <span class="q-ml-sm">Encerrar exercício atual</span>
+            <span>Encerrar exercício atual</span>
           </QBtn>
         </div>
       </QCardSection>
@@ -598,6 +600,17 @@ onMounted(async () => {
 
 .administrative-actions__buttons :deep(.q-btn) {
   min-height: 34px;
+}
+
+.administrative-actions__buttons :deep(.administrative-action-btn .q-btn__content) {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.administrative-actions__buttons :deep(.administrative-action-btn .q-icon) {
+  flex: 0 0 auto;
+  position: static;
 }
 
 @media (max-width: 599px) {
