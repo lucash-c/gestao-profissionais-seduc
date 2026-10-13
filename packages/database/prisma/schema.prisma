@@ -48,6 +48,7 @@ enum StatusEventoParticipante {
   AGUARDANDO
   ATENDIDO
   EMPATE_PENDENTE
+  SEM_VAGA
 
   @@map("status_evento_participante")
 }

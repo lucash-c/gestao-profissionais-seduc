@@ -79,6 +79,7 @@ export const UNIT_TYPES = [
   { code: 'CASA_DA_CRIANCA', label: 'CASA DA CRIANÇA' },
   { code: 'CMEA', label: 'CMEA' },
   { code: 'CENTRO_DE_INCLUSAO', label: 'CENTRO DE INCLUSÃO' },
+  { code: 'GABINETE', label: 'GABINETE' },
 ] as const;
 
 export type UnitTypeCode = (typeof UNIT_TYPES)[number]['code'];
@@ -536,7 +537,7 @@ export interface EventOperationalParticipant {
   pontuacaoSnapshot: string | null;
   posicao: number;
   profissionalId: string;
-  status: 'AGUARDANDO' | 'ATENDIDO';
+  status: 'AGUARDANDO' | 'ATENDIDO' | 'SEM_VAGA';
 }
 
 export interface EventOperationalMovement {
@@ -582,6 +583,7 @@ export interface EventCentralRecord {
     aguardando: number;
     atendidos: number;
     podeEncerrar: boolean;
+    semVaga: number;
     total: number;
     vagasDisponiveis: number;
   };

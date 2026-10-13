@@ -165,7 +165,7 @@ function mapParticipant(
     !participant.dataEntradaSnapshot ||
     !participant.dataNascimentoSnapshot ||
     participant.numeroFilhosSnapshot === null ||
-    !['AGUARDANDO', 'ATENDIDO'].includes(participant.status)
+    !['AGUARDANDO', 'ATENDIDO', 'SEM_VAGA'].includes(participant.status)
   ) {
     throw new HttpError(
       409,
@@ -183,7 +183,7 @@ function mapParticipant(
     pontuacaoSnapshot: participant.pontuacaoSnapshot?.toFixed(2) ?? null,
     posicao: participant.posicao,
     profissionalId: participant.profissionalId,
-    status: participant.status as 'AGUARDANDO' | 'ATENDIDO',
+    status: participant.status as 'AGUARDANDO' | 'ATENDIDO' | 'SEM_VAGA',
   };
 }
 
@@ -377,6 +377,50 @@ async function clearParticipantManifestations(
   });
 }
 
+async function closeWhenNoVacancies(
+  transaction: Prisma.TransactionClient,
+  event: EventPayload,
+  userId: string | null,
+  now: Date,
+): Promise<EventPayload | null> {
+  if (event.tipo === 'PERMUTA') return null;
+  const waiting = await transaction.eventoParticipante.count({
+    where: { eventoId: event.id, status: 'AGUARDANDO' },
+  });
+  if (waiting === 0) return null;
+  const available = await listAvailablePositions(transaction, event, {
+    code: null,
+    message: 'Qualquer período',
+    mode: 'ANY',
+    periodoId: null,
+  });
+  if (available.length > 0) return null;
+  await transaction.eventoParticipante.updateMany({
+    data: { status: 'SEM_VAGA' },
+    where: { eventoId: event.id, status: 'AGUARDANDO' },
+  });
+  const closed = await transaction.evento.update({
+    data: { dataFim: now, status: 'ENCERRADO' },
+    include: eventInclude,
+    where: { id: event.id },
+  });
+  await clearParticipantManifestations(transaction, event);
+  if (userId) {
+    await writeAudit(transaction, {
+      acao: 'UPDATE',
+      after: {
+        ...mapEvent(closed),
+        motivo: 'Evento encerrado automaticamente por ausência de vagas disponíveis.',
+      },
+      before: mapEvent(event),
+      entidade: 'EVENTO',
+      registroId: event.id,
+      usuarioId: userId,
+    });
+  }
+  return closed;
+}
+
 async function loadEvent(transaction: Prisma.TransactionClient, id: string): Promise<EventPayload> {
   const event = await transaction.evento.findUnique({ include: eventInclude, where: { id } });
   if (!event) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
@@ -405,7 +449,7 @@ async function loadQueue(
     where: {
       eventoId: event.id,
       posicao: { not: null },
-      status: { in: ['AGUARDANDO', 'ATENDIDO'] },
+      status: { in: ['AGUARDANDO', 'ATENDIDO', 'SEM_VAGA'] },
     },
   });
   return { current: queue.find(({ status }) => status === 'AGUARDANDO') ?? null, queue };
@@ -624,7 +668,13 @@ async function buildCentral(
   id: string,
 ): Promise<EventCentralRecord> {
   const event = await loadEvent(transaction, id);
-  assertActiveEvent(event);
+  assertStandardMovementEvent(event);
+  if (event.status === 'RASCUNHO') {
+    throw new HttpError(409, 'EVENT_NOT_ACTIVE', 'O evento ainda não foi iniciado.');
+  }
+  if (event.status === 'CANCELADO') {
+    throw new HttpError(409, 'EVENT_CANCELLED', 'O evento está cancelado.');
+  }
   const { current, queue } = await loadQueue(transaction, event);
   const mappedQueue = queue.map((participant) =>
     mapParticipant(participant, positionDefinition(event.cargoFuncaoId as PositionCode).label),
@@ -644,6 +694,7 @@ async function buildCentral(
   }
   const waiting = mappedQueue.filter(({ status }) => status === 'AGUARDANDO');
   const attended = mappedQueue.filter(({ status }) => status === 'ATENDIDO');
+  const noVacancy = mappedQueue.filter(({ status }) => status === 'SEM_VAGA');
   return {
     evento: mapEvent(event),
     fila: mappedQueue,
@@ -655,6 +706,7 @@ async function buildCentral(
       aguardando: waiting.length,
       atendidos: attended.length,
       podeEncerrar: waiting.length === 0,
+      semVaga: noVacancy.length,
       total: mappedQueue.length,
       vagasDisponiveis: vacancies.length,
     },
@@ -671,7 +723,13 @@ export function createPrismaEventOperationServices(
 
   return {
     async central(id) {
-      return client.$transaction((transaction) => buildCentral(transaction, id));
+      return client.$transaction(async (transaction) => {
+        const event = await loadEvent(transaction, id);
+        if (event.status === 'ATIVO') {
+          await closeWhenNoVacancies(transaction, event, null, new Date());
+        }
+        return buildCentral(transaction, id);
+      });
     },
     async choose(id, userId, input) {
       try {
@@ -815,6 +873,7 @@ export function createPrismaEventOperationServices(
             data: { status: 'ATENDIDO' },
             where: { id: expected.id },
           });
+          await closeWhenNoVacancies(transaction, event, userId, now);
           return {
             atendido: {
               ...mapParticipant(

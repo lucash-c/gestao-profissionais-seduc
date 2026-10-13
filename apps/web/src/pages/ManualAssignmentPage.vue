@@ -353,7 +353,7 @@ onMounted(async () => {
             outline
             color="secondary"
             class="administrative-action-btn"
-            icon="home_off"
+            icon="work_off"
             label="Retirar sede"
             data-testid="manual-remove-seat"
             @click="openSeatRemoval"

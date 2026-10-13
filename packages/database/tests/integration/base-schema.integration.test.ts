@@ -520,10 +520,20 @@ describeDatabase('Etapa 1 database schema', () => {
     expect(Number(result.rows[0]?.total)).toBe(3);
   });
 
-  it('enforces structural codes, including CMEA and Centro de Inclusão', async () => {
+  it('enforces structural codes, including CMEA, Centro de Inclusão and Gabinete', async () => {
     await pool.query(
-      'INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3), ($4, $5, $6)',
-      [randomUUID(), 'CMEA', 'CMEA', randomUUID(), 'CENTRO_DE_INCLUSAO', 'Centro de Inclusão'],
+      'INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3), ($4, $5, $6), ($7, $8, $9)',
+      [
+        randomUUID(),
+        'CMEA',
+        'CMEA',
+        randomUUID(),
+        'CENTRO_DE_INCLUSAO',
+        'Centro de Inclusão',
+        randomUUID(),
+        'GABINETE',
+        'Gabinete',
+      ],
     );
     await expectConstraint(
       pool.query('INSERT INTO "unidade" ("id", "tipo_unidade_id", "nome") VALUES ($1, $2, $3)', [

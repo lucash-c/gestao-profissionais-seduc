@@ -148,7 +148,14 @@ const central: EventCentralRecord = {
       unidadeId: UNIT_A,
     },
   },
-  totais: { aguardando: 2, atendidos: 0, podeEncerrar: false, total: 2, vagasDisponiveis: 2 },
+  totais: {
+    aguardando: 2,
+    atendidos: 0,
+    podeEncerrar: false,
+    semVaga: 0,
+    total: 2,
+    vagasDisponiveis: 2,
+  },
   ultimasMovimentacoes: [
     {
       dataHora: '2026-10-07T11:00:00.000Z',

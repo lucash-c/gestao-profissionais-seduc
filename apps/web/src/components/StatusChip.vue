@@ -28,6 +28,7 @@ const labels: Record<string, string> = {
   RASCUNHO: 'Rascunho',
   REMOCAO: 'Remoção',
   RESERVADA_PARA_EVENTO: 'Reservada para evento',
+  SEM_VAGA: 'Sem vaga',
   SEDE: 'Sede fixa',
   SEM_SEDE: 'Sem sede',
   SUBSTITUICAO: 'Substituição',
@@ -50,6 +51,7 @@ const resolvedTone = computed(() => {
       'RASCUNHO',
       'RESERVADA_PARA_EVENTO',
       'SEM_SEDE',
+      'SEM_VAGA',
       'DISPONIVEL_SEM_SEDE',
     ].includes(normalized.value)
   ) {
