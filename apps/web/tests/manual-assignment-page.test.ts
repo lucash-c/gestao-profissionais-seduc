@@ -175,6 +175,12 @@ describe('ações administrativas da atribuição manual', () => {
     expect(administrativeActions.text()).toContain('Controle administrativo');
     expect(administrativeActions.text()).toContain('Ações administrativas');
     expect(administrativeActions.find('.administrative-actions__buttons').exists()).toBe(true);
+    const removeSeatButton = administrativeActions.get('[data-testid="manual-remove-seat"]');
+    expect(removeSeatButton.text()).toContain('Retirar sede');
+    expect(removeSeatButton.find('.q-icon').exists()).toBe(true);
+    expect(removeSeatButton.find('.q-icon').element.closest('.q-btn')).toBe(
+      removeSeatButton.element,
+    );
     await wrapper.get('[data-testid="manual-remove-seat"]').trigger('click');
     await flushPromises();
     expect(mocks.simulateSeatRemoval).toHaveBeenCalledWith({

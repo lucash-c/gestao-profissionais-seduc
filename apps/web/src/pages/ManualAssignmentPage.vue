@@ -14,6 +14,7 @@ import {
   QCardSection,
   QDialog,
   QInput,
+  QIcon,
   QPage,
   QPagination,
   QSpinner,
@@ -352,22 +353,24 @@ onMounted(async () => {
             v-if="selectedProfessional.sedeAtual"
             outline
             color="secondary"
-            icon="home_off"
-            label="Retirar sede"
             data-testid="manual-remove-seat"
             @click="openSeatRemoval"
-          />
+          >
+            <QIcon name="home_off" aria-hidden="true" />
+            <span class="q-ml-sm">Retirar sede</span>
+          </QBtn>
           <QBtn
             v-for="exercise in selectedProfessional.exerciciosAtuais"
             :key="exercise.id"
             outline
             color="secondary"
-            icon="work_off"
-            label="Encerrar exercício atual"
             :aria-label="`Encerrar exercício atual em ${exercise.unidadeNome}`"
             data-testid="manual-end-exercise"
             @click="openExerciseEnd(exercise.id)"
-          />
+          >
+            <QIcon name="work_off" aria-hidden="true" />
+            <span class="q-ml-sm">Encerrar exercício atual</span>
+          </QBtn>
         </div>
       </QCardSection>
       <div v-if="positions.length === 0" class="registry-state">
