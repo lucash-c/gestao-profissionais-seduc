@@ -178,6 +178,10 @@ onMounted(load);
             <StatusChip :status="central.evento.status" />
             <span>{{ central.evento.cargoFuncao.nome }} · {{ central.evento.ano }}</span>
           </div>
+          <p class="text-caption q-mt-sm q-mb-none" data-testid="event-totals">
+            Atendidos: {{ central.totais.atendidos }} · Sem vaga: {{ central.totais.semVaga }} ·
+            Total: {{ central.totais.total }}
+          </p>
         </div>
         <QBtn
           v-if="central.evento.status === 'ATIVO'"
@@ -259,6 +263,23 @@ onMounted(load);
           </QCardSection>
         </QCard>
       </section>
+
+      <QCard flat bordered class="q-mt-md" data-testid="event-queue">
+        <QCardSection>
+          <p class="eyebrow">Fila do evento</p>
+          <ol v-if="central.fila.length" class="q-pl-md q-mb-none">
+            <li
+              v-for="participant in central.fila"
+              :key="participant.participanteId"
+              class="row items-center q-gutter-sm q-py-xs"
+            >
+              <span>{{ participant.posicao }}º · {{ participant.nome }}</span>
+              <StatusChip :status="participant.status" />
+            </li>
+          </ol>
+          <p v-else class="q-mb-none">Nenhum participante informado.</p>
+        </QCardSection>
+      </QCard>
 
       <QCard flat bordered class="q-mt-md" data-testid="available-positions">
         <QCardSection>

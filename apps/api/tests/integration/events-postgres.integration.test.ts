@@ -341,6 +341,25 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
       .put(`/eventos/${eventId}/preparacao`)
       .send({ profissionalIds: [professionals.get('without-seat')] })
       .expect(200);
+    const availablePlan = await database.client.quadroNecessidade.findFirstOrThrow({
+      where: {
+        anoLetivo: 2026,
+        cargoFuncaoId: ids.cargoScore,
+        periodoId: ids.period,
+        segmentoEnsinoId: null,
+        unidadeId: ids.unit,
+      },
+    });
+    await database.client.postoTrabalho.create({
+      data: {
+        anoLetivo: 2026,
+        cargoFuncaoId: ids.cargoScore,
+        codigo: `ATRIBUICAO-ATIVA-${randomUUID()}`,
+        periodoId: ids.period,
+        quadroNecessidadeId: availablePlan.id,
+        unidadeId: ids.unit,
+      },
+    });
     await operator.post(`/eventos/${eventId}/iniciar`).expect(200);
     expect(await database.client.evento.findUnique({ where: { id: eventId } })).toMatchObject({
       status: 'ATIVO',
@@ -419,6 +438,25 @@ describeWithPostgres('Etapa 6 eventos no PostgreSQL', () => {
       .put(`/eventos/${eventId}/preparacao`)
       .send({ profissionalIds: selected })
       .expect(200);
+    const availablePlan = await database.client.quadroNecessidade.findFirstOrThrow({
+      where: {
+        anoLetivo: 2026,
+        cargoFuncaoId: ids.cargoScore,
+        periodoId: ids.period,
+        segmentoEnsinoId: null,
+        unidadeId: ids.unit,
+      },
+    });
+    await database.client.postoTrabalho.create({
+      data: {
+        anoLetivo: 2026,
+        cargoFuncaoId: ids.cargoScore,
+        codigo: `EVENTO-ATIVO-${randomUUID()}`,
+        periodoId: ids.period,
+        quadroNecessidadeId: availablePlan.id,
+        unidadeId: ids.unit,
+      },
+    });
     const started = await operator
       .post(`/eventos/${eventId}/iniciar`)
       .send({ iniciadoPorUsuarioId: randomUUID(), dataInicio: new Date(0).toISOString() })

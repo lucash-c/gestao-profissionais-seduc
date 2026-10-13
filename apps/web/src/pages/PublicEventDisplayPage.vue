@@ -131,6 +131,13 @@ watch(publicDisplayUrl, () => void generateQrCode());
       <QBanner v-if="error" class="bg-red-1 text-negative" data-testid="public-event-error">{{
         error
       }}</QBanner>
+      <QBanner
+        v-if="display.evento.motivoEncerramento === 'SEM_VAGAS'"
+        class="q-mt-md bg-blue-1 text-primary"
+        data-testid="public-event-closed-no-vacancies"
+      >
+        Evento encerrado: não há mais vagas disponíveis.
+      </QBanner>
 
       <section class="public-main">
         <QCard flat bordered data-testid="public-current-participant">

@@ -21,7 +21,6 @@ import { periodLookup, positionDefinition } from '@seduc/contracts';
 import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
-import { writeAudit } from '../audit/audit.service.js';
 import {
   loadPosition,
   lockPositions,
@@ -35,7 +34,7 @@ import type {
   EventMovementQuery,
   EventVacancyQuery,
 } from './event-operation.schemas.js';
-import { eventInclude, mapEvent, type EventPayload } from './event.service.js';
+import { eventInclude, finalizeEvent, mapEvent, type EventPayload } from './event.service.js';
 
 const participantInclude = {
   profissional: { select: { cargoFuncaoId: true, id: true, nomeCompleto: true } },
@@ -79,6 +78,8 @@ type ProfessionalSituationPayload = Prisma.ProfissionalGetPayload<{
   include: typeof professionalSituationInclude;
 }>;
 type MovementPayload = Prisma.MovimentacaoGetPayload<{ include: typeof movementInclude }>;
+
+const automaticCloseReason = 'Evento encerrado automaticamente por ausência de vagas disponíveis.';
 
 interface ChoiceAnalysis {
   destination: PositionAvailabilityPayload;
@@ -349,38 +350,10 @@ async function lockParticipant(transaction: Prisma.TransactionClient, id: string
   }
 }
 
-async function clearParticipantManifestations(
-  transaction: Prisma.TransactionClient,
-  event: EventPayload,
-): Promise<void> {
-  if (!['REMOCAO', 'PERMUTA'].includes(event.tipo)) return;
-
-  const participantIds = (
-    await transaction.eventoParticipante.findMany({
-      select: { profissionalId: true },
-      where: { eventoId: event.id },
-    })
-  ).map(({ profissionalId }) => profissionalId);
-  if (participantIds.length === 0) return;
-
-  if (event.tipo === 'REMOCAO') {
-    await transaction.profissional.updateMany({
-      data: { remocao: false },
-      where: { id: { in: participantIds } },
-    });
-    return;
-  }
-
-  await transaction.profissional.updateMany({
-    data: { permuta: false },
-    where: { id: { in: participantIds } },
-  });
-}
-
 async function closeWhenNoVacancies(
   transaction: Prisma.TransactionClient,
   event: EventPayload,
-  userId: string | null,
+  userId: string,
   now: Date,
 ): Promise<EventPayload | null> {
   if (event.tipo === 'PERMUTA') return null;
@@ -395,30 +368,7 @@ async function closeWhenNoVacancies(
     periodoId: null,
   });
   if (available.length > 0) return null;
-  await transaction.eventoParticipante.updateMany({
-    data: { status: 'SEM_VAGA' },
-    where: { eventoId: event.id, status: 'AGUARDANDO' },
-  });
-  const closed = await transaction.evento.update({
-    data: { dataFim: now, status: 'ENCERRADO' },
-    include: eventInclude,
-    where: { id: event.id },
-  });
-  await clearParticipantManifestations(transaction, event);
-  if (userId) {
-    await writeAudit(transaction, {
-      acao: 'UPDATE',
-      after: {
-        ...mapEvent(closed),
-        motivo: 'Evento encerrado automaticamente por ausência de vagas disponíveis.',
-      },
-      before: mapEvent(event),
-      entidade: 'EVENTO',
-      registroId: event.id,
-      usuarioId: userId,
-    });
-  }
-  return closed;
+  return finalizeEvent(transaction, event, userId, now, { automatic: true });
 }
 
 async function loadEvent(transaction: Prisma.TransactionClient, id: string): Promise<EventPayload> {
@@ -663,6 +613,27 @@ async function latestMovements(
   return movements.map(mapMovement);
 }
 
+function isAutomaticCloseAudit(value: Prisma.JsonValue | null): boolean {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    (value as Prisma.JsonObject).motivo === automaticCloseReason
+  );
+}
+
+async function closingReason(
+  transaction: Prisma.TransactionClient,
+  eventId: string,
+): Promise<'SEM_VAGAS' | null> {
+  const audits = await transaction.auditoria.findMany({
+    orderBy: { dataHora: 'desc' },
+    select: { dadosNovos: true },
+    where: { entidade: 'EVENTO', registroId: eventId },
+  });
+  return audits.some(({ dadosNovos }) => isAutomaticCloseAudit(dadosNovos)) ? 'SEM_VAGAS' : null;
+}
+
 async function buildCentral(
   transaction: Prisma.TransactionClient,
   id: string,
@@ -723,13 +694,7 @@ export function createPrismaEventOperationServices(
 
   return {
     async central(id) {
-      return client.$transaction(async (transaction) => {
-        const event = await loadEvent(transaction, id);
-        if (event.status === 'ATIVO') {
-          await closeWhenNoVacancies(transaction, event, null, new Date());
-        }
-        return buildCentral(transaction, id);
-      });
+      return client.$transaction((transaction) => buildCentral(transaction, id));
     },
     async choose(id, userId, input) {
       try {
@@ -909,25 +874,9 @@ export function createPrismaEventOperationServices(
               'Todos os participantes precisam ser atendidos antes do encerramento.',
             );
           }
-          const closed = mapEvent(
-            await transaction.evento.update({
-              data: { dataFim: clock(), status: 'ENCERRADO' },
-              include: eventInclude,
-              where: { id },
-            }),
+          return mapEvent(
+            await finalizeEvent(transaction, event, userId, clock(), { automatic: false }),
           );
-          await clearParticipantManifestations(transaction, event);
-          if (userId) {
-            await writeAudit(transaction, {
-              acao: 'UPDATE',
-              after: closed,
-              before: mapEvent(event),
-              entidade: 'EVENTO',
-              registroId: id,
-              usuarioId: userId,
-            });
-          }
-          return closed;
         });
       } catch (error) {
         handleDatabaseError(error);
@@ -1022,6 +971,8 @@ export function createPrismaEventOperationServices(
           evento: {
             ano: event.ano,
             cargoFuncao: positionDefinition(event.cargoFuncaoId as PositionCode).label,
+            motivoEncerramento:
+              event.status === 'ENCERRADO' ? await closingReason(transaction, event.id) : null,
             nome: event.nome,
             status: event.status as 'ATIVO' | 'ENCERRADO',
             tipo: event.tipo,
@@ -1063,12 +1014,15 @@ export function createPrismaEventOperationServices(
           orderBy: { dataHora: 'asc' },
           where: { eventoId: id },
         });
+        const motivoEncerramento =
+          event.status === 'ENCERRADO' ? await closingReason(transaction, event.id) : null;
         return {
           evento: {
             ano: event.ano,
             cargoFuncao: positionDefinition(event.cargoFuncaoId as PositionCode).label,
             dataFim: event.dataFim?.toISOString() ?? null,
             dataInicio: event.dataInicio?.toISOString() ?? null,
+            motivoEncerramento,
             nome: event.nome,
             responsavel: event.iniciadoPorUsuario?.nome ?? null,
             status: event.status,

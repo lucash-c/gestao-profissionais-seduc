@@ -13,6 +13,7 @@ import { Prisma, type DatabaseConnection } from '@seduc/database';
 
 import { HttpError } from '../../http/http-error.js';
 import { writeAudit } from '../audit/audit.service.js';
+import { mapWorkPosition, positionAvailabilityInclude } from '../assignments/assignment.service.js';
 import { assertAdministratorPassword } from '../authorization/admin-deletion.js';
 import type { EventCreateInput, EventQuery, EventUpdateInput } from './event.schemas.js';
 
@@ -215,6 +216,89 @@ async function lockEvent(transaction: Prisma.TransactionClient, id: string): Pro
     SELECT "id" FROM "evento" WHERE "id" = ${id}::uuid FOR UPDATE
   `);
   if (rows.length === 0) throw new HttpError(404, 'NOT_FOUND', 'Evento não encontrado.');
+}
+
+async function clearParticipantManifestations(
+  transaction: Prisma.TransactionClient,
+  event: EventPayload,
+): Promise<void> {
+  if (!['REMOCAO', 'PERMUTA'].includes(event.tipo)) return;
+  const participantIds = (
+    await transaction.eventoParticipante.findMany({
+      select: { profissionalId: true },
+      where: { eventoId: event.id },
+    })
+  ).map(({ profissionalId }) => profissionalId);
+  if (participantIds.length === 0) return;
+  await transaction.profissional.updateMany({
+    data: event.tipo === 'REMOCAO' ? { remocao: false } : { permuta: false },
+    where: { id: { in: participantIds } },
+  });
+}
+
+export async function finalizeEvent(
+  transaction: Prisma.TransactionClient,
+  event: EventPayload,
+  userId: string | undefined,
+  now: Date,
+  options: { automatic: boolean },
+): Promise<EventPayload> {
+  if (options.automatic) {
+    await transaction.eventoParticipante.updateMany({
+      data: { status: 'SEM_VAGA' },
+      where: { eventoId: event.id, status: 'AGUARDANDO' },
+    });
+  }
+  const closed = await transaction.evento.update({
+    data: { dataFim: now, status: 'ENCERRADO' },
+    include: eventInclude,
+    where: { id: event.id },
+  });
+  await clearParticipantManifestations(transaction, event);
+  if (userId) {
+    await writeAudit(transaction, {
+      acao: 'UPDATE',
+      after: options.automatic
+        ? {
+            ...mapEvent(closed),
+            motivo: 'Evento encerrado automaticamente por ausência de vagas disponíveis.',
+          }
+        : mapEvent(closed),
+      before: mapEvent(event),
+      entidade: 'EVENTO',
+      registroId: event.id,
+      usuarioId: userId,
+    });
+  }
+  return closed;
+}
+
+async function closeStartedEventWhenNoVacancies(
+  transaction: Prisma.TransactionClient,
+  event: EventPayload,
+  userId: string,
+  now: Date,
+): Promise<boolean> {
+  if (event.tipo === 'PERMUTA') return false;
+  const positions = await transaction.postoTrabalho.findMany({
+    include: positionAvailabilityInclude,
+    where: {
+      anoLetivo: event.ano,
+      ativo: true,
+      cargoFuncaoId: event.cargoFuncaoId,
+    },
+  });
+  if (
+    positions
+      .map(mapWorkPosition)
+      .some(({ disponibilidade }) =>
+        ['DISPONIVEL_COM_SEDE', 'DISPONIVEL_SEM_SEDE'].includes(disponibilidade),
+      )
+  ) {
+    return false;
+  }
+  await finalizeEvent(transaction, event, userId, now, { automatic: true });
+  return true;
 }
 
 function assertActiveCargo(cargoFuncaoId: string): void {
@@ -539,8 +623,9 @@ export function createPrismaEventServices(
               where: { id: participant.id },
             });
           }
-          await transaction.evento.update({
+          const started = await transaction.evento.update({
             data: { dataInicio: clock(), iniciadoPorUsuarioId: userId, status: 'ATIVO' },
+            include: eventInclude,
             where: { id },
           });
           await writeAudit(transaction, {
@@ -551,6 +636,13 @@ export function createPrismaEventServices(
             registroId: id,
             usuarioId: userId,
           });
+          const closingTime = clock();
+          await closeStartedEventWhenNoVacancies(
+            transaction,
+            started,
+            userId,
+            new Date(Math.max(closingTime.getTime(), started.dataInicio!.getTime() + 1)),
+          );
         });
         return preparation(id);
       } catch (error) {

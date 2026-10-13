@@ -212,6 +212,7 @@ const publicDisplay: PublicEventDisplay = {
   evento: {
     ano: 2027,
     cargoFuncao: 'PEB1 - Fundamental',
+    motivoEncerramento: null,
     nome: 'Remoção 2027',
     status: 'ATIVO',
     tipo: 'REMOCAO',
@@ -241,6 +242,7 @@ const minutes: EventMinutes = {
     cargoFuncao: 'PEB1 - Fundamental',
     dataFim: '2026-10-07T12:00:00.000Z',
     dataInicio: '2026-10-07T11:00:00.000Z',
+    motivoEncerramento: null,
     nome: 'Permuta 2027',
     responsavel: 'Operador João',
     status: 'ENCERRADO',
@@ -488,6 +490,29 @@ describe('Etapa 7 frontend da Central', () => {
     wrapper.unmount();
   });
 
+  it('apresenta o total de participantes sem vaga na Central encerrada', async () => {
+    mocks.central.mockResolvedValue({
+      ...structuredClone(central),
+      evento: { ...central.evento, status: 'ENCERRADO' },
+      fila: [
+        { ...participantA, status: 'ATENDIDO' },
+        { ...participantB, status: 'SEM_VAGA' },
+      ],
+      participanteAtual: null,
+      proximos: [],
+      totais: { ...central.totais, aguardando: 0, atendidos: 1, podeEncerrar: true, semVaga: 1 },
+      vagasDisponiveis: [],
+    });
+    const wrapper = await mountPage(EventOperationsPage, `/eventos/${EVENT_ID}/central`);
+
+    expect(wrapper.get('[data-testid="event-totals"]').text()).toContain('Sem vaga: 1');
+    expect(wrapper.get('[data-testid="event-queue"]').text()).toContain('Bruno Próximo');
+    expect(wrapper.get('[data-testid="event-queue"]').text()).toContain('Sem vaga');
+    expect(wrapper.text()).toContain('Evento encerrado. Esta visualização é somente leitura.');
+    expect(wrapper.find('[data-testid="close-event"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('mostra bloqueio formal quando o período não pode ser comprovado', async () => {
     mocks.central.mockResolvedValue({
       ...structuredClone(central),
@@ -631,6 +656,25 @@ describe('Etapa 7 frontend do telão público', () => {
     wrapper.unmount();
   });
 
+  it('informa no Telão quando o encerramento ocorreu por falta de vagas', async () => {
+    mocks.publicDisplay.mockResolvedValue({
+      ...structuredClone(publicDisplay),
+      evento: {
+        ...publicDisplay.evento,
+        motivoEncerramento: 'SEM_VAGAS',
+        status: 'ENCERRADO',
+      },
+      participanteAtual: null,
+      proximos: [],
+    });
+    const wrapper = await mountPage(PublicEventDisplayPage, `/publico/eventos/${EVENT_ID}`);
+
+    expect(wrapper.get('[data-testid="public-event-closed-no-vacancies"]').text()).toContain(
+      'não há mais vagas disponíveis',
+    );
+    wrapper.unmount();
+  });
+
   it('informa indisponibilidade e evento inexistente com mensagens amigáveis', async () => {
     mocks.publicDisplay.mockRejectedValueOnce({ status: 404 });
     const missingEvent = await mountPage(PublicEventDisplayPage, `/publico/eventos/${EVENT_ID}`);
@@ -673,6 +717,28 @@ describe('Ata de eventos', () => {
     await wrapper.get('[data-testid="print-minutes"]').trigger('click');
     expect(open).toHaveBeenCalledWith(`/eventos/${EVENT_ID}/ata/impressao`, '_blank', 'noopener');
     expect(print).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('registra participantes sem vaga e o encerramento automático na Ata', async () => {
+    mocks.minutes.mockResolvedValue({
+      ...structuredClone(minutes),
+      evento: { ...minutes.evento, motivoEncerramento: 'SEM_VAGAS', tipo: 'REMOCAO' },
+      movimentacoes: [],
+      participantes: [
+        { nome: 'Ana', posicao: 1, status: 'ATENDIDO' },
+        { nome: 'Bruno', posicao: 2, status: 'SEM_VAGA' },
+      ],
+    });
+    const wrapper = await mountPage(EventMinutesPage, `/eventos/${EVENT_ID}/central`);
+
+    expect(wrapper.get('[data-testid="event-minutes-document"]').text()).toContain(
+      'Bruno — Sem vaga',
+    );
+    expect(wrapper.text()).toContain(
+      'Após o preenchimento da última vaga disponível, o evento foi encerrado automaticamente.',
+    );
+    expect(wrapper.text()).toContain('Participantes sem vaga:');
     wrapper.unmount();
   });
 

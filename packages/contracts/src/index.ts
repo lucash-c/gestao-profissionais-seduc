@@ -715,6 +715,7 @@ export interface PublicEventDisplay {
   evento: {
     ano: number;
     cargoFuncao: string;
+    motivoEncerramento: 'SEM_VAGAS' | null;
     nome: string;
     status: 'ATIVO' | 'ENCERRADO';
     tipo: EventType;
@@ -736,6 +737,7 @@ export interface EventMinutes {
     cargoFuncao: string;
     dataFim: string | null;
     dataInicio: string | null;
+    motivoEncerramento: 'SEM_VAGAS' | null;
     nome: string;
     responsavel: string | null;
     status: EventStatus;

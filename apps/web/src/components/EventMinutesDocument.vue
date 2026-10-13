@@ -43,6 +43,10 @@ function eventStatus(value: EventMinutes['evento']['status']): string {
     value
   ];
 }
+
+function participantStatus(value: string): string {
+  return { AGUARDANDO: 'Aguardando', ATENDIDO: 'Atendido', SEM_VAGA: 'Sem vaga' }[value] ?? value;
+}
 </script>
 
 <template>
@@ -97,7 +101,8 @@ function eventStatus(value: EventMinutes['evento']['status']): string {
           v-for="participant in minutes.participantes"
           :key="`${participant.posicao}-${participant.nome}`"
         >
-          {{ participant.posicao ? `${participant.posicao}º — ` : '' }}{{ participant.nome }}
+          {{ participant.posicao ? `${participant.posicao}º — ` : '' }}{{ participant.nome }} —
+          {{ participantStatus(participant.status) }}
         </li>
       </ol>
       <p v-else>Nenhum participante informado.</p>
@@ -133,7 +138,27 @@ function eventStatus(value: EventMinutes['evento']['status']): string {
           </p>
         </div>
       </template>
-      <p v-if="minutes.movimentacoes.length === 0 && minutes.evento.status === 'ENCERRADO'">
+      <template v-if="minutes.evento.motivoEncerramento === 'SEM_VAGAS'">
+        <p>
+          Após o preenchimento da última vaga disponível, o evento foi encerrado automaticamente.
+        </p>
+        <template
+          v-if="minutes.participantes.some((participant) => participant.status === 'SEM_VAGA')"
+        >
+          <p><strong>Participantes sem vaga:</strong></p>
+          <ul>
+            <li
+              v-for="participant in minutes.participantes.filter(
+                (candidate) => candidate.status === 'SEM_VAGA',
+              )"
+              :key="`sem-vaga-${participant.posicao}-${participant.nome}`"
+            >
+              {{ participant.nome }}
+            </li>
+          </ul>
+        </template>
+      </template>
+      <p v-else-if="minutes.movimentacoes.length === 0 && minutes.evento.status === 'ENCERRADO'">
         Participação encerrada sem movimentação.
       </p>
       <p v-if="minutes.evento.dataFim">

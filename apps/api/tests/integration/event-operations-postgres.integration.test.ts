@@ -196,17 +196,19 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
   }
 
   async function createEvent(input: {
+    cargoId?: string;
     participants: Array<{ professionalId: string; status?: 'AGUARDANDO' | 'ATENDIDO' }>;
     status?: 'RASCUNHO' | 'ATIVO' | 'ENCERRADO' | 'CANCELADO';
     type?: 'REMOCAO' | 'LISTAO' | 'PERMUTA' | 'ATRIBUICAO';
+    year?: number;
   }) {
     const operator = await database.client.usuario.findUniqueOrThrow({
       where: { login: logins.operator },
     });
     const event = await database.client.evento.create({
       data: {
-        ano: 2027,
-        cargoFuncaoId: ids.cargo,
+        ano: input.year ?? 2027,
+        cargoFuncaoId: input.cargoId ?? ids.cargo,
         nome: `Evento Central ${randomUUID()}`,
         tipo: input.type ?? 'REMOCAO',
       },
@@ -272,7 +274,7 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     }
   }
 
-  it('restringe a Central ao OPERADOR e somente a eventos ATIVOS de REMOCAO/LISTAO', async () => {
+  it('restringe a Central ao OPERADOR, aceita leitura de encerrados e rejeita outros estados', async () => {
     const professional = await createProfessional('Participante estados');
     const source = await createPosition();
     await seat(professional.id, source.id);
@@ -293,7 +295,6 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
 
     const states = [
       { code: 'EVENT_NOT_ACTIVE', status: 'RASCUNHO' as const },
-      { code: 'EVENT_CLOSED', status: 'ENCERRADO' as const },
       { code: 'EVENT_CANCELLED', status: 'CANCELADO' as const },
     ];
     for (const state of states) {
@@ -305,6 +306,17 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
       const response = await operator.get(`/eventos/${event.eventId}/central`).expect(409);
       expect(response.body.error).toBe(state.code);
     }
+    const closedProfessional = await createProfessional('Participante ENCERRADO');
+    const closed = await createEvent({
+      participants: [{ professionalId: closedProfessional.id, status: 'ATENDIDO' }],
+      status: 'ENCERRADO',
+    });
+    const closedCentral = await operator.get(`/eventos/${closed.eventId}/central`).expect(200);
+    expect(closedCentral.body).toMatchObject({
+      evento: { status: 'ENCERRADO' },
+      participanteAtual: null,
+      proximos: [],
+    });
     const exchange = await createEvent({
       participants: [{ professionalId: professional.id }],
       type: 'PERMUTA',
@@ -1215,8 +1227,12 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
     const closed = await operator.post(`/eventos/${event.eventId}/encerrar`).expect(200);
     expect(closed.body).toMatchObject({ status: 'ENCERRADO' });
     expect(new Date(closed.body.dataFim).getTime()).toBeGreaterThanOrEqual(baseTime.getTime());
-    const afterClose = await operator.get(`/eventos/${event.eventId}/central`).expect(409);
-    expect(afterClose.body.error).toBe('EVENT_CLOSED');
+    const afterClose = await operator.get(`/eventos/${event.eventId}/central`).expect(200);
+    expect(afterClose.body).toMatchObject({
+      evento: { status: 'ENCERRADO' },
+      participanteAtual: null,
+      proximos: [],
+    });
     const publicView = await request(app).get(`/public/eventos/${event.eventId}/telao`).expect(200);
     expect(publicView.body).toMatchObject({
       evento: { status: 'ENCERRADO' },
@@ -1436,5 +1452,194 @@ describeWithPostgres('Etapa 7 Central de Remoção e Listão no PostgreSQL', () 
         where: { dataFim: null, postoTrabalhoId: reservedSeat.id },
       }),
     ).toMatchObject({ profissionalId: candidate.id });
+  });
+
+  it('encerra apenas em fluxos de escrita sem vagas, preserva vínculos e mantém a Central em leitura', async () => {
+    const autoCloseYear = 2033;
+    const operator = await authenticated();
+    const operatorUser = await database.client.usuario.findUniqueOrThrow({
+      where: { login: logins.operator },
+    });
+    const removalCandidate = await createProfessional('Remoção sem vaga', ids.cargoOther);
+    const removalSeat = await createPosition({ cargoId: ids.cargoOther, year: autoCloseYear });
+    await seat(removalCandidate.id, removalSeat.id);
+    const assignmentCandidate = await createProfessional('Atribuição sem vaga', ids.cargoOther);
+    const listCandidate = await createProfessional('Listão sem vaga', ids.cargoOther);
+    const exchangeCandidate = await createProfessional('Permuta sem vaga', ids.cargoOther);
+    await database.client.profissional.update({
+      data: { permuta: true },
+      where: { id: exchangeCandidate.id },
+    });
+
+    const removal = await createEvent({
+      cargoId: ids.cargoOther,
+      participants: [{ professionalId: removalCandidate.id }],
+      status: 'RASCUNHO',
+      year: autoCloseYear,
+    });
+    const assignment = await createEvent({
+      cargoId: ids.cargoOther,
+      participants: [{ professionalId: assignmentCandidate.id }],
+      status: 'RASCUNHO',
+      type: 'ATRIBUICAO',
+      year: autoCloseYear,
+    });
+    const list = await createEvent({
+      cargoId: ids.cargoOther,
+      participants: [{ professionalId: listCandidate.id }],
+      status: 'RASCUNHO',
+      type: 'LISTAO',
+      year: autoCloseYear,
+    });
+    const exchange = await createEvent({
+      cargoId: ids.cargoOther,
+      participants: [{ professionalId: exchangeCandidate.id }],
+      status: 'RASCUNHO',
+      type: 'PERMUTA',
+      year: autoCloseYear,
+    });
+
+    for (const event of [removal, assignment, list]) {
+      await operator.post(`/eventos/${event.eventId}/iniciar`).expect(200);
+      expect(
+        await database.client.evento.findUniqueOrThrow({ where: { id: event.eventId } }),
+      ).toMatchObject({
+        dataFim: expect.any(Date),
+        status: 'ENCERRADO',
+      });
+      expect(
+        await database.client.eventoParticipante.findUniqueOrThrow({
+          where: { id: event.participantIds[0]! },
+        }),
+      ).toMatchObject({ status: 'SEM_VAGA' });
+      expect(await database.client.movimentacao.count({ where: { eventoId: event.eventId } })).toBe(
+        0,
+      );
+      expect(
+        await database.client.auditoria.findFirst({
+          orderBy: { dataHora: 'desc' },
+          where: { entidade: 'EVENTO', registroId: event.eventId, usuarioId: operatorUser.id },
+        }),
+      ).toMatchObject({
+        dadosNovos: expect.objectContaining({
+          motivo: 'Evento encerrado automaticamente por ausência de vagas disponíveis.',
+        }),
+      });
+    }
+    expect(
+      await database.client.lotacaoSede.findFirst({
+        where: { dataFim: null, profissionalId: removalCandidate.id },
+      }),
+    ).toMatchObject({ postoTrabalhoId: removalSeat.id });
+    expect(
+      await database.client.profissional.findUniqueOrThrow({ where: { id: removalCandidate.id } }),
+    ).toMatchObject({ remocao: false });
+    expect(
+      await database.client.lotacaoSede.count({
+        where: { dataFim: null, profissionalId: assignmentCandidate.id },
+      }),
+    ).toBe(0);
+    expect(
+      await database.client.exercicioProfissional.count({
+        where: { dataFim: null, profissionalId: assignmentCandidate.id },
+      }),
+    ).toBe(0);
+
+    await operator.post(`/eventos/${exchange.eventId}/iniciar`).expect(200);
+    expect(
+      await database.client.evento.findUniqueOrThrow({ where: { id: exchange.eventId } }),
+    ).toMatchObject({
+      dataFim: null,
+      status: 'ATIVO',
+    });
+
+    const readOnly = await createEvent({
+      cargoId: ids.cargoOther,
+      participants: [{ professionalId: listCandidate.id }],
+      year: autoCloseYear,
+    });
+    const auditBeforeRead = await database.client.auditoria.count({
+      where: { entidade: 'EVENTO', registroId: readOnly.eventId },
+    });
+    await operator.get(`/eventos/${readOnly.eventId}/central`).expect(200);
+    expect(
+      await database.client.evento.findUniqueOrThrow({ where: { id: readOnly.eventId } }),
+    ).toMatchObject({
+      dataFim: null,
+      status: 'ATIVO',
+    });
+    expect(
+      await database.client.eventoParticipante.findUniqueOrThrow({
+        where: { id: readOnly.participantIds[0]! },
+      }),
+    ).toMatchObject({ status: 'AGUARDANDO' });
+    expect(
+      await database.client.auditoria.count({
+        where: { entidade: 'EVENTO', registroId: readOnly.eventId },
+      }),
+    ).toBe(auditBeforeRead);
+
+    const first = await createProfessional('Última vaga primeiro', ids.cargoOther);
+    const second = await createProfessional('Última vaga segundo', ids.cargoOther);
+    const finalPosition = await createPosition({ cargoId: ids.cargoOther, year: autoCloseYear });
+    const lastVacancyEvent = await createEvent({
+      cargoId: ids.cargoOther,
+      participants: [{ professionalId: first.id }, { professionalId: second.id }],
+      type: 'ATRIBUICAO',
+      year: autoCloseYear,
+    });
+    const [firstChoice, repeatedChoice] = await Promise.all([
+      operator.post(`/eventos/${lastVacancyEvent.eventId}/escolha`).send({
+        participanteEsperadoId: lastVacancyEvent.participantIds[0],
+        postoTrabalhoId: finalPosition.id,
+      }),
+      operator.post(`/eventos/${lastVacancyEvent.eventId}/escolha`).send({
+        participanteEsperadoId: lastVacancyEvent.participantIds[0],
+        postoTrabalhoId: finalPosition.id,
+      }),
+    ]);
+    expect([firstChoice.status, repeatedChoice.status].sort()).toEqual([200, 409]);
+    expect(
+      await database.client.evento.findUniqueOrThrow({ where: { id: lastVacancyEvent.eventId } }),
+    ).toMatchObject({ dataFim: expect.any(Date), status: 'ENCERRADO' });
+    expect(
+      await database.client.eventoParticipante.findMany({
+        orderBy: { posicao: 'asc' },
+        where: { eventoId: lastVacancyEvent.eventId },
+      }),
+    ).toEqual([
+      expect.objectContaining({ status: 'ATENDIDO' }),
+      expect.objectContaining({ status: 'SEM_VAGA' }),
+    ]);
+    expect(
+      await database.client.movimentacao.count({ where: { eventoId: lastVacancyEvent.eventId } }),
+    ).toBe(1);
+    expect(
+      await database.client.lotacaoSede.count({
+        where: { dataFim: null, profissionalId: second.id },
+      }),
+    ).toBe(0);
+    expect(
+      await database.client.exercicioProfissional.count({
+        where: { dataFim: null, profissionalId: second.id },
+      }),
+    ).toBe(0);
+    const closedCentral = await operator
+      .get(`/eventos/${lastVacancyEvent.eventId}/central`)
+      .expect(200);
+    expect(closedCentral.body).toMatchObject({
+      evento: { status: 'ENCERRADO' },
+      participanteAtual: null,
+      proximos: [],
+      totais: { aguardando: 0, atendidos: 1, semVaga: 1, total: 2 },
+    });
+    const minutes = await operator.get(`/eventos/${lastVacancyEvent.eventId}/ata`).expect(200);
+    expect(minutes.body).toMatchObject({
+      evento: { motivoEncerramento: 'SEM_VAGAS' },
+      participantes: [
+        expect.objectContaining({ status: 'ATENDIDO' }),
+        expect.objectContaining({ status: 'SEM_VAGA' }),
+      ],
+    });
   });
 });
